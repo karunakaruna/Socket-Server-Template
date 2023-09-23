@@ -107,6 +107,10 @@ app.get('/', (req, res) => {
 });
 
 app.post('/unity-endpoint', (req, res) => {
+    res.header("Access-Control-Allow-Credentials", true);
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
     const receivedData = req.body;
     const responseMessage = {
         message: receivedData.message ? receivedData.message.split('').reverse().join('') : 'No message received.'
