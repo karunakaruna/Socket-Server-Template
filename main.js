@@ -9,6 +9,15 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
 
+
+//GPT code for websockets
+
+app.use(express.static("public"));
+app.use(express.json());  // <-- Add this line to parse incoming JSON
+
+
+//GPT code for websockets
+
 let keepAliveId;
 
 const wss =
@@ -95,4 +104,12 @@ const isJSON = (message) => {
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
+});
+
+app.post('/unity-endpoint', (req, res) => {
+    const receivedData = req.body;
+    const responseMessage = {
+        message: receivedData.message ? receivedData.message.split('').reverse().join('') : 'No message received.'
+    };
+    res.json(responseMessage);
 });
