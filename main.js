@@ -120,7 +120,7 @@ app.post('/unity-endpoint', (req, res) => {
   res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
   
   // Accessing the message sent in the form data
-  const receivedMessage = req.body.message;
+  const receivedMessage = req.body.data;
 
   // Log the received message
   console.log("Received message:", receivedMessage);
