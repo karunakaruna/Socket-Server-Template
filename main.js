@@ -152,6 +152,7 @@ app.get('/', (req, res) => {
 
 // attempt 3
 app.post('/unity-endpoint', (req, res) => {
+  console.log("Raw body:", req.body);
   // CORS headers
   res.header("Access-Control-Allow-Credentials", true);
   res.header('Access-Control-Allow-Origin', '*');
