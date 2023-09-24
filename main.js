@@ -1,4 +1,4 @@
-const http = require("http");
+const https = require("https");
 const express = require("express");
 const app = express();
 
@@ -6,27 +6,29 @@ app.use(express.static("public"));
 // require("dotenv").config();
 
 const port = process.env.PORT || 3000;
-const server = http.createServer(app);
+
+// Create an HTTPS server without manually specifying certificates
+const httpsServer = https.createServer(app);
+
 const WebSocket = require("ws");
 
-
-//GPT code for websockets
+// GPT code for websockets
 
 app.use(express.static("public"));
 app.use(express.json());  // <-- Add this line to parse incoming JSON
 
-
-//GPT code for websockets
+// GPT code for websockets
 
 let keepAliveId;
 
 const wss =
   process.env.NODE_ENV === "production"
-    ? new WebSocket.Server({ server })
+    ? new WebSocket.Server({ server: httpsServer }) // Pass the HTTPS server instance
     : new WebSocket.Server({ port: 5001 });
 
-server.listen(port);
-console.log(`Server started on port ${process.env.PORT} in stage ${process.env.NODE_ENV}`);
+httpsServer.listen(port, () => {
+  console.log(`Server started on port ${port} in stage ${process.env.NODE_ENV}`);
+});
 
 wss.on("connection", function (ws, req) {
   console.log("Connection Opened");
@@ -41,8 +43,8 @@ wss.on("connection", function (ws, req) {
     if (isJSON(data)) {
       const currData = JSON.parse(data);
       broadcast(ws, currData, false);
-    } else if(typeof currData === 'string') {
-      if(currData === 'pong') {
+    } else if (typeof currData === 'string') {
+      if (currData === 'pong') {
         console.log('keepAlive');
         return;
       }
@@ -91,7 +93,7 @@ const isJSON = (message) => {
 /**
  * Sends a ping message to all connected clients every 50 seconds
  */
- const keepServerAlive = () => {
+const keepServerAlive = () => {
   keepAliveId = setInterval(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
@@ -101,22 +103,9 @@ const isJSON = (message) => {
   }, 50000);
 };
 
-
 app.get('/', (req, res) => {
-    res.send('Hello World!');
+  res.send('Hello World!');
 });
-
-// app.post('/unity-endpoint', (req, res) => {
-//     res.header("Access-Control-Allow-Credentials", true);
-//     res.header('Access-Control-Allow-Origin', '*');
-//     res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-//     res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
-//     const receivedData = req.body;
-//     const responseMessage = {
-//         message: receivedData.message ? receivedData.message.split('').reverse().join('') : 'No message received.'
-//     };
-//     res.json(responseMessage);
-// });
 
 app.post('/unity-endpoint', (req, res) => {
   res.header("Access-Control-Allow-Credentials", true);
