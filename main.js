@@ -171,6 +171,6 @@ app.post('/unity-endpoint', (req, res) => {
   };
   
   // Send the response
-  res.status(0).send('oops');
+  res.send('oops');
   res.json(responseMessage);
 });
