@@ -111,28 +111,6 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
-app.post('/unity-endpoint', (req, res) => {
-  // CORS headers
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
-  
-  // Accessing the message sent in the form data
-  const receivedMessage = req.body.message;
-
-  // Log the received message
-  console.log("Received message:", receivedMessage);
-
-  // Prepare the response
-  const responseMessage = {
-      message: 'hello'
-  };
-  
-  // Send the response
-  res.json(responseMessage);
-});
-
 
 
 // original
@@ -150,23 +128,46 @@ app.post('/unity-endpoint', (req, res) => {
 
 
 // attempt 2
+app.post('/unity-endpoint', (req, res) => {
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+  
+  const receivedData = req.body;
+
+  // Log the received message
+  console.log("Received message:", receivedData.message);
+
+  // Prepare the response
+  const responseMessage = {
+      message: 'hello'
+  };
+
+
+  
+  // Send the response
+  res.json(responseMessage);
+});
+
+// attempt 3
 // app.post('/unity-endpoint', (req, res) => {
+//   // CORS headers
 //   res.header("Access-Control-Allow-Credentials", true);
 //   res.header('Access-Control-Allow-Origin', '*');
 //   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
 //   res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
   
-//   const receivedData = req.body;
+//   // Accessing the message sent in the form data
+//   const receivedMessage = req.body.message;
 
 //   // Log the received message
-//   console.log("Received message:", receivedData.message);
+//   console.log("Received message:", receivedMessage);
 
 //   // Prepare the response
 //   const responseMessage = {
 //       message: 'hello'
 //   };
-
-
   
 //   // Send the response
 //   res.json(responseMessage);
