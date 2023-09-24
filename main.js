@@ -6,7 +6,7 @@ app.use(express.static("public"));
 // require("dotenv").config();
 
 const port = process.env.PORT || 3000;
-const server = https.createServer(app);
+const server = http.createServer(app);
 const WebSocket = require("ws");
 
 
