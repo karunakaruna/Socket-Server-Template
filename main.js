@@ -106,14 +106,34 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
+// app.post('/unity-endpoint', (req, res) => {
+//     res.header("Access-Control-Allow-Credentials", true);
+//     res.header('Access-Control-Allow-Origin', '*');
+//     res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+//     res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+//     const receivedData = req.body;
+//     const responseMessage = {
+//         message: receivedData.message ? receivedData.message.split('').reverse().join('') : 'No message received.'
+//     };
+//     res.json(responseMessage);
+// });
+
 app.post('/unity-endpoint', (req, res) => {
-    res.header("Access-Control-Allow-Credentials", true);
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
-    const receivedData = req.body;
-    const responseMessage = {
-        message: receivedData.message ? receivedData.message.split('').reverse().join('') : 'No message received.'
-    };
-    res.json(responseMessage);
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+  
+  const receivedData = req.body;
+
+  // Log the received message
+  console.log("Received message:", receivedData.message);
+
+  // Prepare the response
+  const responseMessage = {
+      message: 'hello'
+  };
+
+  // Send the response
+  res.json(responseMessage);
 });
