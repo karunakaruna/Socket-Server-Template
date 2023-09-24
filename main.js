@@ -8,13 +8,16 @@ app.use(express.static("public"));
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
+const bodyParser = require('body-parser');
+
+
 
 
 //GPT code for websockets
 
 app.use(express.static("public"));
 app.use(express.json());  // <-- Add this line to parse incoming JSON
-
+app.use(bodyParser.urlencoded({ extended: true }));
 
 //GPT code for websockets
 
@@ -108,6 +111,31 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
+app.post('/unity-endpoint', (req, res) => {
+  // CORS headers
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+  
+  // Accessing the message sent in the form data
+  const receivedMessage = req.body.message;
+
+  // Log the received message
+  console.log("Received message:", receivedMessage);
+
+  // Prepare the response
+  const responseMessage = {
+      message: 'hello'
+  };
+  
+  // Send the response
+  res.json(responseMessage);
+});
+
+
+
+// original
 // app.post('/unity-endpoint', (req, res) => {
 //     res.header("Access-Control-Allow-Credentials", true);
 //     res.header('Access-Control-Allow-Origin', '*');
@@ -120,22 +148,26 @@ app.get('/', (req, res) => {
 //     res.json(responseMessage);
 // });
 
-app.post('/unity-endpoint', (req, res) => {
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+
+// attempt 2
+// app.post('/unity-endpoint', (req, res) => {
+//   res.header("Access-Control-Allow-Credentials", true);
+//   res.header('Access-Control-Allow-Origin', '*');
+//   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+//   res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
   
-  const receivedData = req.body;
+//   const receivedData = req.body;
 
-  // Log the received message
-  console.log("Received message:", receivedData.message);
+//   // Log the received message
+//   console.log("Received message:", receivedData.message);
 
-  // Prepare the response
-  const responseMessage = {
-      message: 'hello'
-  };
+//   // Prepare the response
+//   const responseMessage = {
+//       message: 'hello'
+//   };
 
-  // Send the response
-  res.json(responseMessage);
-});
+
+  
+//   // Send the response
+//   res.json(responseMessage);
+// });
