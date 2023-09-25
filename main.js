@@ -125,6 +125,10 @@ app.post('/unity-endpoint', (req, res) => {
   
   // Accessing the message sent in the form data
   const receivedMessage = req.body.data;
+  if(receivedMessage === 'red') {
+    // Broadcast the color change to all connected WebSocket clients
+    broadcast(null, JSON.stringify({ type: 'color', value: '#ff0000' }), true);
+  }
 
   // Log the received message
   console.log("Received message:", receivedMessage);
@@ -133,12 +137,8 @@ app.post('/unity-endpoint', (req, res) => {
   const responseMessage = {
       message: 'hello'
   };
-  
-  myColor = 0x0000FF;
-
   // Send the response
   //res.send('oops');
   res.json(responseMessage);
 });
 
-var myColor = 0x0000FF;
