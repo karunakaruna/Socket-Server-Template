@@ -1,3 +1,5 @@
+
+
 const http = require("http");
 const express = require("express");
 const app = express();
@@ -5,13 +7,12 @@ const app = express();
 app.use(express.static(__dirname + "/public"));
 // require("dotenv").config();
 
+
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
 const bodyParser = require('body-parser');
 
-
-var myColor = 0xFF0000;
 
 //GPT code for websockets
 
@@ -140,3 +141,4 @@ app.post('/unity-endpoint', (req, res) => {
   res.json(responseMessage);
 });
 
+var myColor = 0x0000FF;
