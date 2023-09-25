@@ -21,6 +21,7 @@ const bodyParser = require('body-parser');
 
 app.use(express.json());  // <-- Add this line to parse incoming JSON
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public", { "extensions": ["html", "css", "js"] }));
 
 //GPT code for websockets
 

@@ -2,28 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Simple Three.js Cube Scene</title>
+    <title>Three.js GLB Model Scene</title>
     <style>
         body { margin: 0; }
     </style>
 </head>
 <body>
     <script>
-            // Setup WebSocket client to receive messages from the server
-    const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
+        // Setup WebSocket client to receive messages from the server
+        const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
 
-ws.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === 'color') {
-        // Update the cube's color
-        cube.material.color.set(message.value);
-    }
-};
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'color') {
+                // Update the cube's color
+                cube.material.color.set(message.value);
+            }
+        };
     </script>
 
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
+    <script type="module">
+        // Import the GLTFLoader from the module
+        import { GLTFLoader } from '/three/addons/loaders/GLTFLoader.js';
+
         // Set up the scene, camera, and renderer
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -32,12 +34,20 @@ ws.onmessage = (event) => {
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
         
-        // Create a cube
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial({ color: 0x000088 });
-        const cube = new THREE.Mesh(geometry, material);
-        
-        scene.add(cube);
+        // Load the GLB model
+        const loader = new GLTFLoader();
+        let model;
+
+        loader.load('test.glb', (gltf) => {
+            model = gltf.scene;
+            scene.add(model);
+
+            // Position the model in the center of the scene
+            model.position.set(0, 0, 0);
+
+            // You can scale the model if needed
+            // model.scale.set(0.1, 0.1, 0.1);
+        });
         
         // Position the camera
         camera.position.z = 5;
@@ -55,9 +65,11 @@ ws.onmessage = (event) => {
         const animate = () => {
             requestAnimationFrame(animate);
             
-            // Rotate the cube
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
+            // Rotate the model (if needed)
+            if (model) {
+                model.rotation.x += 0.01;
+                model.rotation.y += 0.01;
+            }
             
             renderer.render(scene, camera);
         };
