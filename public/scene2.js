@@ -1,10 +1,30 @@
-const scene = new THREE.Scene();
+    //websockets
+    // Setup WebSocket client to receive messages from the server      
+    const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'color') {
+            // Update the cube's color
+            cube.material.color.set(message.value);
+        }
+    };
+    
+    
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'ping') {
+            // Update the cube's color
+            console.log('ping!');
+        }
+    };
+
+    
+    
+    const scene = new THREE.Scene();
 
     // Initialize cube position, target position, and rotation
     let cubePosition = new THREE.Vector3(0, 0, 0);
     let targetPosition = new THREE.Vector3(0, 0, 0);
-
-
 
     //Camera Movement
     const maxMovement = 8;

@@ -105,9 +105,10 @@ const isJSON = (message) => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send('ping');
+        broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), true);
       }
     });
-  }, 50000);
+  }, 5000);
 };
 
 
