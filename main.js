@@ -15,7 +15,9 @@ const bodyParser = require('body-parser');
 
 //GPT code for websockets
 
-app.use(express.static("public"));
+//app.use(express.static("public"));
+app.use(express.static(__dirname + "/public"));
+
 app.use(express.json());  // <-- Add this line to parse incoming JSON
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -108,7 +110,8 @@ const isJSON = (message) => {
 
 
 app.get('/', (req, res) => {
-    res.send('Hello World! (c8=');
+    //res.send('Hello World! (c8=');
+    res.sendFile(__dirname + '/index.html');
 });
 
 app.post('/unity-endpoint', (req, res) => {
@@ -135,41 +138,3 @@ app.post('/unity-endpoint', (req, res) => {
   res.json(responseMessage);
 });
 
-// original
-// app.post('/unity-endpoint', (req, res) => {
-//     res.header("Access-Control-Allow-Credentials", true);
-//     res.header('Access-Control-Allow-Origin', '*');
-//     res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-//     res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
-//     const receivedData = req.body;
-//     const responseMessage = {
-//         message: receivedData.message ? receivedData.message.split('').reverse().join('') : 'No message received.'
-//     };
-//     res.json(responseMessage);
-// });
-
-
-// attempt 2
-// app.post('/unity-endpoint', (req, res) => {
-//   res.header("Access-Control-Allow-Credentials", true);
-//   res.header('Access-Control-Allow-Origin', '*');
-//   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-//   res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
-  
-//   const receivedData = req.body;
-
-//   // Log the received message
-//   console.log("Received message:", receivedData.message);
-
-//   // Prepare the response
-//   const responseMessage = {
-//       message: 'hello'
-//   };
-
-
-  
-//   // Send the response
-//   res.json(responseMessage);
-// });
-
-// attempt 3
