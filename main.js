@@ -41,46 +41,53 @@ wss.on("connection", function (ws, req) {
   console.log("Connection Opened");
   console.log("Client size: ", wss.clients.size);
 
+  // Broadcast the new user count
+  broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+
   if (wss.clients.size === 1) {
-    console.log("first connection. starting keepalive");
-    keepServerAlive();
+      console.log("first connection. starting keepalive");
+      keepServerAlive();
   }
 
   ws.on("message", (data) => {
-    if (isJSON(data)) {
-        const currData = JSON.parse(data);
-        
-        if(currData.type === 'ping') {
-            // Handle the server heartbeat ping
-            console.log('Received a server heartbeat ping');
-        } else if(currData.type === 'loc') {
-            // Log the received location
-            console.log('Received a ping location:', currData.position);
+      if (isJSON(data)) {
+          const currData = JSON.parse(data);
+          
+          if(currData.type === 'ping') {
+              // Handle the server heartbeat ping
+              console.log('Received a server heartbeat ping');
+          } else if(currData.type === 'loc') {
+              // Log the received location
+              console.log('Received a ping location:', currData.position);
+          }
+          
+          // Broadcast the data to other clients
+          broadcast(ws, currData, false);
+          
+      } else if(typeof currData === 'string') {
+        if(currData === 'pong') {
+          console.log('keepAlive');
+          return;
         }
-        
-        // Broadcast the data to other clients
         broadcast(ws, currData, false);
-        
-    } else if(typeof currData === 'string') {
-      if(currData === 'pong') {
-        console.log('keepAlive');
-        return;
+      } else {
+        console.error('malformed message', data);
       }
-      broadcast(ws, currData, false);
-    } else {
-      console.error('malformed message', data);
-    }
-});
+  });
 
   ws.on("close", (data) => {
-    console.log("closing connection");
+      console.log("closing connection");
 
-    if (wss.clients.size === 0) {
-      console.log("last client disconnected, stopping keepAlive interval");
-      clearInterval(keepAliveId);
-    }
+      // Broadcast the updated user count
+      broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+
+      if (wss.clients.size === 0) {
+          console.log("last client disconnected, stopping keepAlive interval");
+          clearInterval(keepAliveId);
+      }
   });
 });
+
 
 // Implement broadcast function because of ws doesn't have it
 const broadcast = (ws, message, includeSelf) => {
