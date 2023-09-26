@@ -2,6 +2,7 @@
 
 const http = require("http");
 const express = require("express");
+const cors = require('cors');
 const app = express();
 
 app.use(express.static(__dirname + "/public"));
@@ -12,7 +13,12 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
 const bodyParser = require('body-parser');
-
+//cors
+const corsOptions = {
+  origin: 'https://monaverse.com',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  optionsSuccessStatus: 204, // Some legacy browsers (IE11) choke on a 204 response.
+};
 
 //GPT code for websockets
 
@@ -22,9 +28,13 @@ const bodyParser = require('body-parser');
 app.use(express.json());  // <-- Add this line to parse incoming JSON
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public", { "extensions": ["html", "css", "js"] }));
+//cors
+app.use(cors(corsOptions));
+app.options('/unity-endpoint', cors(corsOptions));
+
+
 
 //GPT code for websockets
-
 let keepAliveId;
 
 const wss =
