@@ -48,8 +48,19 @@ wss.on("connection", function (ws, req) {
 
   ws.on("message", (data) => {
     if (isJSON(data)) {
-      const currData = JSON.parse(data);
-      broadcast(ws, currData, false);
+        const currData = JSON.parse(data);
+        
+        if(currData.type === 'ping') {
+            // Handle the server heartbeat ping
+            console.log('Received a server heartbeat ping');
+        } else if(currData.type === 'loc') {
+            // Log the received location
+            console.log('Received a ping location:', currData.position);
+        }
+        
+        // Broadcast the data to other clients
+        broadcast(ws, currData, false);
+        
     } else if(typeof currData === 'string') {
       if(currData === 'pong') {
         console.log('keepAlive');
@@ -59,7 +70,7 @@ wss.on("connection", function (ws, req) {
     } else {
       console.error('malformed message', data);
     }
-  });
+});
 
   ws.on("close", (data) => {
     console.log("closing connection");

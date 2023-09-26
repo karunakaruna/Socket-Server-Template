@@ -9,17 +9,7 @@
         } else if (message.type === 'ping') {
             // Process ping
             console.log('ping!');
-        } else if (message.type === 'loc') {
-        const receivedPosition = new THREE.Vector3(
-            message.position.x,
-            message.position.y,
-            message.position.z,
-        
-        );
-        console.log('hi!');
-        // Call your function to spawn and animate a ping instance at this position
-        spawnPingAtPosition(receivedPosition);
-    }
+        }
     };
     
 
@@ -225,22 +215,47 @@
     });
 
 
-    function spawnPingAtPosition(position) {
+// Event Listener For Clicks!
+window.addEventListener('click', (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(gltfScene.children, true);
+
+    for (let i = 0; i < intersects.length; i++) {
+        const userData = intersects[i].object.userData;
+        if (userData && userData.URL) {
+            window.open(userData.URL, "_blank");  // Open URL in a new tab
+            return;
+        }
+    }
+
+    if (intersects.length > 0) {
+        const intersection = intersects[0];
+
+        // Play spatial audio at the intersection point
+        playSpatialAudio(audioBuffer, intersection.point);
+
         const pingInstance = pingModel.clone();
-        pingInstance.position.copy(position).add(new THREE.Vector3(0, 1, 0));
+        pingInstance.position.copy(intersection.point).add(new THREE.Vector3(0, 1, 0));
         pingInstance.animations = pingModel.animations;
         pingInstance.visible = true;
         scene.add(pingInstance);
-    
-        let mixer = new THREE.AnimationMixer(pingInstance);
+
+        //console.log(pingInstance);
+        // Play the animation
+        let mixer;
+        mixer = new THREE.AnimationMixer(pingInstance);
         activeMixers.push(mixer);
         const clips = pingInstance.animations; 
-        const clip = THREE.AnimationClip.findByName(clips, 'CircleAction');
-    
+        const clip = THREE.AnimationClip.findByName(clips, 'CircleAction'); // Fetch the first animation
+        console.log(pingModel.animations);
         if (clip) {
             const action = mixer.clipAction(clip);
             action.play();
-    
+        
+            // Set a timer to remove the instance after animation completes
             setTimeout(() => {
                 scene.remove(pingInstance);
                 mixer.stopAllAction();
@@ -253,46 +268,9 @@
         } else {
             console.error("Animation clip not found");
         }
+         // Duration in milliseconds
     }
-    
-    window.addEventListener('click', (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(gltfScene.children, true);
-    
-        for (let i = 0; i < intersects.length; i++) {
-            const userData = intersects[i].object.userData;
-            if (userData && userData.URL) {
-                window.open(userData.URL, "_blank");
-                return;
-            }
-        }
-    
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-    
-            // Play spatial audio at the intersection point
-            playSpatialAudio(audioBuffer, intersection.point);
-    
-            // Spawn the ping locally
-            spawnPingAtPosition(intersection.point);
-    
-            // Send the position data to WebSocket server
-            const payload = {
-                type: 'loc',
-                position: {
-                    x: intersection.point.x,
-                    y: intersection.point.y,
-                    z: intersection.point.z
-                }
-            };
-    
-            ws.send(JSON.stringify(payload));
-        }
-    });
-    
+});
 
 
     const activeMixers = [];
@@ -321,6 +299,9 @@
             renderer.render(scene, camera);
 
 
+            if (pingmixer) {
+                pingmixer.update(0.01); // Update the animation mixer
+            }
         };
 
         animate();
