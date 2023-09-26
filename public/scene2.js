@@ -1,5 +1,6 @@
     //websockets
     // Setup WebSocket client to receive messages from the server      
+    let loadedGLTF; 
     const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
     ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
@@ -25,7 +26,7 @@
             // Process beacon message
             const beaconURL = message.url;
             // Now, iterate through your gltf.scene objects
-            gltf.scene.traverse((object) => {
+            loadedGLTF.scene.traverse((object) => {
                 if (object.userData && object.userData.url === beaconURL) {
                     // Run the "spawn ping" at this object's position
                     spawnPingAtPosition(object.position);
@@ -143,6 +144,7 @@
     let gltfScene; 
     const loader = new THREE.GLTFLoader();
     loader.load('grid6.glb', function(gltf) {
+        loadedGLTF = gltf; // Assign the loaded gltf model
         gltfScene = gltf.scene;  // Store the scene
         scene.add(gltfScene);
     }, undefined, function(error) {
