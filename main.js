@@ -108,7 +108,7 @@ const isJSON = (message) => {
         broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), true);
       }
     });
-  }, 5000);
+  }, 50000);
 };
 
 

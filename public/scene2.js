@@ -18,6 +18,37 @@
         }
     };
 
+
+    //Audio Stuff!
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let audioBuffer; // Store the audio buffer globally
+    
+    // Load the audio file and store it in the audioBuffer
+    const audioFile = 'multichime2.mp3';
+    fetch(audioFile)
+      .then(response => response.arrayBuffer())
+      .then(data => audioContext.decodeAudioData(data))
+      .then(buffer => {
+        audioBuffer = buffer; // Store the audio buffer
+      })
+      .catch(error => console.error('Error loading audio:', error));
+    
+    // Create a function to play spatial audio
+    function playSpatialAudio(buffer, position) {
+      const source = audioContext.createBufferSource();
+      const panner = audioContext.createPanner();
+    
+      source.buffer = buffer;
+      source.connect(panner);
+    
+      panner.setPosition(position.x*-1, position.y, position.z);
+      panner.connect(audioContext.destination);
+    
+      source.start();
+      source.stop(audioContext.currentTime + 2);
+    }
+
+
     
     
     const scene = new THREE.Scene();
@@ -57,7 +88,10 @@
     let cameraFOV = 45;
     let targetFOV = 45; // Initial target FOV
     const fovLerpSpeed = 0.1; // Adjust this for zoom speed
+    const customUpVector = new THREE.Vector3(0, 0, 1); // Example: Use the default "up" direction
 
+    // Set the camera's "up" vector
+    camera.up.copy(customUpVector);
 
     //Setup Basis Geometry (used for camera testing)
     const geometry = new THREE.BoxGeometry();
@@ -71,7 +105,7 @@
     cube2.position.set(0,0,5)
     cube.add(cube2);
     camera.position.set(0, 5, -10);
-    const gridGeometry = new THREE.PlaneGeometry(8, 8, 8, 8);
+    const gridGeometry = new THREE.PlaneGeometry(88, 88, 88, 88);
     const gridMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true });
     const grid = new THREE.Mesh(gridGeometry, gridMaterial);
     grid.rotation.x = Math.PI / 2;
@@ -79,16 +113,49 @@
     scene.add(cube);
     cube.add(camera);
 
+    //Lights
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Use a lower intensity value like 0.2 for a dim light
+    directionalLight.position.set(1, 1, 1); // Set the light's position
+    scene.add(directionalLight); // Add the light to your scene
+
+
+
 
     // GLTF loader
     let gltfScene; 
     const loader = new THREE.GLTFLoader();
-    loader.load('grid5.glb', function(gltf) {
+    loader.load('grid6.glb', function(gltf) {
         gltfScene = gltf.scene;  // Store the scene
         scene.add(gltfScene);
     }, undefined, function(error) {
         console.error('An error occurred loading the GLTF:', error);
     });
+
+
+    //ping loader
+    
+    const pingloader = new THREE.GLTFLoader();
+    let pingModel; // Store the loaded model
+    pingloader.load('ping.glb', (gltf) => {
+        pingModel = gltf.scene; // Store the loaded model
+        pingModel.animations = gltf.animations; // Store animations
+    
+        // You can scale and position the model as needed
+        pingModel.scale.set(1, 1, 1);
+        pingModel.position.set(0, 1, 0);
+    
+        // Add the model to the scene but initially hide it
+        pingModel.visible = true;
+        scene.add(pingModel);
+    }, undefined, (error) => {
+        console.error('An error occurred loading the GLB:', error);
+    });
+    console.log(pingModel); // Check if 'Animation' exists in the console
+
+
+
+
+
 
 
     //Mouse movement listener.
@@ -114,6 +181,8 @@
             div.style.left = `${event.clientX}px`;
             div.style.top = `${event.clientY + index * 25}px`; // Stack the divs vertically
         });
+
+
     // Update Text Overlay for Objects Intersected
     const intersects = raycaster.intersectObjects(gltfScene.children, true);
                 for (let i = 0; i < intersects.length; i++) {
@@ -137,22 +206,51 @@
     });
 
 
-    // Event Listener For Clicks!
-    window.addEventListener('click', (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+// Event Listener For Clicks!
+window.addEventListener('click', (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(gltfScene.children, true);
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(gltfScene.children, true);
 
-        for (let i = 0; i < intersects.length; i++) {
-            const userData = intersects[i].object.userData;
-            if (userData && userData.URL) {
-                window.open(userData.URL, "_blank");  // Open URL in a new tab
-                return;
-            }
+    for (let i = 0; i < intersects.length; i++) {
+        const userData = intersects[i].object.userData;
+        if (userData && userData.URL) {
+            window.open(userData.URL, "_blank");  // Open URL in a new tab
+            return;
         }
-    });
+    }
+
+    if (intersects.length > 0) {
+        const intersection = intersects[0];
+
+        // Play spatial audio at the intersection point
+        playSpatialAudio(audioBuffer, intersection.point);
+
+        const pingInstance = pingModel.clone();
+        pingInstance.visible = true;
+        scene.add(pingInstance);
+        console.log(pingInstance);
+        // Play the animation
+        const mixer = new THREE.AnimationMixer(pingInstance);
+        const clip = THREE.AnimationClip.findByName(pingInstance.animations, 'Animation');
+
+        if (clip) {
+          const action = mixer.clipAction(clip);
+          action.play();
+        }
+
+        // Set a timer to remove the instance after animation completes
+        setTimeout(() => {
+            scene.remove(pingInstance);
+        }, (clip.duration * 1000)); // Duration in milliseconds
+    }
+});
+
+
+
+
     //Animation Update Loop
         const animate = () => {
             requestAnimationFrame(animate);
@@ -169,7 +267,7 @@
             cube.rotation.y = cubeRotationY;
 
             // Update the camera position relative to the cube
-            camera.position.copy(cube.position).add(new THREE.Vector3(0, 10, -10));
+            camera.position.copy(cube.position).add(new THREE.Vector3(0, 10, 0));
             
             //camera.rotation.copy(cube.rotation)
             camera.lookAt(cube.position);
