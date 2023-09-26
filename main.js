@@ -172,3 +172,29 @@ app.post('/unity-endpoint', (req, res) => {
   res.json(responseMessage);
 });
 
+
+
+app.post('/beacon-endpoint', (req, res) => {
+  // CORS headers
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+
+  const beaconURL = req.body.beacon;
+  if (beaconURL) {
+    // Broadcast the beacon URL to all connected WebSocket clients
+    broadcast(null, JSON.stringify({ type: 'beacon', url: beaconURL }), true);
+  }
+
+  // Log the received beacon URL
+  console.log("Received beacon URL:", beaconURL);
+
+  // Prepare the response
+  const responseMessage = {
+      message: 'Beacon URL received!'
+  };
+
+  // Send the response
+  res.json(responseMessage);
+});
