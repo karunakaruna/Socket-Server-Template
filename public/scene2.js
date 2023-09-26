@@ -33,7 +33,7 @@
                 if (object.userData && object.userData.URL === beaconURL) {
                     // Run the "spawn ping" at this object's position
                     console.log(object.userData.URL);
-                    spawnPingAtPosition(object.position);
+                    spawnBeaconLightAtPosition(object.position);
                 }
             });
         }
@@ -41,7 +41,7 @@
     
 
 
-    //Audio Stuff!
+// Audio //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     let audioBuffer; // Store the audio buffer globally
     
@@ -55,6 +55,9 @@
       })
       .catch(error => console.error('Error loading audio:', error));
     
+
+
+      
     // Create a function to play spatial audio
     function playSpatialAudio(buffer, position) {
       const source = audioContext.createBufferSource();
@@ -144,7 +147,9 @@
 
 
 
-    // GLTF loader
+// GLTF loaders /////////////////////////////////////////////////////////////////////////////////////////////
+
+// Map Scene ////////////////////////////
     let gltfScene; 
     const loader = new THREE.GLTFLoader();
     loader.load('grid6.glb', function(gltf) {
@@ -156,47 +161,72 @@
     });
 
 
-    //ping loader
-    
-    const pingloader = new THREE.GLTFLoader();
-    let pingModel; // Store the loaded model
-    pingloader.load('ping.glb', (gltf) => {
-        pingModel = gltf.scene; // Store the loaded model
-        pingModel.animations = gltf.animations; // Store animations
-    
-        // You can scale and position the model as needed
-        pingModel.scale.set(2, 2, 2);
-        pingModel.position.set(0, 1, 0);
-        const materialred = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // Create a basic material with a red color
-        pingModel.traverse((child) => {
-            if (child.isMesh) {
-                child.material = materialred;
-            }
-        });
-        // Add the model to the scene but initially hide it
-        pingModel.visible = false;
+// Ping Animation ////////////////////////////
+        const pingloader = new THREE.GLTFLoader();
+        let pingModel; // Store the loaded model
+        pingloader.load('ping.glb', (gltf) => {
+            pingModel = gltf.scene; // Store the loaded model
+            pingModel.animations = gltf.animations; // Store animations
         
-        scene.add(pingModel);
-        //console.log(pingModel); // Check if 'Animation' exists in the console
-         // Check if 'Animation' exists in the console
-        pingmixer = new THREE.AnimationMixer(pingModel);
-        const pingclips = pingModel.animations;
-        pingclip = THREE.AnimationClip.findByName(pingclips, 'CircleAction'); // Fetch the first animation
-        const pingaction = pingmixer.clipAction(pingclip);
-        pingaction.play();
+            // You can scale and position the model as needed
+            pingModel.scale.set(2, 2, 2);
+            pingModel.position.set(0, 1, 0);
+            const materialred = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // Create a basic material with a red color
+            pingModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = materialred;
+                }
+            });
+            // Add the model to the scene but initially hide it
+            pingModel.visible = false;
+            
+            scene.add(pingModel);
+            //console.log(pingModel); // Check if 'Animation' exists in the console
+            // Check if 'Animation' exists in the console
+            pingmixer = new THREE.AnimationMixer(pingModel);
+            const pingclips = pingModel.animations;
+            pingclip = THREE.AnimationClip.findByName(pingclips, 'CircleAction'); // Fetch the first animation
+            const pingaction = pingmixer.clipAction(pingclip);
+            pingaction.play();
 
-    }, undefined, (error) => {
-        console.error('An error occurred loading the GLB:', error);
-    });
+        }, undefined, (error) => {
+            console.error('An error occurred loading the GLB:', error);
+        });
  
+// Beaconlight Loader //////////////////////////
+        const beaconLightLoader = new THREE.GLTFLoader();
+        let beaconLightModel; // Store the loaded beacon light model
+        beaconLightLoader.load('beaconlight.glb', (gltf) => {
+            beaconLightModel = gltf.scene; // Store the loaded model
+            beaconLightModel.animations = gltf.animations; // Store animations
+
+            beaconLightModel.scale.set(2, 2, 2);
+            beaconLightModel.position.set(0, 1, 0);
+            const materialRed = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+            beaconLightModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = materialRed;
+                }
+            });
+            
+            beaconLightModel.visible = false;
+            scene.add(beaconLightModel);
+            
+            // If you end up adding animations for the beacon light later, you can initialize its animation mixer here:
+            // beaconLightMixer = new THREE.AnimationMixer(beaconLightModel);
+
+        }, undefined, (error) => {
+            console.error('An error occurred loading the beacon light GLB:', error);
+        });
 
 
 
 
 
 
+// LISTENERS ///////////////////////////////////////////////////////////////
 
-    //Mouse movement listener.
+    // Mouse movement listener. /////////
     window.addEventListener('mousemove', (event) => {
         const mouseX = event.clientX - window.innerWidth / 2;
         const mouseY = event.clientY - window.innerHeight / 2;
@@ -244,39 +274,7 @@
     });
 
 
-    function spawnPingAtPosition(position) {
-        const pingInstance = pingModel.clone();
-        pingInstance.position.copy(position).add(new THREE.Vector3(0, 1, 0));
-        pingInstance.animations = pingModel.animations;
-        pingInstance.visible = true;
-        scene.add(pingInstance);
-        
-        // Play spatial audio at the given position
-        playSpatialAudio(audioBuffer, position);
-    
-        let mixer = new THREE.AnimationMixer(pingInstance);
-        activeMixers.push(mixer);
-        const clips = pingInstance.animations; 
-        const clip = THREE.AnimationClip.findByName(clips, 'CircleAction');
-        
-        if (clip) {
-            const action = mixer.clipAction(clip);
-            action.play();
-        
-            setTimeout(() => {
-                scene.remove(pingInstance);
-                mixer.stopAllAction();
-                const mixerIndex = activeMixers.indexOf(mixer);
-                if (mixerIndex !== -1) {
-                    activeMixers.splice(mixerIndex, 1);
-                }
-            }, (clip.duration * 1000));
-            
-        } else {
-            console.error("Animation clip not found");
-        }
-    }
-    
+// CLICK <<<<<<<<<<<<<    
     window.addEventListener('click', (event) => {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -311,6 +309,67 @@
             ws.send(JSON.stringify(payload));
         }
     });
+
+
+
+// SPAWNERS /////////////////////////////////////
+
+// PING <<<<<<<<<<<<<<<<<
+    function spawnPingAtPosition(position) {
+        const pingInstance = pingModel.clone();
+        pingInstance.position.copy(position).add(new THREE.Vector3(0, 1, 0));
+        pingInstance.animations = pingModel.animations;
+        pingInstance.visible = true;
+        scene.add(pingInstance);
+        
+        // Play spatial audio at the given position
+        playSpatialAudio(audioBuffer, position);
+    
+        let mixer = new THREE.AnimationMixer(pingInstance);
+        activeMixers.push(mixer);
+        const clips = pingInstance.animations; 
+        const clip = THREE.AnimationClip.findByName(clips, 'CircleAction');
+        
+        if (clip) {
+            const action = mixer.clipAction(clip);
+            action.play();
+        
+            setTimeout(() => {
+                scene.remove(pingInstance);
+                mixer.stopAllAction();
+                const mixerIndex = activeMixers.indexOf(mixer);
+                if (mixerIndex !== -1) {
+                    activeMixers.splice(mixerIndex, 1);
+                }
+            }, (clip.duration * 1000));
+            
+        } else {
+            console.error("Animation clip not found");
+        }
+    }
+    
+// BEACONLIGHT <<<<<<<<<<<<
+    function spawnBeaconLightAtPosition(position) {
+        const beaconLightInstance = beaconLightModel.clone();
+        beaconLightInstance.position.copy(position).add(new THREE.Vector3(0, 0, 0));
+        beaconLightInstance.visible = true;
+        scene.add(beaconLightInstance);
+        
+        // Play spatial audio at the given position
+        playSpatialAudio(audioBuffer, position);
+        
+        // Since there's currently no animation for the beacon light, we'll simply make it disappear after 5 seconds:
+        setTimeout(() => {
+            scene.remove(beaconLightInstance);
+        }, 10000);
+    }
+
+
+
+
+
+
+
     
     
 
