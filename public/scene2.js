@@ -119,6 +119,7 @@
     const grid = new THREE.Mesh(gridGeometry, gridMaterial);
     grid.rotation.x = Math.PI / 2;
     scene.add(grid);
+    cube.visible = false;
     scene.add(cube);
     cube.add(camera);
 
