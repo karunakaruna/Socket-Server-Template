@@ -10,20 +10,28 @@
             // Process ping
             console.log('ping!');
         } else if (message.type === 'loc') {
-        const receivedPosition = new THREE.Vector3(
-            message.position.x,
-            message.position.y,
-            message.position.z,
-        
-        );
-        console.log('hi!');
-        // Call your function to spawn and animate a ping instance at this position
-        spawnPingAtPosition(receivedPosition);
-    } else if (message.type === 'userCount') {
-        // Update the user count on the page
-        document.getElementById('userCount').textContent = message.value;
-    }
-    
+            const receivedPosition = new THREE.Vector3(
+                message.position.x,
+                message.position.y,
+                message.position.z,
+            );
+            console.log('hi!');
+            // Call your function to spawn and animate a ping instance at this position
+            spawnPingAtPosition(receivedPosition);
+        } else if (message.type === 'userCount') {
+            // Update the user count on the page
+            document.getElementById('userCount').textContent = message.value;
+        } else if (message.type === 'beacon') {
+            // Process beacon message
+            const beaconURL = message.url;
+            // Now, iterate through your gltf.scene objects
+            gltf.scene.traverse((object) => {
+                if (object.userData && object.userData.url === beaconURL) {
+                    // Run the "spawn ping" at this object's position
+                    spawnPingAtPosition(object.position);
+                }
+            });
+        }
     };
     
 
