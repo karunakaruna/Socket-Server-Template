@@ -25,10 +25,14 @@
         } else if (message.type === 'beacon') {
             // Process beacon message
             const beaconURL = message.url;
+            console.log(beaconURL);
             // Now, iterate through your gltf.scene objects
             loadedGLTF.scene.traverse((object) => {
+                console.log(object.userData.URL);
+                console.log(beaconURL);
                 if (object.userData && object.userData.URL === beaconURL) {
                     // Run the "spawn ping" at this object's position
+                    console.log(object.userData.URL);
                     spawnPingAtPosition(object.position);
                 }
             });
