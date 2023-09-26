@@ -27,7 +27,7 @@
             const beaconURL = message.url;
             // Now, iterate through your gltf.scene objects
             loadedGLTF.scene.traverse((object) => {
-                if (object.userData && object.userData.url === beaconURL) {
+                if (object.userData && object.userData.URL === beaconURL) {
                     // Run the "spawn ping" at this object's position
                     spawnPingAtPosition(object.position);
                 }
