@@ -235,16 +235,19 @@
         pingInstance.animations = pingModel.animations;
         pingInstance.visible = true;
         scene.add(pingInstance);
+        
+        // Play spatial audio at the given position
+        playSpatialAudio(audioBuffer, position);
     
         let mixer = new THREE.AnimationMixer(pingInstance);
         activeMixers.push(mixer);
         const clips = pingInstance.animations; 
         const clip = THREE.AnimationClip.findByName(clips, 'CircleAction');
-    
+        
         if (clip) {
             const action = mixer.clipAction(clip);
             action.play();
-    
+        
             setTimeout(() => {
                 scene.remove(pingInstance);
                 mixer.stopAllAction();
@@ -265,7 +268,7 @@
     
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(gltfScene.children, true);
-    
+        
         for (let i = 0; i < intersects.length; i++) {
             const userData = intersects[i].object.userData;
             if (userData && userData.URL) {
@@ -276,13 +279,10 @@
     
         if (intersects.length > 0) {
             const intersection = intersects[0];
-    
-            // Play spatial audio at the intersection point
-            playSpatialAudio(audioBuffer, intersection.point);
-    
-            // Spawn the ping locally
+        
+            // Spawn the ping locally and play the audio
             spawnPingAtPosition(intersection.point);
-    
+        
             // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
@@ -292,10 +292,11 @@
                     z: intersection.point.z
                 }
             };
-    
+        
             ws.send(JSON.stringify(payload));
         }
     });
+    
     
 
 
