@@ -19,7 +19,11 @@
         console.log('hi!');
         // Call your function to spawn and animate a ping instance at this position
         spawnPingAtPosition(receivedPosition);
+    } else if (message.type === 'userCount') {
+        // Update the user count on the page
+        document.getElementById('userCount').textContent = message.value;
     }
+    
     };
     
 
