@@ -170,13 +170,14 @@ function onUserPositionUpdate(userID, position) {
 
 // When a user disconnects:
 function onUserDisconnect(userID) {
-    delete users[userID];
-    // Inform other users about the disconnect
-    broadcast({
-        type: 'userDisconnected',
-        userID: userID
-    });
+  delete users[userID];
+  // Inform other users about the disconnect
+  broadcast(null, JSON.stringify({
+      type: 'userDisconnected',
+      userID: userID
+  }), true);
 }
+
 
 function sendToUser(userID, message) {
   wss.clients.forEach(client => {
