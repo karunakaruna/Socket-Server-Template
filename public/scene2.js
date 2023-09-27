@@ -49,26 +49,26 @@ ws.onmessage = (event) => {
             message.position.z
         );
         spawnPingAtPosition(receivedPosition);
-        const userPos = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+    
+        const userPos = new THREE.Vector3(message.position.x, message.position.y, message.position.z);
         
-        if (!users[data.userID]) {
+        if (!users[message.userID]) {
             // New user, create a sphere for them
             const geometry = new THREE.SphereGeometry(0.5, 32, 32);  // Half-unit diameter sphere
             const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
             const sphere = new THREE.Mesh(geometry, material);
-
+    
             sphere.position.copy(userPos);
             scene.add(sphere);
-
-            users[data.userID] = {
+    
+            users[message.userID] = {
                 sphere: sphere,
                 targetPosition: userPos
             };
         } else {
             // Existing user, update their position
-            users[data.userID].targetPosition.copy(userPos);
+            users[message.userID].targetPosition.copy(userPos);
         }
-
     } else if (message.type === 'userCount') {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
@@ -294,14 +294,15 @@ function showModal(objectName, url, intersectionPoint) {
 
     //Setup Basis Geometry (used for camera testing)
     const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
     const cube = new THREE.Mesh(geometry, material);
     const geometry2 = new THREE.BoxGeometry();
     const material2 = new THREE.MeshBasicMaterial({ color: 0x0000ff });
     const cube2 = new THREE.Mesh(geometry2, material2);
     cube.name = "cube"; 
-    cube2.scale.set(.1,.1,.1)
-    cube2.position.set(0,0,0)
+    cube.scale.set(1,1,1);
+    cube2.scale.set(.1,.1,.1);
+    cube2.position.set(0,0,0);
     cube.add(cube2);
 
     camera.position.set(0, 15, 0);
@@ -311,25 +312,21 @@ function showModal(objectName, url, intersectionPoint) {
     const grid = new THREE.Mesh(gridGeometry, gridMaterial);
     grid.rotation.x = Math.PI / 2;
     scene.add(grid);
-    cube.visible = false;
+    cube.visible = true;
     scene.add(cube);
     cube.add(camera);
 
 
 
 //  Jiggle Sphere
-    const userGeometry = new THREE.SphereGeometry(0.5, 32, 32); 
+    const userGeometry = new THREE.SphereGeometry(0.1, 32, 32); 
     const userMaterial = new THREE.MeshBasicMaterial({color: 0x00FF00});  // Green
     const userSphere = new THREE.Mesh(userGeometry, userMaterial);
     userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
 
     cube.add(userSphere);  // Attach to the cube
 
-    // In your animate loop:
-    const jiggleAmount = 0.1;
-    userSphere.position.x += (Math.random() - 0.5) * jiggleAmount;
-    userSphere.position.y += (Math.random() - 0.5) * jiggleAmount;
-    userSphere.position.z += (Math.random() - 0.5) * jiggleAmount;
+
 
 
 
@@ -672,6 +669,9 @@ const animate = () => {
         const user = users[userID];
         user.sphere.position.lerp(user.targetPosition, 0.05);
     }
+
+
+
 
 
     renderer.render(scene, camera);
