@@ -1,24 +1,20 @@
-// Function to append logs
-function addLog(text) {
+// Function to add new log
+function addLog(message) {
     const logList = document.getElementById('log-list');
-    const newLog = document.createElement('li');
+    
+    // Create new log item
+    const newItem = document.createElement('li');
     
     // Convert URLs to clickable links
-    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-
-    newLog.innerHTML = text;
+    message = message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
     
-    // Append new log to the end of the list
-    logList.appendChild(newLog);
+    newItem.innerHTML = new Date().toLocaleTimeString() + ": " + message;
+
+    // Append new item to the end of the list
+    logList.appendChild(newItem);
 
     // Start fading out after appending
     setTimeout(() => {
-        newLog.classList.add('fade');
+        newItem.classList.add('fade');
     }, 1000);  // start the fade out 1 second after appending
 }
-
-
-// Simulate beacon signal received every 5 seconds
-setInterval(function() {
-    addLog('Received beacon signal');
-}, 5000);

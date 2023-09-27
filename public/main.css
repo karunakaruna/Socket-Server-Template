@@ -28,7 +28,7 @@ body {
     left: 0;
     top: 0;
     bottom: 0;
-    width: 300px;
+    width: 400px;
     overflow: auto;
     /*border-right: 1px solid #333; */
     padding: 10px;
@@ -37,6 +37,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
+    user-select: none;
 }
 
 #log-list {
@@ -44,6 +45,7 @@ body {
     padding: 0;
     margin: 0;
     text-shadow: 0px 0px 5px #000;  /* shadow for better readability */
+    user-select: none;
 }
 
 @keyframes fadeOut {
@@ -53,5 +55,5 @@ body {
 }
 
 .fade {
-  animation: fadeOut 120s forwards;
+  animation: fadeOut 333s forwards;
 }

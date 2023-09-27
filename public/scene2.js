@@ -38,7 +38,7 @@
                 if (object.userData && object.userData.URL === beaconURL) {
                     // Run the "spawn ping" at this object's position
                     spawnBeaconLightAtPosition(object.position);
-                    addLog(`Beacon ping at ${object.userData.URL}`);
+                    addLog(`Beacon activated at ${object.userData.URL}`);
                 }
             });
         }
