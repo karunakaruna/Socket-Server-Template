@@ -300,7 +300,7 @@ function showModal(objectName, url, intersectionPoint) {
 
     //Setup Basis Geometry (used for camera testing)
     const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+    const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0 });
     const cube = new THREE.Mesh(geometry, material);
     const geometry2 = new THREE.BoxGeometry();
     const material2 = new THREE.MeshBasicMaterial({ color: 0x0000ff });
@@ -326,7 +326,7 @@ function showModal(objectName, url, intersectionPoint) {
 
 //  Jiggle Sphere
     const userGeometry = new THREE.SphereGeometry(0.1, 32, 32); 
-    const userMaterial = new THREE.MeshBasicMaterial({color: 0x00FF00});  // Green
+    const userMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});  // WHITE
     const userSphere = new THREE.Mesh(userGeometry, userMaterial);
     userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
 
