@@ -51,7 +51,19 @@
         'beep': '528863__eponn__beep-3.mp3',
         // ...add other sounds as needed
     };
-    
+    const listener = new THREE.AudioListener();
+    const loop = new THREE.PositionalAudio( listener );
+
+// load a sound and set it as the Audio object's buffer
+    const loopLoader = new THREE.AudioLoader();
+    loopLoader.load( 'Precession - Move 37.mp3', function( buffer ) {
+        loop.setBuffer( buffer );
+        loop.setLoop(true);
+        loop.setVolume(0.5);
+        loop.play();
+    });
+
+
     let audioBuffers = {};
     
     for (let soundName in audioFiles) {
@@ -70,30 +82,27 @@
             console.error(`Audio buffer for "${soundName}" not found.`);
             return;
         }
-    
-        const source = audioContext.createBufferSource();
-        const panner = audioContext.createPanner();
-        const gainNode = audioContext.createGain();
-    
-        // Set panner properties
-        panner.distanceModel = 'inverse';
-        panner.refDistance = 1;
-        panner.maxDistance = 1000;
-        panner.rolloffFactor = 1;
-    
-        source.buffer = buffer;
-        source.connect(panner);
-    
-        panner.setPosition(position.x, position.y, position.z);
-        panner.connect(gainNode);
-    
-        gainNode.gain.value = volume;
-        gainNode.connect(audioContext.destination);
-    
-        source.start();
-        source.stop(audioContext.currentTime + buffer.duration);
-    }
         
+        const sound = new THREE.PositionalAudio(listener);
+        
+        sound.setBuffer(buffer);
+        sound.setRefDistance(1);
+        sound.setRolloffFactor(1);
+        sound.setDistanceModel('exponential');
+        sound.setMaxDistance(1000);
+        sound.setVolume(volume);
+        sound.position.copy(position);
+        scene.add(sound);
+        
+        sound.play();
+    
+        sound.onEnded = function() {
+            scene.remove(sound);
+        };
+    }
+    
+
+    
     const scene = new THREE.Scene();
 
     // Initialize cube position, target position, and rotation
@@ -114,9 +123,8 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
-    const listener = new THREE.AudioListener();
-    //camera.add(listener).add(new THREE.Vector3(0, 10, 0));
-    
+    camera.add(listener);
+
     // Scale the three.js scene when you change the window size.
     function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -134,10 +142,10 @@
     let cameraFOV = 45;
     let targetFOV = 45; // Initial target FOV
     const fovLerpSpeed = 0.1; // Adjust this for zoom speed
-    //const customUpVector = new THREE.Vector3(0, 0, 1); // Example: Use the default "up" direction
+    const customUpVector = new THREE.Vector3(0, 0, 1); // Example: Use the default "up" direction
 
     // Set the camera's "up" vector
-    //camera.up.copy(customUpVector);
+    camera.up.copy(customUpVector);
 
     //Setup Basis Geometry (used for camera testing)
     const geometry = new THREE.BoxGeometry();
@@ -206,10 +214,7 @@
             });
             // Add the model to the scene but initially hide it
             pingModel.visible = false;
-            
             scene.add(pingModel);
-            //console.log(pingModel); // Check if 'Animation' exists in the console
-            // Check if 'Animation' exists in the console
             pingmixer = new THREE.AnimationMixer(pingModel);
             const pingclips = pingModel.animations;
             pingclip = THREE.AnimationClip.findByName(pingclips, 'CircleAction'); // Fetch the first animation
@@ -255,7 +260,6 @@
         const mouseX = event.clientX - window.innerWidth / 2;
         const mouseY = event.clientY - window.innerHeight / 2;
 
-
         // Normalize mouse position for raycasting
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -268,8 +272,8 @@
             div.style.left = `${event.clientX}px`;
             div.style.top = `${event.clientY + index * 25}px`; // Stack the divs vertically
         });
-    // Map mouse position from screen space to rotation
-    // Horizontal movement
+
+
         // Update the target rotations based on the mouse position
         targetRotationZ = THREE.MathUtils.mapLinear(
             event.clientX, 0, window.innerWidth, 
@@ -280,32 +284,21 @@
             event.clientY, 0, window.innerHeight, 
             THREE.MathUtils.degToRad(maxrot*-1), THREE.MathUtils.degToRad(maxrot)
         );
-
         // Ensure the X rotation stays within bounds to avoid over-rotation
-       // targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2)+.4;
+       targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2)+.4;
 
+        // Update Text Overlay for Objects Intersected
+            const intersects = raycaster.intersectObjects(gltfScene.children, true);
+                        for (let i = 0; i < intersects.length; i++) {
+                            const userData = intersects[i].object.userData;
 
-    // Ensure the X rotation stays within bounds to avoid over-rotation
-    //cube.rotation.x = Math.max(Math.min(cube.rotation.x, Math.PI/2), -Math.PI/2)+.4;
-
-
-
-
-
-        
-
-    // Update Text Overlay for Objects Intersected
-    const intersects = raycaster.intersectObjects(gltfScene.children, true);
-                for (let i = 0; i < intersects.length; i++) {
-                    const userData = intersects[i].object.userData;
-
-                    if (userData) {
-                        document.getElementById('floatingText').innerText = userData.Name || "";
-                        document.getElementById('authorText').innerText = userData.Author || "";
-                        document.getElementById('yearText').innerText = userData.Year || "";
-                        return;
-                    }
-                }
+                            if (userData) {
+                                document.getElementById('floatingText').innerText = userData.Name || "";
+                                document.getElementById('authorText').innerText = userData.Author || "";
+                                document.getElementById('yearText').innerText = userData.Year || "";
+                                return;
+                            }
+                        }
     // If no object is intersected
     divs.forEach(div => div.innerText = '');
     });
@@ -362,14 +355,10 @@
     });
 
 
-    // Mouse click listener //
-
-
-
 
 // SPAWNERS ///
 
-// PING <<<<<<<<<<<<<<<<<
+// PING 
     function spawnPingAtPosition(position) {
         const pingInstance = pingModel.clone();
         pingInstance.position.copy(position).add(new THREE.Vector3(0, 1, 0));
@@ -378,7 +367,7 @@
         scene.add(pingInstance);
         
         // Play spatial audio at the given position
-        playSpatialAudio('beep', position, .5);
+        playSpatialAudio('beep', position, 1);
     
         let mixer = new THREE.AnimationMixer(pingInstance);
         activeMixers.push(mixer);
@@ -437,13 +426,7 @@ const animate = () => {
     // Lerp the cube's rotation to the target
     cube.rotation.x += (targetRotationX - cube.rotation.x) * lerpFactor;
     cube.rotation.z += (targetRotationZ - cube.rotation.z) * lerpFactor;
-    // No longer overwrite the rotation.y value
-    // cube.rotation.y = cubeRotationY; <-- Comment or remove this line
 
-    // Update the camera position relative to the cube
-    //listener.position.copy(cube.position).add(new THREE.Vector3(0, 10, 0));
-    //camera.rotation.copy(cube.rotation)
-    //camera.lookAt(cube.position);
     renderer.render(scene, camera);
 };
 
