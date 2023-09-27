@@ -72,14 +72,14 @@ wss.on("connection", function (ws, req) {
           }
           
           // Broadcast the data to other clients
-          // broadcast(ws, currData, false);
+           broadcast(ws, currData, false);
           
       } else if(typeof currData === 'string') {
         if(currData === 'pong') {
           console.log('keepAlive');
           return;
         }
-        broadcast(ws, currData, false);
+        //broadcast(ws, currData, false);
       } else if (currData.type === 'entrance') {
         console.log(`Received an entrance ping for object: ${currData.objectName}`);
         
