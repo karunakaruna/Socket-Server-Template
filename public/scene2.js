@@ -22,11 +22,10 @@ ws.onmessage = (event) => {
     if (message.type === 'color') {
         cube.material.color.set(message.value);
         addLog(`Color updated to ${message.value}`);
-        else if (message.type === 'ping') {
-            addLog('Received heartbeat');
-            ws.send(JSON.stringify({ type: 'pong' }));
-        } 
-    } else if (message.type === 'loc') {
+    } else if (message.type === 'ping') {
+        addLog('Received heartbeat from server');
+        ws.send(JSON.stringify({ type: 'pong' }));
+    }  else if (message.type === 'loc') {
         const receivedPosition = new THREE.Vector3(
             message.position.x,
             message.position.y,
