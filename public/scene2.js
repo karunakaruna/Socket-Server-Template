@@ -432,20 +432,41 @@
     }
     
 // BEACONLIGHT <<<<<<<<<<<<
-    function spawnBeaconLightAtPosition(position) {
-        const beaconLightInstance = beaconLightModel.clone();
-        beaconLightInstance.position.copy(position).add(new THREE.Vector3(0, 0, 0));
-        beaconLightInstance.visible = true;
-        scene.add(beaconLightInstance);
-        
-        // Play spatial audio at the given position
-        playSpatialAudio('beacon', position);
-        
-        // 
-        setTimeout(() => {
+function spawnBeaconLightAtPosition(position) {
+    const beaconLightInstance = beaconLightModel.clone();
+    beaconLightInstance.position.copy(position).add(new THREE.Vector3(0, 0, 0));
+    beaconLightInstance.visible = true;
+
+    // Set the initial material opacity
+    beaconLightInstance.traverse((child) => {
+        if (child.isMesh && child.material) {
+            child.material.transparent = true; // Required to allow fading
+            child.material.opacity = 1;
+        }
+    });
+
+    scene.add(beaconLightInstance);
+
+    // Play spatial audio at the given position
+    playSpatialAudio('beacon', position);
+
+    // Fade out using Tween.js
+    const fadeOut = { opacity: 1 };
+    new TWEEN.Tween(fadeOut)
+        .to({ opacity: 0 }, 60000)  // 60 seconds
+        .onUpdate(() => {
+            beaconLightInstance.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.opacity = fadeOut.opacity;
+                }
+            });
+        })
+        .onComplete(() => {
             scene.remove(beaconLightInstance);
-        }, 10000);
-    }
+        })
+        .start();
+}
+
 
     const activeMixers = [];
 
@@ -457,7 +478,8 @@ const animate = () => {
     // Use lerp to smoothly change FOV
     camera.fov += (targetFOV - camera.fov) * fovLerpSpeed;
     camera.updateProjectionMatrix();
-
+    
+    TWEEN.update();
     // Use lerp to smoothly move the cube towards the target position
     cubePosition.lerp(targetPosition, damping);
     cube.position.copy(cubePosition);

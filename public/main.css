@@ -48,6 +48,11 @@ body {
     user-select: none;
 }
 
+#log-list a {
+  color: cyan;
+}
+
+
 @keyframes fadeOut {
   to {
       opacity: 0;
