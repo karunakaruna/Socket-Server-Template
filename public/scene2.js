@@ -1,3 +1,14 @@
+// This function can be used to generate a UUID.
+function generateUUID() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+}
+const userID = generateUUID();
+const users = {};  // Mapping of user IDs to their Three.js sphere objects
+
+
+
 //websockets
 let loadedGLTF; 
 const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
@@ -38,6 +49,26 @@ ws.onmessage = (event) => {
             message.position.z
         );
         spawnPingAtPosition(receivedPosition);
+        const userPos = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+        
+        if (!users[data.userID]) {
+            // New user, create a sphere for them
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);  // Half-unit diameter sphere
+            const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+            const sphere = new THREE.Mesh(geometry, material);
+
+            sphere.position.copy(userPos);
+            scene.add(sphere);
+
+            users[data.userID] = {
+                sphere: sphere,
+                targetPosition: userPos
+            };
+        } else {
+            // Existing user, update their position
+            users[data.userID].targetPosition.copy(userPos);
+        }
+
     } else if (message.type === 'userCount') {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
@@ -284,6 +315,26 @@ function showModal(objectName, url, intersectionPoint) {
     scene.add(cube);
     cube.add(camera);
 
+
+
+//  Jiggle Sphere
+    const userGeometry = new THREE.SphereGeometry(0.5, 32, 32); 
+    const userMaterial = new THREE.MeshBasicMaterial({color: 0x00FF00});  // Green
+    const userSphere = new THREE.Mesh(userGeometry, userMaterial);
+    userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
+
+    cube.add(userSphere);  // Attach to the cube
+
+    // In your animate loop:
+    const jiggleAmount = 0.1;
+    userSphere.position.x += (Math.random() - 0.5) * jiggleAmount;
+    userSphere.position.y += (Math.random() - 0.5) * jiggleAmount;
+    userSphere.position.z += (Math.random() - 0.5) * jiggleAmount;
+
+
+
+
+
     //Lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Use a lower intensity value like 0.2 for a dim light
     directionalLight.position.set(1, 1, 1); // Set the light's position
@@ -471,6 +522,7 @@ function showModal(objectName, url, intersectionPoint) {
             // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
+                userID: userID,
                 position: {
                     x: intersection.point.x,
                     y: intersection.point.y,
@@ -615,6 +667,12 @@ const animate = () => {
     // Lerp the cube's rotation to the target
     cube.rotation.x += (targetRotationX - cube.rotation.x) * lerpFactor;
     cube.rotation.z += (targetRotationZ - cube.rotation.z) * lerpFactor;
+
+    for (const userID in users) {
+        const user = users[userID];
+        user.sphere.position.lerp(user.targetPosition, 0.05);
+    }
+
 
     renderer.render(scene, camera);
     labelRenderer.render( scene, camera );
