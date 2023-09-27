@@ -1,6 +1,11 @@
     //websockets
     let loadedGLTF; 
     const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
+
+
+// Your existing code...
+
+
     ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
     
@@ -43,6 +48,15 @@
             });
         }
     };
+
+// Label Renderer
+    labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize( window.innerWidth, window.innerHeight );
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0px';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    document.getElementById( 'container' ).appendChild( labelRenderer.domElement );
+
 
 // Audio ///
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -135,6 +149,7 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.setSize( window.innerWidth, window.innerHeight );
     }
     window.addEventListener('resize', onWindowResize, false);
 
@@ -196,9 +211,28 @@
         loadedGLTF = gltf; // Assign the loaded gltf model
         gltfScene = gltf.scene;  // Store the scene
         scene.add(gltfScene);
+
+        gltfScene.traverse(function (child) {
+            // Check if the child has a userData.Name property
+            if (child.userData && child.userData.Name) {
+                // Create a label for this child
+                const text = document.createElement('div');
+                text.className = 'label';
+                text.textContent = child.userData.Name;  // Set label text to the Name property
+        
+                const label = new CSS2DObject(text);
+                label.position.copy(child.position);
+                scene.add(label);  // Assuming 'root' is the main group/scene where everything is added
+            }
+        });
+
     }, undefined, function(error) {
         console.error('An error occurred loading the GLTF:', error);
     });
+
+// Label Maker
+
+
 
 
 // Ping  //
@@ -433,6 +467,7 @@ const animate = () => {
     cube.rotation.z += (targetRotationZ - cube.rotation.z) * lerpFactor;
 
     renderer.render(scene, camera);
+    labelRenderer.render( scene, camera );
 };
 
 
