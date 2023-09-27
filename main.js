@@ -5,9 +5,10 @@ const express = require("express");
 const cors = require('cors');
 const app = express();
 
-app.use(express.static(__dirname + "/public"));
+//app.use(express.static(__dirname + "/public"));
 // require("dotenv").config();
 
+let users = {};  // Format: {userID: {position: {x, y, z}, ...}, ...}
 
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
@@ -158,6 +159,12 @@ function onUserConnect(userID) {
         users: users
     });
 }
+
+broadcastToUsers({
+  type: 'userDisconnected',
+  userID: userID
+});
+
 
 // When receiving a position update from a user:
 function onUserPositionUpdate(userID, position) {
