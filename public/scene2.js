@@ -50,16 +50,21 @@ ws.onmessage = (event) => {
         );
         spawnPingAtPosition(receivedPosition);
     
-        const userPos = new THREE.Vector3(0, 0.7, 0);
+        const userPos = new THREE.Vector3(message.position.x, message.position.y, message.position.z);
         
         if (!users[message.userID]) {
             // New user, create a sphere for them
             const geometry = new THREE.SphereGeometry(0.1, 32, 32);  // Half-unit diameter sphere
+            const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
             const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
-            const sphere = new THREE.Mesh(geometry, material);
-    
+            const sphere = new THREE.Mesh(geometry, trans);
+            const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);  // Half-unit diameter sphere
+            const sphere2 = new THREE.Mesh(geometrysphere, material);
+
+
             sphere.position.copy(userPos);
             scene.add(sphere);
+            sphere.add(sphere2);
     
             users[message.userID] = {
                 sphere: sphere,
@@ -67,9 +72,9 @@ ws.onmessage = (event) => {
             };
         } else {
             // Existing user, update their position
-            users[message.userID].sphere.position.copy(userPos);
             users[message.userID].targetPosition.copy(userPos);
         }
+
     } else if (message.type === 'userCount') {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
@@ -321,7 +326,7 @@ function showModal(objectName, url, intersectionPoint) {
 
 //  Jiggle Sphere
     const userGeometry = new THREE.SphereGeometry(0.1, 32, 32); 
-    const userMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});  // Green
+    const userMaterial = new THREE.MeshBasicMaterial({color: 0x00FF00});  // Green
     const userSphere = new THREE.Mesh(userGeometry, userMaterial);
     userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
 
