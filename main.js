@@ -79,8 +79,14 @@ wss.on("connection", function (ws, req) {
           console.log('keepAlive');
           return;
         }
-        //broadcast(ws, currData, false);
-      } else {
+        broadcast(ws, currData, false);
+      } else if (currData.type === 'entrance') {
+        console.log(`Received an entrance ping for object: ${currData.objectName}`);
+        
+        // Broadcast the entrance ping to other clients
+        broadcast(ws, currData, false);
+    }
+     else {
         console.error('malformed message', data);
       }
   });
