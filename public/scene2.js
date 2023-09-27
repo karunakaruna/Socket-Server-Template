@@ -5,60 +5,74 @@
 
 // Your existing code...
 
+ws.onmessage = (event) => {
+    const message = JSON.parse(event.data);
 
-    ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-    
-        // Function to append logs
-
-    
-        if (message.type === 'color') {
-            // Update the cube's color
-            cube.material.color.set(message.value);
-            addLog(`Color updated to ${message.value}`);
-        } else if (message.type === 'ping') {
-            // Process ping
-            //console.log('ping!');
-            addLog('Received heartbeat');
-        } else if (message.type === 'loc') {
-            const receivedPosition = new THREE.Vector3(
-                message.position.x,
-                message.position.y,
-                message.position.z,
-            );
-            //console.log('hi!');
-            // Call your function to spawn and animate a ping instance at this position
-            spawnPingAtPosition(receivedPosition);
-            //addLog(`Received location: (${receivedPosition.x}, ${receivedPosition.y}, ${receivedPosition.z})`);
-        } else if (message.type === 'userCount') {
-            // Update the user count on the page
-            document.getElementById('userCount').textContent = message.value;
-            addLog(`Users online: ${message.value}`);
-        } else if (message.type === 'beacon') {
-            // Process beacon message
-            const beaconURL = message.url;
-            console.log(beaconURL);
-            // Now, iterate through your gltf.scene objects
-            loadedGLTF.scene.traverse((object) => {
-                if (object.userData && object.userData.URL === beaconURL) {
-                    // Run the "spawn ping" at this object's position
-                    spawnBeaconLightAtPosition(object.position);
-                    addLog(`Beacon activated at ${object.userData.URL}`);
-        } else if (message.type === 'entrance') {
-            console.log('received entrance ping');
-            addLog(`User entered ${message.objectName}`);
-            const receivedPosition = new THREE.Vector3(
-                message.position.x,
-                message.position.y,
-                message.position.z,
-            );
-        
-            spawnEntrancePingAtPosition(receivedPosition);
-        }
-        
-            });
-        }
+    // Get object by its name or URL
+    const getObjectByProperty = (prop, value) => {
+        let foundObject = null;
+        loadedGLTF.scene.traverse((object) => {
+            if (object.userData && object.userData[prop] === value) {
+                foundObject = object;
+            }
+        });
+        return foundObject;
     };
+
+    if (message.type === 'color') {
+        cube.material.color.set(message.value);
+        addLog(`Color updated to ${message.value}`);
+        else if (message.type === 'ping') {
+            addLog('Received heartbeat');
+            ws.send(JSON.stringify({ type: 'pong' }));
+        } 
+    } else if (message.type === 'loc') {
+        const receivedPosition = new THREE.Vector3(
+            message.position.x,
+            message.position.y,
+            message.position.z
+        );
+        spawnPingAtPosition(receivedPosition);
+    } else if (message.type === 'userCount') {
+        document.getElementById('userCount').textContent = message.value;
+        addLog(`Users online: ${message.value}`);
+    } else if (message.type === 'beacon') {
+        let object = getObjectByProperty('URL', message.url);
+        if (object) {
+            spawnBeaconLightAtPosition(object.position);
+            addLog(`Beacon activated at <a href="${object.userData.URL}" target="_blank">${object.userData.Name}</a>`);
+        }
+    } else if (message.type === 'entrance') {
+        console.log('received entrance ping');
+        
+        let entranceURL = "";
+        let foundObjectName = "";
+        
+        // Traverse the scene to find the object with the matching name to fetch its URL
+        loadedGLTF.scene.traverse((object) => {
+            if (object.userData && object.userData.Name === message.objectName) {
+                entranceURL = object.userData.URL;
+                foundObjectName = object.userData.Name;  // Use the exact name found in the object
+            }
+        });
+    
+        if (entranceURL) {
+            addLog(`User entered <a href="${entranceURL}" target="_blank">${foundObjectName}</a>`);
+        } else {
+            addLog(`User entered ${message.objectName}`);
+        }
+        
+        const receivedPosition = new THREE.Vector3(
+            message.position.x,
+            message.position.y,
+            message.position.z
+        );
+        spawnEntrancePingAtPosition(receivedPosition);
+    }
+    
+};
+
+
 
 // Label Renderer
     labelRenderer = new CSS2DRenderer();

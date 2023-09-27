@@ -5,9 +5,6 @@ function addLog(message) {
     // Create new log item
     const newItem = document.createElement('li');
     
-    // Convert URLs to clickable links
-    message = message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-    
     newItem.innerHTML = new Date().toLocaleTimeString() + ": " + message;
 
     // Append new item to the end of the list
