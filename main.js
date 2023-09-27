@@ -155,28 +155,36 @@ function onUserConnect(userID) {
     });
 }
 
-broadcastToUsers({
-  type: 'userDisconnected',
-  userID: userID
-});
 
 
-// When receiving a position update from a user:
 function onUserPositionUpdate(userID, position) {
-    users[userID].position = position;
-    // Broadcast the updated position to other users as you're doing now...
+  users[userID].position = position;
+  // Broadcast the updated position to other users
+  broadcast(null, {
+      type: 'userPositionUpdate',
+      userID: userID,
+      position: position
+  }, false);
 }
+
 
 // When a user disconnects:
 function onUserDisconnect(userID) {
     delete users[userID];
     // Inform other users about the disconnect
-    broadcastToUsers({
+    broadcast({
         type: 'userDisconnected',
         userID: userID
     });
 }
 
+function sendToUser(userID, message) {
+  wss.clients.forEach(client => {
+      if (client._socket._httpMessage.headers['sec-websocket-key'] === userID && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(message));
+      }
+  });
+}
 
 
 
