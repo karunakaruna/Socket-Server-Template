@@ -44,11 +44,6 @@ wss.on("connection", function (ws, req) {
   onUserConnect(userID);
   broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
-  if (wss.clients.size === 1) {
-    console.log("first connection. starting keepalive");
-    keepServerAlive();
-}
-
   ws.on("message", (data) => {
     if (isJSON(data)) {
         const currData = JSON.parse(data);
