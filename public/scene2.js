@@ -1,13 +1,14 @@
-    //websockets
-    let loadedGLTF; 
-    const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
+//websockets
+let loadedGLTF; 
+const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
 
 
 // Your existing code...
 
 ws.onmessage = (event) => {
     if (event.data === 'ping') {
-        addLog('Received heartbeat');
+        addLog('Received heartbeat!');
+        console.log('this ping!');
         ws.send('pong'); // reply to keep connection alive
         return;
     }
