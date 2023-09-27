@@ -3,41 +3,46 @@
     const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
     ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
+    
+        // Function to append logs
+
+    
         if (message.type === 'color') {
             // Update the cube's color
             cube.material.color.set(message.value);
+            addLog(`Color updated to ${message.value}`);
         } else if (message.type === 'ping') {
             // Process ping
-            console.log('ping!');
+            //console.log('ping!');
+            addLog('Received heartbeat');
         } else if (message.type === 'loc') {
             const receivedPosition = new THREE.Vector3(
                 message.position.x,
                 message.position.y,
                 message.position.z,
             );
-            console.log('hi!');
+            //console.log('hi!');
             // Call your function to spawn and animate a ping instance at this position
             spawnPingAtPosition(receivedPosition);
+            //addLog(`Received location: (${receivedPosition.x}, ${receivedPosition.y}, ${receivedPosition.z})`);
         } else if (message.type === 'userCount') {
             // Update the user count on the page
             document.getElementById('userCount').textContent = message.value;
+            addLog(`Users online: ${message.value}`);
         } else if (message.type === 'beacon') {
             // Process beacon message
             const beaconURL = message.url;
             console.log(beaconURL);
             // Now, iterate through your gltf.scene objects
             loadedGLTF.scene.traverse((object) => {
-                console.log(object.userData.URL);
-                console.log(beaconURL);
                 if (object.userData && object.userData.URL === beaconURL) {
                     // Run the "spawn ping" at this object's position
-                    console.log(object.userData.URL);
                     spawnBeaconLightAtPosition(object.position);
+                    addLog(`Beacon ping at ${object.userData.URL}`);
                 }
             });
         }
     };
-    
 
 // Audio ///
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -56,10 +61,10 @@
 
 // load a sound and set it as the Audio object's buffer
     const loopLoader = new THREE.AudioLoader();
-    loopLoader.load( 'Precession - Move 37.mp3', function( buffer ) {
+    loopLoader.load( 'Precession - bnk736_1.mp3', function( buffer ) {
         loop.setBuffer( buffer );
         loop.setLoop(true);
-        loop.setVolume(0.5);
+        loop.setVolume(2);
         loop.play();
     });
 
@@ -277,7 +282,7 @@
         // Update the target rotations based on the mouse position
         targetRotationZ = THREE.MathUtils.mapLinear(
             event.clientX, 0, window.innerWidth, 
-            THREE.MathUtils.degToRad(maxrot*-1), THREE.MathUtils.degToRad(maxrot)
+            THREE.MathUtils.degToRad(maxrot), THREE.MathUtils.degToRad(maxrot*-1)
         );
             
         targetRotationX = THREE.MathUtils.mapLinear(

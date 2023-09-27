@@ -72,7 +72,7 @@ wss.on("connection", function (ws, req) {
           }
           
           // Broadcast the data to other clients
-          broadcast(ws, currData, false);
+          // broadcast(ws, currData, false);
           
       } else if(typeof currData === 'string') {
         if(currData === 'pong') {
