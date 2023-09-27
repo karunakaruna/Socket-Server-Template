@@ -103,7 +103,8 @@ function showModal(objectName, url, intersectionPoint) {
         };
         
         ws.send(JSON.stringify(payload));
-        console.log(payload + ' sent');
+        console.log('Payload sent:', payload);
+
         // Delay the opening of the URL by 1 second
         spawnEntrancePingAtPosition(intersectionPoint);
 
