@@ -70,8 +70,6 @@ ws.onmessage = (event) => {
             users[message.userID].sphere.position.copy(userPos);
             users[message.userID].targetPosition.copy(userPos);
         }
-    }
-    
     } else if (message.type === 'userCount') {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
