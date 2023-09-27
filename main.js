@@ -68,7 +68,7 @@ wss.on("connection", function (ws, req) {
             console.log('Received a server heartbeat ping');
         } else if(currData.type === 'loc') {
             // Log the received location
-            console.log('Received a ping location:', currData.position);
+            //console.log('Received a ping location:', currData.position);
         } else if (currData.type === 'entrance') {
             console.log(`Received an entrance ping for object: ${currData.objectName}`);
             
@@ -77,7 +77,7 @@ wss.on("connection", function (ws, req) {
         }
 
         // Broadcast the data to other clients
-        broadcast(ws, currData, false);
+        //broadcast(ws, currData, false);
         
     } else if(typeof data === 'string') { // Note: I changed currData to data here
         if(data === 'pong') {

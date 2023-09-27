@@ -45,6 +45,7 @@
                     spawnBeaconLightAtPosition(object.position);
                     addLog(`Beacon activated at ${object.userData.URL}`);
         } else if (message.type === 'entrance') {
+            console.log('received entrance ping');
             addLog(`User entered ${message.objectName}`);
         
             const receivedPosition = new THREE.Vector3(
@@ -91,7 +92,6 @@ function showModal(objectName, url, intersectionPoint) {
         urlModal.style.display = 'none';
     
         // Handle the entrance ping on URL confirmation
-        spawnEntrancePingAtPosition(intersectionPoint);
             
         const payload = {
             type: 'entrance',
@@ -106,6 +106,8 @@ function showModal(objectName, url, intersectionPoint) {
         ws.send(JSON.stringify(payload));
         console.log(payload + ' sent');
         // Delay the opening of the URL by 1 second
+        spawnEntrancePingAtPosition(intersectionPoint);
+
         setTimeout(() => {
             window.open(url, "_blank");
         }, 1000);
