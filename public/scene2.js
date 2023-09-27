@@ -1,10 +1,4 @@
-// This function can be used to generate a UUID.
-function generateUUID() {
-    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-    );
-}
-const userID = generateUUID();
+let userID = null;
 const users = {};  // Mapping of user IDs to their Three.js sphere objects
 
 
@@ -36,8 +30,11 @@ ws.onmessage = (event) => {
         });
         return foundObject;
     };
-
-    if (message.type === 'color') {
+    if (message.type === 'assignUserID') {
+        userID = message.userID;
+        console.log('Assigned UserID:', userID);
+        return;
+    } else if (message.type === 'color') {
         cube.material.color.set(message.value);
         addLog(`Color updated to ${message.value}`);
     } else if (message.type === 'ping') {

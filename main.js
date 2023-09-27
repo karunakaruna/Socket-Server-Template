@@ -1,42 +1,31 @@
-
-
 const http = require("http");
 const express = require("express");
 const cors = require('cors');
 const app = express();
-
-//app.use(express.static(__dirname + "/public"));
-// require("dotenv").config();
+const { v4: uuidv4 } = require('uuid');
 
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
 const bodyParser = require('body-parser');
-//cors
+
 const corsOptions = {
   origin: 'https://monaverse.com',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  optionsSuccessStatus: 204, // Some legacy browsers (IE11) choke on a 204 response.
+  optionsSuccessStatus: 204,
 };
 
-//GPT code for websockets
-
-//app.use(express.static("public"));
-
-
-app.use(express.json());  // <-- Add this line to parse incoming JSON
+app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public", { "extensions": ["html", "css", "js"] }));
-//cors
 app.use(cors(corsOptions));
 app.options('/unity-endpoint', cors(corsOptions));
 
-let users = {};  // Format: {userID: {position: {x, y, z}, ...}, ...}
+let users = {};
 
-//GPT code for websockets
 let keepAliveId;
 
-const wss =
+const wss = 
   process.env.NODE_ENV === "production"
     ? new WebSocket.Server({ server })
     : new WebSocket.Server({ port: 5001 });
@@ -49,56 +38,37 @@ console.log(`Server started on port ${process.env.PORT} in stage ${process.env.N
 wss.on("connection", function (ws, req) {
   console.log("Connection Opened");
   console.log("Client size: ", wss.clients.size);
-  const userID = req.headers['sec-websocket-key']; // We're using the WebSocket key as a unique ID for simplicity
-  users[userID] = {};  // Initialize user with no data (yet)
-  onUserConnect(userID);  // Handle the user connection
-  // Broadcast the new user count
-  broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
-  if (wss.clients.size === 1) {
-      console.log("first connection. starting keepalive");
-      keepServerAlive();
-  }
+  const userID = uuidv4();  // Generate a UUID for each connected user
+  users[userID] = {};
+  onUserConnect(userID);
+  broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
   ws.on("message", (data) => {
     if (isJSON(data)) {
         const currData = JSON.parse(data);
-
         if(currData.type === 'ping') {
-            // Handle the server heartbeat ping
             console.log('Received a server heartbeat ping');
         } else if(currData.type === 'loc') {
-            onUserPositionUpdate(userID, currData.position);  // Update the user's position
-            // Log the received location
-            //console.log('Received a ping location:', currData.position);
+            onUserPositionUpdate(userID, currData.position);
             broadcast(ws, currData, false);
         } else if (currData.type === 'entrance') {
           console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
             broadcast(ws, currData, false);
         }
-
-        // Broadcast the data to other clients
-        
-        
-    } else if(typeof data === 'string') { // Note: I changed currData to data here
+    } else if(typeof data === 'string') {
         if(data === 'pong') {
             console.log('keepAlive');
             return;
         }
-        // If you want to broadcast strings as well, uncomment the line below
-        // broadcast(ws, data, false);
     } else {
         console.error('malformed message', data);
     }
-});
-
+  });
 
   ws.on("close", (data) => {
       console.log("closing connection");
-      onUserDisconnect(userID);  // Handle the user disconnect
-
-
-      // Broadcast the updated user count
+      onUserDisconnect(userID);
       broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
       if (wss.clients.size === 0) {
@@ -108,19 +78,14 @@ wss.on("connection", function (ws, req) {
   });
 });
 
-
-// Implement broadcast function because of ws doesn't have it
 const broadcast = (ws, message, includeSelf) => {
-  // Ensure message is a string (if not, stringify it)
   const stringifiedMessage = typeof message === 'string' ? message : JSON.stringify(message);
-
   wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN && (includeSelf || client !== ws)) {
           client.send(stringifiedMessage);
       }
   });
 };
-
 
 const isJSON = (message) => {
   try {
@@ -131,35 +96,25 @@ const isJSON = (message) => {
   }
 };
 
-/**
- * Sends a ping message to all connected clients every 50 seconds
- */
- const keepServerAlive = () => {
+const keepServerAlive = () => {
   keepAliveId = setInterval(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send('ping');
-        //broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), false);
       }
     });
   }, 50000);
 };
 
-
-// When a user connects:
 function onUserConnect(userID) {
-    // Send the current users' positions to the new user
     sendToUser(userID, {
         type: 'initUsers',
         users: users
     });
 }
 
-
-
 function onUserPositionUpdate(userID, position) {
   users[userID].position = position;
-  // Broadcast the updated position to other users
   broadcast(null, {
       type: 'userPositionUpdate',
       userID: userID,
@@ -167,70 +122,44 @@ function onUserPositionUpdate(userID, position) {
   }, false);
 }
 
-
-// When a user disconnects:
 function onUserDisconnect(userID) {
   delete users[userID];
-  // Inform other users about the disconnect
   broadcast(null, JSON.stringify({
       type: 'userDisconnected',
       userID: userID
   }), true);
 }
 
-
 function sendToUser(userID, message) {
   wss.clients.forEach(client => {
-      const key = client?._socket?._httpMessage?.headers?.['sec-websocket-key'];
-      if (key === userID && client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(message));
-      }
+      client.send(JSON.stringify(message));
   });
 }
 
-
-
-
-
-
-
-
 app.get('/', (req, res) => {
-    //res.send('Hello World! (c8=');
     res.sendFile(__dirname + '/index.html');
 });
 
 app.post('/unity-endpoint', (req, res) => {
   console.log("Raw body:", req.body);
-  // CORS headers
   res.header("Access-Control-Allow-Credentials", true);
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
   
-  // Accessing the message sent in the form data
   const receivedMessage = req.body.data;
   if(receivedMessage === 'red') {
-    // Broadcast the color change to all connected WebSocket clients
     broadcast(null, JSON.stringify({ type: 'color', value: '#ff0000' }), true);
   }
 
-  // Log the received message
   console.log("Received message:", receivedMessage);
-
-  // Prepare the response
   const responseMessage = {
       message: 'hello'
   };
-  // Send the response
-  //res.send('oops');
   res.json(responseMessage);
 });
 
-
-
 app.post('/beacon-endpoint', (req, res) => {
-  // CORS headers
   res.header("Access-Control-Allow-Credentials", true);
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -238,18 +167,12 @@ app.post('/beacon-endpoint', (req, res) => {
 
   const beaconURL = req.body.beacon;
   if (beaconURL) {
-    // Broadcast the beacon URL to all connected WebSocket clients
     broadcast(null, JSON.stringify({ type: 'beacon', url: beaconURL }), true);
   }
 
-  // Log the received beacon URL
   console.log("Received beacon URL:", beaconURL);
-
-  // Prepare the response
   const responseMessage = {
       message: 'Beacon URL received!'
   };
-
-  // Send the response
   res.json(responseMessage);
 });
