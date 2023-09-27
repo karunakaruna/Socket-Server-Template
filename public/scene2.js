@@ -54,7 +54,7 @@ ws.onmessage = (event) => {
         
         if (!users[message.userID]) {
             // New user, create a sphere for them
-            const geometry = new THREE.SphereGeometry(0.5, 32, 32);  // Half-unit diameter sphere
+            const geometry = new THREE.SphereGeometry(0.1, 32, 32);  // Half-unit diameter sphere
             const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
             const sphere = new THREE.Mesh(geometry, material);
     
@@ -321,7 +321,7 @@ function showModal(objectName, url, intersectionPoint) {
 
 //  Jiggle Sphere
     const userGeometry = new THREE.SphereGeometry(0.1, 32, 32); 
-    const userMaterial = new THREE.MeshBasicMaterial({color: 0x00FF00});  // Green
+    const userMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});  // Green
     const userSphere = new THREE.Mesh(userGeometry, userMaterial);
     userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
 
