@@ -110,6 +110,7 @@ ws.onmessage = (event) => {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
     } else if (message.type === 'beacon') {
+        console.log('beacon received');
         let object = getObjectByProperty('URL', message.url);
         if (object) {
             spawnBeaconLightAtPosition(object.position);
