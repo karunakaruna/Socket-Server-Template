@@ -50,11 +50,11 @@ ws.onmessage = (event) => {
         );
         spawnPingAtPosition(receivedPosition);
     
-        const userPos = new THREE.Vector3(message.position.x, message.position.y, message.position.z);
+        const userPos = new THREE.Vector3(0, 0.7, 0);
         
         if (!users[message.userID]) {
             // New user, create a sphere for them
-            const geometry = new THREE.SphereGeometry(0.1, 32, 32);  // Half-unit diameter sphere
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);  // Half-unit diameter sphere
             const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
             const sphere = new THREE.Mesh(geometry, material);
     
@@ -67,8 +67,11 @@ ws.onmessage = (event) => {
             };
         } else {
             // Existing user, update their position
+            users[message.userID].sphere.position.copy(userPos);
             users[message.userID].targetPosition.copy(userPos);
         }
+    }
+    
     } else if (message.type === 'userCount') {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
