@@ -8,8 +8,6 @@ const app = express();
 //app.use(express.static(__dirname + "/public"));
 // require("dotenv").config();
 
-let users = {};  // Format: {userID: {position: {x, y, z}, ...}, ...}
-
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
@@ -33,7 +31,7 @@ app.use(express.static("public", { "extensions": ["html", "css", "js"] }));
 app.use(cors(corsOptions));
 app.options('/unity-endpoint', cors(corsOptions));
 
-
+let users = {};  // Format: {userID: {position: {x, y, z}, ...}, ...}
 
 //GPT code for websockets
 let keepAliveId;
@@ -147,9 +145,6 @@ const isJSON = (message) => {
   }, 50000);
 };
 
-// USERS STUFF
-
-let users = {};  // Format: {userID: {position: {x, y, z}, ...}, ...}
 
 // When a user connects:
 function onUserConnect(userID) {
@@ -199,10 +194,10 @@ app.get('/', (req, res) => {
 app.post('/unity-endpoint', (req, res) => {
   console.log("Raw body:", req.body);
   // CORS headers
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+  // res.header("Access-Control-Allow-Credentials", true);
+  // res.header('Access-Control-Allow-Origin', '*');
+  // res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  // res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
   
   // Accessing the message sent in the form data
   const receivedMessage = req.body.data;
