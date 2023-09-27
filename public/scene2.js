@@ -47,7 +47,6 @@
         } else if (message.type === 'entrance') {
             console.log('received entrance ping');
             addLog(`User entered ${message.objectName}`);
-        
             const receivedPosition = new THREE.Vector3(
                 message.position.x,
                 message.position.y,

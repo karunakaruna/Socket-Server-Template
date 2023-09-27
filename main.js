@@ -69,15 +69,16 @@ wss.on("connection", function (ws, req) {
         } else if(currData.type === 'loc') {
             // Log the received location
             //console.log('Received a ping location:', currData.position);
+            broadcast(ws, currData, false);
         } else if (currData.type === 'entrance') {
-            console.log(`Received an entrance ping for object: ${currData.objectName}`);
+            console.log(`Received an entrance ping for object: ${currData.objectName} at ${currData.position}`);
             
             // Broadcast the entrance ping to other clients
             broadcast(ws, currData, false);
         }
 
         // Broadcast the data to other clients
-        //broadcast(ws, currData, false);
+        
         
     } else if(typeof data === 'string') { // Note: I changed currData to data here
         if(data === 'pong') {
