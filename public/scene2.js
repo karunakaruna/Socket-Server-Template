@@ -6,6 +6,11 @@
 // Your existing code...
 
 ws.onmessage = (event) => {
+    if (event.data === 'ping') {
+        addLog('Received heartbeat from server');
+        ws.send('pong'); // reply to keep connection alive
+        return;
+    }
     const message = JSON.parse(event.data);
 
     // Get object by its name or URL

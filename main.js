@@ -72,9 +72,6 @@ wss.on("connection", function (ws, req) {
             broadcast(ws, currData, false);
         } else if (currData.type === 'entrance') {
           console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
-
-            
-            // Broadcast the entrance ping to other clients
             broadcast(ws, currData, false);
         }
 
@@ -133,16 +130,16 @@ const isJSON = (message) => {
 /**
  * Sends a ping message to all connected clients every 50 seconds
  */
- const keepServerAlive = () => {
+const keepServerAlive = () => {
   keepAliveId = setInterval(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send('ping');
-        broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), true);
       }
     });
   }, 50000);
 };
+
 
 
 app.get('/', (req, res) => {
