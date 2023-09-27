@@ -60,36 +60,37 @@ wss.on("connection", function (ws, req) {
   }
 
   ws.on("message", (data) => {
-      if (isJSON(data)) {
-          const currData = JSON.parse(data);
-          
-          if(currData.type === 'ping') {
-              // Handle the server heartbeat ping
-              console.log('Received a server heartbeat ping');
-          } else if(currData.type === 'loc') {
-              // Log the received location
-              console.log('Received a ping location:', currData.position);
-          }
-          
-          // Broadcast the data to other clients
-           broadcast(ws, currData, false);
-          
-      } else if(typeof currData === 'string') {
-        if(currData === 'pong') {
-          console.log('keepAlive');
-          return;
+    if (isJSON(data)) {
+        const currData = JSON.parse(data);
+
+        if(currData.type === 'ping') {
+            // Handle the server heartbeat ping
+            console.log('Received a server heartbeat ping');
+        } else if(currData.type === 'loc') {
+            // Log the received location
+            console.log('Received a ping location:', currData.position);
+        } else if (currData.type === 'entrance') {
+            console.log(`Received an entrance ping for object: ${currData.objectName}`);
+            
+            // Broadcast the entrance ping to other clients
+            broadcast(ws, currData, false);
         }
-        //broadcast(ws, currData, false);
-      } else if (currData.type === 'entrance') {
-        console.log(`Received an entrance ping for object: ${currData.objectName}`);
-        
-        // Broadcast the entrance ping to other clients
+
+        // Broadcast the data to other clients
         broadcast(ws, currData, false);
-    }
-     else {
+        
+    } else if(typeof data === 'string') { // Note: I changed currData to data here
+        if(data === 'pong') {
+            console.log('keepAlive');
+            return;
+        }
+        // If you want to broadcast strings as well, uncomment the line below
+        // broadcast(ws, data, false);
+    } else {
         console.error('malformed message', data);
-      }
-  });
+    }
+});
+
 
   ws.on("close", (data) => {
       console.log("closing connection");
