@@ -118,6 +118,21 @@ function showModal(objectName, url, intersectionPoint) {
         ws.send(JSON.stringify(payload));
         console.log('Payload sent:', payload);
 
+        if (loadedGLTF && loadedGLTF.scene) {
+            loadedGLTF.scene.traverse((object) => {
+                if (object.userData && object.userData.Name === objectName) {
+                    if (object.userData.URL) {
+                        addLog(`You entered <a href="${object.userData.URL}" target="_blank">${object.userData.Name}</a>`);
+                    } else {
+                        addLog(`You entered ${objectName}`);
+                    }
+                }
+            });
+        }
+
+
+
+
         // Delay the opening of the URL by 1 second
         spawnEntrancePingAtPosition(intersectionPoint);
 
