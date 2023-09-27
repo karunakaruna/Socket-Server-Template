@@ -23,6 +23,7 @@ ws.onmessage = (event) => {
         ws.send('pong'); // reply to keep connection alive
         return;
     }
+
     const message = JSON.parse(event.data);
 
     // Get object by its name or URL
@@ -40,27 +41,25 @@ ws.onmessage = (event) => {
         cube.material.color.set(message.value);
         addLog(`Color updated to ${message.value}`);
     } else if (message.type === 'ping') {
-        //addLog('Received heartbeat from server');
-        //ws.send(JSON.stringify({ type: 'pong' }));
-    }  else if (message.type === 'loc') {
+        // Existing ping handler
+    } else if (message.type === 'loc') {
         const receivedPosition = new THREE.Vector3(
             message.position.x,
             message.position.y,
             message.position.z
         );
         spawnPingAtPosition(receivedPosition);
-    
+
         const userPos = new THREE.Vector3(message.position.x, message.position.y, message.position.z);
         
         if (!users[message.userID]) {
             // New user, create a sphere for them
-            const geometry = new THREE.SphereGeometry(0.1, 32, 32);  // Half-unit diameter sphere
+            const geometry = new THREE.SphereGeometry(0.1, 32, 32);
             const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
             const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
             const sphere = new THREE.Mesh(geometry, trans);
-            const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);  // Half-unit diameter sphere
+            const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
             const sphere2 = new THREE.Mesh(geometrysphere, material);
-
 
             sphere.position.copy(userPos);
             scene.add(sphere);
@@ -74,7 +73,44 @@ ws.onmessage = (event) => {
             // Existing user, update their position
             users[message.userID].targetPosition.copy(userPos);
         }
-
+    } else if (message.type === 'initUsers') {
+        // Loop through the received users and create a sphere for each one
+        for (let userID in message.users) {
+            let userPos = new THREE.Vector3(
+                message.users[userID].position.x,
+                message.users[userID].position.y,
+                message.users[userID].position.z
+            );
+            if (!users[userID]) {
+                // New user, create a sphere for them
+                const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+                const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+                const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+                const sphere = new THREE.Mesh(geometry, trans);
+                const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
+                const sphere2 = new THREE.Mesh(geometrysphere, material);
+            
+                sphere.position.copy(userPos);
+                scene.add(sphere);
+                sphere.add(sphere2);
+            
+                users[userID] = {
+                    sphere: sphere,
+                    targetPosition: userPos
+                };
+            } else {
+                // Existing user, update their position
+                users[userID].targetPosition.copy(userPos);
+            }
+            
+        }
+    } else if (message.type === 'userDisconnected') {
+        // Remove the sphere of the disconnected user
+        let userObject = users[message.userID];
+        if (userObject) {
+            scene.remove(userObject.sphere);
+            delete users[message.userID];
+        }
     } else if (message.type === 'userCount') {
         document.getElementById('userCount').textContent = message.value;
         addLog(`Users online: ${message.value}`);
@@ -94,7 +130,7 @@ ws.onmessage = (event) => {
         loadedGLTF.scene.traverse((object) => {
             if (object.userData && object.userData.Name === message.objectName) {
                 entranceURL = object.userData.URL;
-                foundObjectName = object.userData.Name;  // Use the exact name found in the object
+                foundObjectName = object.userData.Name;
             }
         });
     
@@ -113,6 +149,7 @@ ws.onmessage = (event) => {
     }
     
 };
+
 
 
 

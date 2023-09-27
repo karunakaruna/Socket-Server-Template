@@ -141,6 +141,43 @@ const isJSON = (message) => {
   }, 50000);
 };
 
+// USERS STUFF
+
+let users = {};  // Format: {userID: {position: {x, y, z}, ...}, ...}
+
+// When a user connects:
+function onUserConnect(userID) {
+    // Send the current users' positions to the new user
+    sendToUser(userID, {
+        type: 'initUsers',
+        users: users
+    });
+}
+
+// When receiving a position update from a user:
+function onUserPositionUpdate(userID, position) {
+    users[userID].position = position;
+    // Broadcast the updated position to other users as you're doing now...
+}
+
+// When a user disconnects:
+function onUserDisconnect(userID) {
+    delete users[userID];
+    // Inform other users about the disconnect
+    broadcastToUsers({
+        type: 'userDisconnected',
+        userID: userID
+    });
+}
+
+
+
+
+
+
+
+
+
 
 app.get('/', (req, res) => {
     //res.send('Hello World! (c8=');
