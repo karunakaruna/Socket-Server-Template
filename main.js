@@ -134,8 +134,8 @@ const isJSON = (message) => {
   keepAliveId = setInterval(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        //client.send('ping');
-        broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), false);
+        client.send('ping');
+        //broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), false);
       }
     });
   }, 50000);

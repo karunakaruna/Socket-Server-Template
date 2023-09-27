@@ -7,7 +7,7 @@
 
 ws.onmessage = (event) => {
     if (event.data === 'ping') {
-        addLog('Received heartbeat from server');
+        addLog('Received heartbeat');
         ws.send('pong'); // reply to keep connection alive
         return;
     }
@@ -28,8 +28,8 @@ ws.onmessage = (event) => {
         cube.material.color.set(message.value);
         addLog(`Color updated to ${message.value}`);
     } else if (message.type === 'ping') {
-        addLog('Received heartbeat from server');
-        ws.send(JSON.stringify({ type: 'pong' }));
+        //addLog('Received heartbeat from server');
+        //ws.send(JSON.stringify({ type: 'pong' }));
     }  else if (message.type === 'loc') {
         const receivedPosition = new THREE.Vector3(
             message.position.x,
