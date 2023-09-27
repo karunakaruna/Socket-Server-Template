@@ -50,7 +50,9 @@ console.log(`Server started on port ${process.env.PORT} in stage ${process.env.N
 wss.on("connection", function (ws, req) {
   console.log("Connection Opened");
   console.log("Client size: ", wss.clients.size);
-
+  const userID = req.headers['sec-websocket-key']; // We're using the WebSocket key as a unique ID for simplicity
+  users[userID] = {};  // Initialize user with no data (yet)
+  onUserConnect(userID);  // Handle the user connection
   // Broadcast the new user count
   broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
@@ -67,6 +69,7 @@ wss.on("connection", function (ws, req) {
             // Handle the server heartbeat ping
             console.log('Received a server heartbeat ping');
         } else if(currData.type === 'loc') {
+            onUserPositionUpdate(userID, currData.position);  // Update the user's position
             // Log the received location
             //console.log('Received a ping location:', currData.position);
             broadcast(ws, currData, false);
@@ -93,6 +96,8 @@ wss.on("connection", function (ws, req) {
 
   ws.on("close", (data) => {
       console.log("closing connection");
+      onUserDisconnect(userID);  // Handle the user disconnect
+
 
       // Broadcast the updated user count
       broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
