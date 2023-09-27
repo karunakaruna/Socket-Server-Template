@@ -621,3 +621,24 @@ const animate = () => {
 
 
         animate();
+
+
+
+
+// Websocket Error Handling
+ws.onerror = (error) => {
+    console.error("WebSocket Error: ", error);
+};
+
+ws.onclose = (event) => {
+    if (event.wasClean) {
+        console.log(`Connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+    } else {
+        console.error('Connection died');
+    }
+    // You could try to reconnect here after some delay
+    setTimeout(() => {
+        initializeWebSocketConnection();
+    }, 5000);  // Try to reconnect every 5 seconds
+};
+        

@@ -130,16 +130,16 @@ const isJSON = (message) => {
 /**
  * Sends a ping message to all connected clients every 50 seconds
  */
-const keepServerAlive = () => {
+ const keepServerAlive = () => {
   keepAliveId = setInterval(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send('ping');
+        //client.send('ping');
+        broadcast(null, JSON.stringify({ type: 'ping', value: 'ping' }), true);
       }
     });
   }, 50000);
 };
-
 
 
 app.get('/', (req, res) => {
