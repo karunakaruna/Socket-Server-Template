@@ -79,7 +79,7 @@ wss.on("connection", function (ws, req) {
           console.log('keepAlive');
           return;
         }
-        broadcast(ws, currData, false);
+        //broadcast(ws, currData, false);
       } else {
         console.error('malformed message', data);
       }
