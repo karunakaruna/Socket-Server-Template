@@ -180,12 +180,12 @@ function onUserDisconnect(userID) {
 
 function sendToUser(userID, message) {
   wss.clients.forEach(client => {
-      if (client._socket._httpMessage.headers['sec-websocket-key'] === userID && client.readyState === WebSocket.OPEN) {
+      const key = client?._socket?._httpMessage?.headers?.['sec-websocket-key'];
+      if (key === userID && client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(message));
       }
   });
 }
-
 
 
 
@@ -202,10 +202,10 @@ app.get('/', (req, res) => {
 app.post('/unity-endpoint', (req, res) => {
   console.log("Raw body:", req.body);
   // CORS headers
-  // res.header("Access-Control-Allow-Credentials", true);
-  // res.header('Access-Control-Allow-Origin', '*');
-  // res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  // res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time');
   
   // Accessing the message sent in the form data
   const receivedMessage = req.body.data;
