@@ -72,13 +72,15 @@ ws.onmessage = (event) => {
         }
     } else if (message.type === 'initUsers') {
         // Loop through the received users and create a sphere for each one
-        for (let userID in message.users) {
+        for (let incomingUserID in message.users) {
             let userPos = new THREE.Vector3(
-                message.users[userID].position.x,
-                message.users[userID].position.y,
-                message.users[userID].position.z
+                message.users[incomingUserID].position.x,
+                message.users[incomingUserID].position.y,
+                message.users[incomingUserID].position.z
             );
-            if (!users[userID]) {
+            
+            // Check if we've already created a sphere for this user
+            if (!users[incomingUserID]) {
                 // New user, create a sphere for them
                 const geometry = new THREE.SphereGeometry(0.1, 32, 32);
                 const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
@@ -86,20 +88,16 @@ ws.onmessage = (event) => {
                 const sphere = new THREE.Mesh(geometry, trans);
                 const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
                 const sphere2 = new THREE.Mesh(geometrysphere, material);
-            
+    
                 sphere.position.copy(userPos);
                 scene.add(sphere);
                 sphere.add(sphere2);
-            
-                users[userID] = {
+    
+                users[incomingUserID] = {
                     sphere: sphere,
                     targetPosition: userPos
                 };
-            } else {
-                // Existing user, update their position
-                users[userID].targetPosition.copy(userPos);
             }
-            
         }
     } else if (message.type === 'userDisconnected') {
         // Remove the sphere of the disconnected user
