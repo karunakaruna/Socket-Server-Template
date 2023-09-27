@@ -46,7 +46,14 @@
                     addLog(`Beacon activated at ${object.userData.URL}`);
         } else if (message.type === 'entrance') {
             addLog(`User entered ${message.objectName}`);
-            // You can spawn an entrance ping here if needed
+        
+            const receivedPosition = new THREE.Vector3(
+                message.position.x,
+                message.position.y,
+                message.position.z,
+            );
+        
+            spawnEntrancePingAtPosition(receivedPosition);
         }
         
             });
@@ -88,10 +95,16 @@ function showModal(objectName, url, intersectionPoint) {
             
         const payload = {
             type: 'entrance',
-            objectName: objectName
+            objectName: objectName,
+            position: {
+                x: intersectionPoint.x,
+                y: intersectionPoint.y,
+                z: intersectionPoint.z
+            }
         };
+        
         ws.send(JSON.stringify(payload));
-    
+        console.log(payload + ' sent');
         // Delay the opening of the URL by 1 second
         setTimeout(() => {
             window.open(url, "_blank");
