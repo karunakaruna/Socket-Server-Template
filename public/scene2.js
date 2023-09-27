@@ -44,7 +44,11 @@
                     // Run the "spawn ping" at this object's position
                     spawnBeaconLightAtPosition(object.position);
                     addLog(`Beacon activated at ${object.userData.URL}`);
-                }
+        } else if (message.type === 'entrance') {
+            addLog(`User entered ${message.objectName}`);
+            // You can spawn an entrance ping here if needed
+        }
+        
             });
         }
     };
@@ -56,6 +60,47 @@
     labelRenderer.domElement.style.top = '0px';
     labelRenderer.domElement.style.pointerEvents = 'none';
     document.getElementById( 'container' ).appendChild( labelRenderer.domElement );
+
+
+// Modal
+
+const urlModal = document.getElementById('urlModal');
+const confirmButton = document.getElementById('confirmButton');
+const modalText = document.getElementById('modalText');
+
+function showModal(objectName, url, intersectionPoint) {
+    modalText.innerText = `Enter ${objectName}`;
+    urlModal.style.display = 'block';
+
+    // Close the modal if clicked outside the content
+    urlModal.onclick = (e) => {
+        if (e.target === urlModal) {
+            urlModal.style.display = 'none';
+        }
+    };
+
+    // When confirm is clicked, open the URL
+    confirmButton.onclick = () => {
+        urlModal.style.display = 'none';
+    
+        // Handle the entrance ping on URL confirmation
+        spawnEntrancePingAtPosition(intersectionPoint);
+            
+        const payload = {
+            type: 'entrance',
+            objectName: objectName
+        };
+        ws.send(JSON.stringify(payload));
+    
+        // Delay the opening of the URL by 1 second
+        setTimeout(() => {
+            window.open(url, "_blank");
+        }, 1000);
+    };
+    
+}
+
+
 
 
 // Audio ///
@@ -348,8 +393,6 @@
         targetFOV = Math.min(Math.max(targetFOV, 25), 80); // Clamp FOV between 25 and 80
     });
 
-
-// CLICK <<<<<<<<<<<<<    
     window.addEventListener('click', (event) => {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -357,29 +400,26 @@
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(gltfScene.children, true);
         
-        for (let i = 0; i < intersects.length; i++) {
-            const userData = intersects[i].object.userData;
-            if (userData && userData.URL) {
-                window.open(userData.URL, "_blank");
-                return;
-            }
-        }
         if (intersects.length > 0) {
-            const intersect = intersects[0];
-    
+            const intersection = intersects[0];
+            
             // Set the intersection point as the target position
-            targetPosition.copy(intersect.point);
+            targetPosition.copy(intersection.point);
     
             // Optional: offset in the Y direction to ensure the cube rests above the grid.
             targetPosition.y += cube.scale.y / 2;
-        };
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-        
-            // Spawn the ping locally and play the audio
+    
+            // Always spawn the regular ping on intersection
             spawnPingAtPosition(intersection.point);
-        
-            // Send the position data to WebSocket server  
+            
+            const userData = intersection.object.userData;
+            if (userData && userData.URL) {
+                // Show the modal and spawn an entrance ping when the URL is confirmed.
+                showModal(userData.Name || 'Unknown', userData.URL, intersection.point, event);
+                return; // Exit to avoid further processing since the URL takes precedence
+            }
+            
+            // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
                 position: {
@@ -388,10 +428,11 @@
                     z: intersection.point.z
                 }
             };
-            
             ws.send(JSON.stringify(payload));
         }
     });
+    
+    
 
 
 
@@ -467,6 +508,44 @@ function spawnBeaconLightAtPosition(position) {
         .start();
 }
 
+// ENTRANCE PING
+function spawnEntrancePingAtPosition(position) {
+    const pingInstance = pingModel.clone();
+    pingInstance.position.copy(position).add(new THREE.Vector3(0, 2, 0)); // Higher position for distinction
+    pingInstance.scale.set(6, 6, 6); // Make it larger
+    pingInstance.animations = pingModel.animations;
+    pingInstance.visible = true;
+    scene.add(pingInstance);
+    
+    // Play spatial audio at the given position
+    playSpatialAudio('chime', position, 1);
+    
+    let mixer = new THREE.AnimationMixer(pingInstance);
+    activeMixers.push(mixer);
+    const clips = pingInstance.animations; 
+    const clip = THREE.AnimationClip.findByName(clips, 'CircleAction');
+    
+    if (clip) {
+        const action = mixer.clipAction(clip);
+        action.play();
+    
+        setTimeout(() => {
+            scene.remove(pingInstance);
+            mixer.stopAllAction();
+            const mixerIndex = activeMixers.indexOf(mixer);
+            if (mixerIndex !== -1) {
+                activeMixers.splice(mixerIndex, 1);
+            }
+        }, (clip.duration * 1000));
+        
+    } else {
+        console.error("Animation clip not found");
+    }
+}
+
+
+
+
 
     const activeMixers = [];
 
@@ -478,7 +557,7 @@ const animate = () => {
     // Use lerp to smoothly change FOV
     camera.fov += (targetFOV - camera.fov) * fovLerpSpeed;
     camera.updateProjectionMatrix();
-    
+
     TWEEN.update();
     // Use lerp to smoothly move the cube towards the target position
     cubePosition.lerp(targetPosition, damping);
