@@ -323,8 +323,8 @@ function showModal(objectName, url, intersectionPoint) {
     const mouse = new THREE.Vector2();
     
     // Camera Zoom Setup
-    let cameraFOV = 45;
-    let targetFOV = 45; // Initial target FOV
+    let cameraFOV = 60;
+    let targetFOV = 60; // Initial target FOV
     const fovLerpSpeed = 0.1; // Adjust this for zoom speed
     const customUpVector = new THREE.Vector3(0, 0, 1); // Example: Use the default "up" direction
 
@@ -346,7 +346,7 @@ function showModal(objectName, url, intersectionPoint) {
 
     camera.position.set(0, 15, 0);
     camera.rotation.set(-1.5708, 0, 0);
-    const gridGeometry = new THREE.PlaneGeometry(88, 88, 88, 88);
+    const gridGeometry = new THREE.PlaneGeometry(188, 188, 188, 188);
     const gridMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true });
     const grid = new THREE.Mesh(gridGeometry, gridMaterial);
     grid.rotation.x = Math.PI / 2;
@@ -372,7 +372,7 @@ function showModal(objectName, url, intersectionPoint) {
 
 
     //Lights
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Use a lower intensity value like 0.2 for a dim light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5); // Use a lower intensity value like 0.2 for a dim light
     directionalLight.position.set(1, 1, 1); // Set the light's position
     scene.add(directionalLight); // Add the light to your scene
 
