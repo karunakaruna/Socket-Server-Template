@@ -6,7 +6,7 @@ const users = {};  // Mapping of user IDs to their Three.js sphere objects
 //websockets
 let loadedGLTF; 
 const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
-
+let isGLTFLoaded = false;
 
 // Your existing code...
 
@@ -39,7 +39,7 @@ ws.onmessage = (event) => {
         addLog(`Color updated to ${message.value}`);
     } else if (message.type === 'ping') {
         // Existing ping handler
-    } else if (message.type === 'loc') {
+    } else if (message.type === 'loc' && message.position) {
         const receivedPosition = new THREE.Vector3(
             message.position.x,
             message.position.y,
@@ -392,7 +392,7 @@ function showModal(objectName, url, intersectionPoint) {
         loadedGLTF = gltf; // Assign the loaded gltf model
         gltfScene = gltf.scene;  // Store the scene
         scene.add(gltfScene);
-
+        isGLTFLoaded = true;
         gltfScene.traverse(function (child) {
             // Check if the child has a userData.Name property
             if (child.userData && child.userData.Name) {
