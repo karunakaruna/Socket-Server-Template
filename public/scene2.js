@@ -346,8 +346,8 @@ function showModal(objectName, url, intersectionPoint) {
 
     camera.position.set(0, 25, 0);
     camera.rotation.set(-1.5708, 0, 0);
-    const gridGeometry = new THREE.PlaneGeometry(188, 188, 188, 188);
-    const gridMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true });
+    const gridGeometry = new THREE.PlaneGeometry(188, 188, 88, 88);
+    const gridMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, wireframe: true });
     const grid = new THREE.Mesh(gridGeometry, gridMaterial);
     grid.rotation.x = Math.PI / 2;
     scene.add(grid);
