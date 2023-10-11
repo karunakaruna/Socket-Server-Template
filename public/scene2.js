@@ -344,7 +344,7 @@ function showModal(objectName, url, intersectionPoint) {
     cube2.position.set(0,0,0);
     cube.add(cube2);
 
-    camera.position.set(0, 15, 0);
+    camera.position.set(0, 25, 0);
     camera.rotation.set(-1.5708, 0, 0);
     const gridGeometry = new THREE.PlaneGeometry(188, 188, 188, 188);
     const gridMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true });
@@ -385,34 +385,105 @@ function showModal(objectName, url, intersectionPoint) {
 
 // GLTF loaders ///
 
-// Map Scene ///
-    let gltfScene; 
-    const loader = new THREE.GLTFLoader();
-    loader.load('grid6.glb', function(gltf) {
-        loadedGLTF = gltf; // Assign the loaded gltf model
-        gltfScene = gltf.scene;  // Store the scene
-        scene.add(gltfScene);
-        isGLTFLoaded = true;
-        gltfScene.traverse(function (child) {
-            // Check if the child has a userData.Name property
-            if (child.userData && child.userData.Name) {
-                // Create a label for this child
-                const text = document.createElement('div');
-                text.className = 'label';
-                text.textContent = child.userData.Name;  // Set label text to the Name property
-        
-                const label = new CSS2DObject(text);
-                label.position.copy(child.position);
-                scene.add(label);  // Assuming 'root' is the main group/scene where everything is added
-            }
-        });
+// // Map Scene ///
+// let gltfScene; 
+// const loader = new THREE.GLTFLoader();
+// loader.load('all_worlds.glb', function(gltf) {
+//     loadedGLTF = gltf; // Assign the loaded gltf model
+//     gltfScene = gltf.scene;  // Store the scene
+//     scene.add(gltfScene);
+//     isGLTFLoaded = true;
+//     gltfScene.traverse(function (child) {
+//         // Check if the child has a userData.Name property
+//         if (child.userData && child.userData.Name) {
+//             // Create a label for this child
+//             const text = document.createElement('div');
+//             text.className = 'label';
+//             text.textContent = child.userData.Name;  // Set label text to the Name property
+            
+//             const label = new CSS2DObject(text);
+//             label.position.copy(child.position);
+            
+//             // Adjust the label's position to be 10 units above the object in 3D space
+//             label.position.y += .5;
 
-    }, undefined, function(error) {
-        console.error('An error occurred loading the GLTF:', error);
+//             scene.add(label);  // Assuming 'root' is the main group/scene where everything is added
+//         }
+//     });
+
+// }, undefined, function(error) {
+//     console.error('An error occurred loading the GLTF:', error);
+// });
+
+
+let gltfScene;
+const loader = new THREE.GLTFLoader();
+
+const sprites = [];
+const boundingBox = new THREE.Box3();
+
+const setBoundingBox = () => {
+    const cubePosition = cube.position;
+    const size = 30;
+    boundingBox.setFromCenterAndSize(cubePosition, new THREE.Vector3(size, size, size));
+};
+
+const checkSpriteVisibility = () => {
+    const scaleFactor = camera.fov / 75;  // 75 is the reference FOV.
+    for (const sprite of sprites) {
+        sprite.visible = boundingBox.containsPoint(sprite.position);
+        
+        if (sprite.visible) {
+            const desiredScale = sprite.initialScale.clone().multiplyScalar(scaleFactor);
+            sprite.scale.copy(desiredScale);
+        }
+    }
+};
+
+loader.load('all_worlds.glb', function (gltf) {
+    loadedGLTF = gltf;
+    gltfScene = gltf.scene;
+    scene.add(gltfScene);
+    isGLTFLoaded = true;
+
+    gltfScene.traverse(function (child) {
+        if (child.userData && child.userData.Name) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            context.font = '20px Arial';
+            const textMetrics = context.measureText(child.userData.Name);
+            
+            canvas.width = textMetrics.width + 10;
+            canvas.height = 40;
+            context.font = '20px Arial';
+            context.fillStyle = 'white';
+            context.fillText(child.userData.Name, 5, 15);
+    
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: texture
+            });
+    
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.copy(child.position);
+            sprite.position.y += 0.5;
+            
+            const uniformScale = canvas.width / 35;
+            sprite.scale.set(uniformScale, uniformScale * (canvas.height / canvas.width), 1);
+            sprite.initialScale = sprite.scale.clone(); // Store the initial scale
+            
+            sprite.center.set(0.5, 0.5);  // This centers our sprite
+            scene.add(sprite);
+            sprites.push(sprite);
+        }
     });
 
-// Label Maker
+    setBoundingBox();
+    checkSpriteVisibility();
 
+}, undefined, function (error) {
+    console.error('An error occurred loading the GLTF:', error);
+});
 
 
 
@@ -572,7 +643,6 @@ function showModal(objectName, url, intersectionPoint) {
     
 
 
-
 // SPAWNERS ///
 
 // PING 
@@ -715,6 +785,11 @@ const animate = () => {
 
     renderer.render(scene, camera);
     labelRenderer.render( scene, camera );
+
+
+    setBoundingBox();
+    checkSpriteVisibility()
+
 };
 
 
