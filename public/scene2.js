@@ -424,7 +424,7 @@ const boundingBox = new THREE.Box3();
 
 const setBoundingBox = () => {
     const cubePosition = cube.position;
-    const size = 30;
+    const size = 60;
     boundingBox.setFromCenterAndSize(cubePosition, new THREE.Vector3(size, size, size));
 };
 
