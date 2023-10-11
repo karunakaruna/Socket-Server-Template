@@ -429,10 +429,26 @@ const setBoundingBox = () => {
 };
 
 const checkSpriteVisibility = () => {
-    const scaleFactor = camera.fov / 75;  // 75 is the reference FOV.
+    const scaleFactor = camera.fov / 75;
     for (const sprite of sprites) {
-        sprite.visible = boundingBox.containsPoint(sprite.position);
-        
+        if (sprite.isStar) {
+            sprite.visible = boundingBox.containsPoint(sprite.position);
+            sprite.material.opacity = 1; // Always fully visible for Star sprites
+        } else if (camera.fov < 40) {
+            sprite.visible = boundingBox.containsPoint(sprite.position);
+            sprite.material.opacity = 1;
+        } else if (camera.fov >= 40 && camera.fov <= 50) {
+            sprite.visible = boundingBox.containsPoint(sprite.position);
+            
+            // Linearly interpolate opacity between 1 at 40 FOV and 0 at 50 FOV.
+            sprite.material.opacity = THREE.MathUtils.lerp(1, 0, (camera.fov - 40) / 10);
+            
+            // This ensures that the changes in opacity are taken into account
+            sprite.material.needsUpdate = true;
+        } else {
+            sprite.visible = false;
+        }
+
         if (sprite.visible) {
             const desiredScale = sprite.initialScale.clone().multiplyScalar(scaleFactor);
             sprite.scale.copy(desiredScale);
@@ -440,11 +456,11 @@ const checkSpriteVisibility = () => {
     }
 };
 
+
 loader.load('all_worlds.glb', function (gltf) {
     loadedGLTF = gltf;
     gltfScene = gltf.scene;
     scene.add(gltfScene);
-    isGLTFLoaded = true;
 
     gltfScene.traverse(function (child) {
         if (child.userData && child.userData.Name) {
@@ -460,9 +476,7 @@ loader.load('all_worlds.glb', function (gltf) {
             context.fillText(child.userData.Name, 5, 15);
     
             const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({
-                map: texture
-            });
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
     
             const sprite = new THREE.Sprite(spriteMaterial);
             sprite.position.copy(child.position);
@@ -470,9 +484,17 @@ loader.load('all_worlds.glb', function (gltf) {
             
             const uniformScale = canvas.width / 35;
             sprite.scale.set(uniformScale, uniformScale * (canvas.height / canvas.width), 1);
-            sprite.initialScale = sprite.scale.clone(); // Store the initial scale
+            sprite.initialScale = sprite.scale.clone();
             
-            sprite.center.set(0.5, 0.5);  // This centers our sprite
+            sprite.center.set(0.5, 0.5);
+
+            // Check for the 'Star' userData
+            if (child.userData.Star) {
+                sprite.isStar = true;
+            } else {
+                sprite.isStar = false;
+            }
+            
             scene.add(sprite);
             sprites.push(sprite);
         }
@@ -484,6 +506,7 @@ loader.load('all_worlds.glb', function (gltf) {
 }, undefined, function (error) {
     console.error('An error occurred loading the GLTF:', error);
 });
+
 
 
 
@@ -545,54 +568,75 @@ loader.load('all_worlds.glb', function (gltf) {
 
 // LISTENERS ///
 
-    // Mouse movement listener. //
-    let maxrot = 25;
-    window.addEventListener('mousemove', (event) => {
-        const mouseX = event.clientX - window.innerWidth / 2;
-        const mouseY = event.clientY - window.innerHeight / 2;
+// Mouse movement listener. //
+let maxrot = 25;
 
-        // Normalize mouse position for raycasting
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        // Update the picking ray with the camera and mouse position
-        raycaster.setFromCamera(mouse, camera);
-
-        const divs = [document.getElementById('floatingText'), document.getElementById('authorText'), document.getElementById('yearText')];
-        divs.forEach((div, index) => {
-            div.style.left = `${event.clientX}px`;
-            div.style.top = `${event.clientY + index * 25}px`; // Stack the divs vertically
-        });
+const imageElem = document.getElementById('imageDisplay');
 
 
-        // Update the target rotations based on the mouse position
-        targetRotationZ = THREE.MathUtils.mapLinear(
-            event.clientX, 0, window.innerWidth, 
-            THREE.MathUtils.degToRad(maxrot), THREE.MathUtils.degToRad(maxrot*-1)
-        );
+window.addEventListener('mousemove', (event) => {
+    const mouseX = event.clientX - window.innerWidth / 2;
+    const mouseY = event.clientY - window.innerHeight / 2;
+
+    // Normalize mouse position for raycasting
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Update the picking ray with the camera and mouse position
+    raycaster.setFromCamera(mouse, camera);
+
+    const divs = [document.getElementById('floatingText'), document.getElementById('authorText'), document.getElementById('yearText')];
+    const imageDiv = document.getElementById('displayedImage');
+    const imageElem = document.getElementById('imageDisplay');
+
+    divs.forEach((div, index) => {
+        div.style.left = `${event.clientX}px`;
+        div.style.top = `${event.clientY + index * 25}px`; // Stack the divs vertically
+    });
+    imageDiv.style.left = `${event.clientX}px`;
+    imageDiv.style.top = `${event.clientY - 220}px`; 
+
+    // Update the target rotations based on the mouse position
+    targetRotationZ = THREE.MathUtils.mapLinear(
+        event.clientX, 0, window.innerWidth, 
+        THREE.MathUtils.degToRad(maxrot), THREE.MathUtils.degToRad(maxrot*-1)
+    );
+
+    targetRotationX = THREE.MathUtils.mapLinear(
+        event.clientY, 0, window.innerHeight, 
+        THREE.MathUtils.degToRad(maxrot*-1), THREE.MathUtils.degToRad(maxrot)
+    );
+
+    // Ensure the X rotation stays within bounds to avoid over-rotation
+    targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2) + 0.4;
+
+    // Check for intersections with 3D objects
+    const intersects = raycaster.intersectObjects(gltfScene.children, true);
+    for (let i = 0; i < intersects.length; i++) {
+        const userData = intersects[i].object.userData;
+    
+        if (userData) {
+            document.getElementById('floatingText').innerText = userData.Name || "";
+            document.getElementById('authorText').innerText = userData.Author || "";
+            document.getElementById('yearText').innerText = userData.Year || "";
+    
+            // Update the image src if 'image' userData is present
+            if (userData.image) {
+                imageElem.src = userData.image;
+            } else {
+                imageElem.src = ''; // Clear the src if no image data is present
+            }
             
-        targetRotationX = THREE.MathUtils.mapLinear(
-            event.clientY, 0, window.innerHeight, 
-            THREE.MathUtils.degToRad(maxrot*-1), THREE.MathUtils.degToRad(maxrot)
-        );
-        // Ensure the X rotation stays within bounds to avoid over-rotation
-       targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2)+.4;
+            return; // Return to break out of loop if we found an intersection with userData
+        }
+    }
+    
 
-        // Update Text Overlay for Objects Intersected
-            const intersects = raycaster.intersectObjects(gltfScene.children, true);
-                        for (let i = 0; i < intersects.length; i++) {
-                            const userData = intersects[i].object.userData;
-
-                            if (userData) {
-                                document.getElementById('floatingText').innerText = userData.Name || "";
-                                document.getElementById('authorText').innerText = userData.Author || "";
-                                document.getElementById('yearText').innerText = userData.Year || "";
-                                return;
-                            }
-                        }
     // If no object is intersected
     divs.forEach(div => div.innerText = '');
-    });
+    imageElem.src = '';  // Also clear the image if no object is intersected
+});
+
 
     // Listen to scroll wheel
     window.addEventListener('wheel', (event) => {
