@@ -9,8 +9,16 @@ const server = http.createServer(app);
 const WebSocket = require("ws");
 const bodyParser = require('body-parser');
 
+const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io'];
+
 const corsOptions = {
-  origin: 'https://monaverse.com',
+  origin: function (origin, callback) {
+    if (allowedOrigins.includes(origin) || !origin) { // !origin handles browser requests like opening the site directly, this is okay for most use-cases but you can remove it if you want to be strict.
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   optionsSuccessStatus: 204,
 };
