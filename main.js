@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const WebSocket = require("ws");
 const bodyParser = require('body-parser');
 
-const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io'];
+const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000'];
 
 const corsOptions = {
   origin: function (origin, callback) {
