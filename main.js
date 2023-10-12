@@ -13,7 +13,9 @@ const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io'];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (allowedOrigins.includes(origin) || !origin) { // !origin handles browser requests like opening the site directly, this is okay for most use-cases but you can remove it if you want to be strict.
+    console.log("Incoming origin:", origin);  // Log the incoming origin
+
+    if (allowedOrigins.includes(origin) || !origin) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -21,6 +23,8 @@ const corsOptions = {
   },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   optionsSuccessStatus: 204,
+  credentials: true, // This allows cookies and headers to be sent/received
+  allowedHeaders: ['Content-Type', 'Authorization'] // Additional headers can be added here
 };
 
 app.use(express.json());
