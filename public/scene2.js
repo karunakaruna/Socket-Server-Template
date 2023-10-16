@@ -5,7 +5,8 @@ const users = {};  // Mapping of user IDs to their Three.js sphere objects
 
 //websockets
 let loadedGLTF; 
-const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
+//const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
+const ws = new WebSocket('wss://metacarta-b8f465580dc6.herokuapp.com/'); 
 let isGLTFLoaded = false;
 
 // Your existing code...
