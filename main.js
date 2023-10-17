@@ -53,13 +53,19 @@ wss.on("connection", function (ws, req) {
 
   const userID = uuidv4();  // Generate a UUID for each connected user
   users[userID] = {};
+
+  // Send the assigned user ID to the connected client
+  ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
+
   onUserConnect(userID);
   broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
   if (wss.clients.size === 1) {
     console.log("first connection. starting keepalive");
     keepServerAlive();
-}
+  }
+});
+
 
   ws.on("message", (data) => {
     if (isJSON(data)) {

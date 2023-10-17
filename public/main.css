@@ -88,3 +88,30 @@ body {
   padding: 20px;
   border-radius: 8px;
 }
+
+
+.userlist {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.5); /* semi-transparent black */
+  padding: 10px;
+  border-right: 1px solid #333;
+  z-index: 300;  /* make sure it's on top */
+}
+
+#user-list-ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  user-select: none;
+}
+
+#user-list-ul li {
+  padding: 5px;
+  border-bottom: 1px solid #444; /* subtle separator */
+}

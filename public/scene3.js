@@ -271,6 +271,18 @@ const animate = () => {
     for (const userID in users) {
         const user = users[userID];
         user.sphere.position.lerp(user.targetPosition, 0.05);
+        for (let userID in users) {
+            let user = users[userID];
+            if (user.sphere && user.sphere.children.length > 0) {
+                for (let child of user.sphere.children) {
+                    if (child.isSprite) {
+                        // Ensure the label always faces the camera
+                        //child.lookAt(camera.position);
+                    }
+                }
+            }
+        }
+        
     }
 
 
