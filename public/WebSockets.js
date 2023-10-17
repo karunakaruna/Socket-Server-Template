@@ -34,6 +34,7 @@ ws.onmessage = (event) => {
         myUserID = message.userID;  // Set the client's own user ID
         document.getElementById('username').textContent = myUserID;
         console.log('Assigned UserID:', myUserID);
+        addUserToList(myUserID, true);
         return;
     } else if (message.type === 'color') {
         cube.material.color.set(message.value);
@@ -83,11 +84,17 @@ ws.onmessage = (event) => {
         
         for (let incomingUserID in message.users) {
             addUserToList(incomingUserID, incomingUserID === myUserID);
-            let userPos = new THREE.Vector3(
-                message.users[incomingUserID].position.x,
-                message.users[incomingUserID].position.y,
-                message.users[incomingUserID].position.z
+            if (message.users[incomingUserID].position) {
+                let userPos = new THREE.Vector3(
+                    message.users[incomingUserID].position.x,
+                    message.users[incomingUserID].position.y,
+                    message.users[incomingUserID].position.z
+                    
             )
+
+            } else {
+                console.warn(`User ${incomingUserID} has no position data.`);
+            }
             ;
             
             // Check if we've already created a sphere for this user

@@ -52,7 +52,9 @@ wss.on("connection", function (ws, req) {
   console.log("Client size: ", wss.clients.size);
 
   const userID = uuidv4();  // Generate a UUID for each connected user
-  users[userID] = {};
+  users[userID] = {
+    position: { x: 0, y: 0, z: 0 } // default position
+};
 
   // Send the assigned user ID to the connected client
   ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
@@ -130,12 +132,18 @@ const keepServerAlive = () => {
 };
 
 function onUserConnect(userID) {
-    sendToUser(userID, {
-        type: 'initUsers',
-        userID: userID,
-        users: users
-    });
+  // Ensure position data is set for the user
+  if(!users[userID].position) {
+      users[userID].position = { x: 0, y: 0, z: 0 };
+  }
+  
+  sendToUser(userID, {
+      type: 'initUsers',
+      userID: userID,
+      users: users
+  });
 }
+
 
 function onUserPositionUpdate(userID, position) {
   users[userID].position = position;
