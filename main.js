@@ -64,7 +64,7 @@ wss.on("connection", function (ws, req) {
     console.log("first connection. starting keepalive");
     keepServerAlive();
   }
-});
+
 
 
   ws.on("message", (data) => {
