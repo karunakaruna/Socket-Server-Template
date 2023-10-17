@@ -64,11 +64,6 @@ ws.onmessage = (event) => {
             scene.add(sphere);
             sphere.add(sphere2);
             
-            // add label sprite
-            // const labelSprite = createLabelSprite(incomingUserID);
-            // labelSprite.position.y += 0.5;  // Adjust based on your needs
-            // sphere.add(labelSprite);
-
             users[message.userID] = {
                 sphere: sphere,
                 targetPosition: userPos
@@ -79,52 +74,51 @@ ws.onmessage = (event) => {
         }
     } else if (message.type === 'initUsers'){ 
         console.log(message.users);
-
+    
         // Loop through the received users and create a sphere for each one
-        
         for (let incomingUserID in message.users) {
             addUserToList(incomingUserID, incomingUserID === myUserID);
+            
             if (message.users[incomingUserID].position) {
                 let userPos = new THREE.Vector3(
                     message.users[incomingUserID].position.x,
                     message.users[incomingUserID].position.y,
                     message.users[incomingUserID].position.z
+                );
+    
+                // Check if we've already created a sphere for this user
+                if (!users[incomingUserID]) {
                     
-            )
-
+                    // New user, create a sphere for them
+                    const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+                    const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+                    const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+                    const sphere = new THREE.Mesh(geometry, trans);
+                    const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
+                    const sphere2 = new THREE.Mesh(geometrysphere, material);
+    
+                    sphere.position.copy(userPos);
+                    scene.add(sphere);
+                    sphere.add(sphere2);
+    
+                    const labelSprite = createLabelSprite(incomingUserID);
+                    labelSprite.position.set(0, 4, 0); // Adjust based on your needs
+                    sphere.add(labelSprite);
+                    sphere.updateMatrixWorld();
+                    //labelSprite.position.copy(userPos);
+    
+                    users[incomingUserID] = {
+                        sphere: sphere,
+                        sprite: labelSprite,
+                        targetPosition: userPos
+                    };
+                }
             } else {
                 console.warn(`User ${incomingUserID} has no position data.`);
             }
-            ;
-            
-            // Check if we've already created a sphere for this user
-            if (!users[incomingUserID]) {
-                
-                // New user, create a sphere for them
-                const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-                const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
-                const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
-                const sphere = new THREE.Mesh(geometry, trans);
-                const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
-                const sphere2 = new THREE.Mesh(geometrysphere, material);
-    
-                sphere.position.copy(userPos);
-                scene.add(sphere);
-                sphere.add(sphere2);
-    
-                const labelSprite = createLabelSprite(incomingUserID);
-                labelSprite.position.set(0, 0.5, 0); // Adjust based on your needs
-                sphere.add(labelSprite);
-                console.log( labelSprite.parent);
-
-                users[incomingUserID] = {
-                    sphere: sphere,
-                    targetPosition: userPos
-                };
-            }
-            
         };
-    } else if (message.type === 'userDisconnected') {
+    }
+     else if (message.type === 'userDisconnected') {
         // Remove the sphere of the disconnected user
         removeUserFromList(message.userID);
         let userObject = users[message.userID];

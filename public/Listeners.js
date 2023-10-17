@@ -88,7 +88,8 @@ export function addClickListener() {
     
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(gltfScene.children, true);
-        
+        const coordinatesDiv = document.getElementById('coordinatesText');
+
         if (intersects.length > 0) {
             const intersection = intersects[0];
             
@@ -107,7 +108,9 @@ export function addClickListener() {
                 showModal(userData.Name || 'Unknown', userData.URL, intersection.point, event);
                 return; // Exit to avoid further processing since the URL takes precedence
             }
-            
+            // ... inside your if (intersects.length > 0) block after getting the intersection.point
+            coordinatesDiv.innerText = `X: ${intersection.point.x.toFixed(2)}, Y: ${intersection.point.y.toFixed(2)}, Z: ${intersection.point.z.toFixed(2)}`;
+
             // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
