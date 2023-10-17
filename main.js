@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const WebSocket = require("ws");
 const bodyParser = require('body-parser');
 
-const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000'];
+const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000','http://localhost:3000'];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -126,6 +126,7 @@ const keepServerAlive = () => {
 function onUserConnect(userID) {
     sendToUser(userID, {
         type: 'initUsers',
+        userID: userID,
         users: users
     });
 }
@@ -145,6 +146,7 @@ function onUserDisconnect(userID) {
       type: 'userDisconnected',
       userID: userID
   }), true);
+  console.log(userID);
 }
 
 

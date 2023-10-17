@@ -1,5 +1,5 @@
 // Function to add new log
-function addLog(message) {
+export function addLog(message) {
     const logList = document.getElementById('log-list');
     
     // Create new log item
@@ -15,3 +15,4 @@ function addLog(message) {
         newItem.classList.add('fade');
     }, 1000);  // start the fade out 1 second after appending
 }
+
