@@ -1,7 +1,8 @@
-import { raycaster, camera, mouse, cube, userID, showModal } from './scene3.js';
+import { raycaster, camera, mouse, cube, userID, showModal, scene } from './scene3.js';
 import { gltfScene } from './Loaders.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
 import {ws, myUserID} from './WebSockets.js'
+import { showMenu } from './Menu.js';
 
 let targetRotationX = 0;
 let targetRotationZ = 0;
@@ -85,7 +86,9 @@ export function addClickListener() {
     window.addEventListener('click', (event) => {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    
+        document.querySelectorAll('.contextMenu').forEach(menu => {
+            menu.style.display = 'none';
+        });
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(gltfScene.children, true);
         const coordinatesDiv = document.getElementById('coordinatesText');
@@ -125,4 +128,50 @@ export function addClickListener() {
     });
 }
 
+
+
+
+export function addRightClickListener(scene, yourUserSphere) {
+    const menu = document.getElementById('yourMenuID'); // Replace 'yourMenuID' with the actual ID of your menu, if it has one
+    function isObjectAnotherUserSphere(object) {
+        return object.userData && object.userData.userID;
+    }
+    window.addEventListener('mousedown', (event) => {
+        // Hide the menu if you click outside of it
+        if (menu && !menu.contains(event.target)) {
+            menu.style.display = 'none';
+        }
+
+        // Check if it's a right-click
+        if (event.button === 2) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const objectsToTest = scene.children.filter(child => !(child instanceof THREE.Sprite));
+            const intersects = raycaster.intersectObjects(objectsToTest, true); // Recursively check all children
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                console.log(object);
+                // Now decide what menu to show based on the object
+                if (object.userData.URL) {
+                    showMenu('url', event.clientX, event.clientY);
+                } else if (object === yourUserSphere) {
+                    showMenu('user', event.clientX, event.clientY);
+                } else if (isObjectAnotherUserSphere(object)) {
+                    showMenu('otherUser', event.clientX, event.clientY);
+                }
+            }
+        }
+    });
+}
+
+
 export { gltfScene, targetRotationX, targetRotationZ, targetPosition, targetFOV};
+
+
+
+
+
+

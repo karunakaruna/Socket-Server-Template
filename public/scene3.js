@@ -1,23 +1,20 @@
 let userID = null;
- // Mapping of user IDs to their Three.js sphere objects
 const scene = new THREE.Scene();
-//let gltfScene;
-//let pingModel;
-//let loadedGLTF; 
 
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, pingModel, setBoundingBox, checkSpriteVisibility, loadedGLTF } from './Loaders.js';
-import { addMouseMovementListener, addScrollWheelListener, addClickListener, targetRotationX, targetRotationZ, targetPosition, targetFOV } from './Listeners.js';
+import { addMouseMovementListener, addScrollWheelListener, addClickListener, targetRotationX, targetRotationZ, targetPosition, targetFOV, addRightClickListener } from './Listeners.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
-import { users, ws } from './WebSockets.js'; 
+import { myUserID, getMyID, users, ws } from './WebSockets.js'; 
 import { addLog } from './log.js';
 
-//websockets
-
-//const ws = new WebSocket('wss://worldtree.herokuapp.com'); // Replace with your Heroku app's WebSocket address
-let isGLTFLoaded = false;
 const lerpFactor = 0.05;
 
 // Modal
+
+document.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+});
+
 
 const urlModal = document.getElementById('urlModal');
 const confirmButton = document.getElementById('confirmButton');
@@ -191,7 +188,7 @@ export const activeMixers = [];
     camera.up.copy(customUpVector);
 
     //Setup Basis Geometry (used for camera testing)
-    const geometry = new THREE.BoxGeometry();
+    const geometry = new THREE.BoxGeometry(0.1,0.1,0.1);
     const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0 });
     const cube = new THREE.Mesh(geometry, material);
     const geometry2 = new THREE.BoxGeometry();
@@ -221,9 +218,11 @@ export const activeMixers = [];
     const userMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});  // WHITE
     const userSphere = new THREE.Mesh(userGeometry, userMaterial);
     userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
-
+    const tempID = getMyID();
+    //console.log('uid: ' + tempID);
+    // userSphere.userData.userID = tempID;
     cube.add(userSphere);  // Attach to the cube
-    export{ scene, cube, camera, mouse, raycaster, playSpatialAudio, showModal, userID };
+    export{ scene, cube, camera, mouse, raycaster, playSpatialAudio, showModal, userID, userSphere };
 
 
 
@@ -247,7 +246,7 @@ loadBeaconLightModel(scene);
 addMouseMovementListener();
 addScrollWheelListener();
 addClickListener();
-
+addRightClickListener(scene,userSphere);
 export {loadedGLTF};
 
 

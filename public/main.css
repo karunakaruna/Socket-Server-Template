@@ -115,3 +115,28 @@ body {
   padding: 5px;
   border-bottom: 1px solid #444; /* subtle separator */
 }
+
+
+.contextMenu {
+  display: none;
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 5px;
+  overflow: hidden; 
+}
+
+.contextMenu button {
+  background-color: transparent;
+  border: none;
+  color: white;
+  text-align: left;
+  padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.contextMenu button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}

@@ -1,6 +1,6 @@
 
 import { addLog } from './log.js';
-import { camera, userID, scene, loadedGLTF } from './scene3.js';
+import { camera, userID, scene, loadedGLTF, userSphere } from './scene3.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './Userlist.js';
@@ -8,7 +8,6 @@ import { boundingBox, getLoadedGLTF  } from './Loaders';
 
 const users = {}; 
 let myUserID = null;
-
 const ws = new WebSocket('wss://metacarta-b8f465580dc6.herokuapp.com/'); 
 ws.onmessage = (event) => {
     if (event.data === 'ping') {
@@ -36,7 +35,8 @@ ws.onmessage = (event) => {
         document.getElementById('username').textContent = myUserID;
         console.log('Assigned UserID:', myUserID);
         addUserToList(myUserID, true);
-        return;
+        userSphere.userData.userID = myUserID;
+        return myUserID;
     } else if (message.type === 'color') {
         cube.material.color.set(message.value);
         addLog(`Color updated to ${message.value}`);
@@ -128,7 +128,8 @@ ws.onmessage = (event) => {
         );
         spawnEntrancePingAtPosition(receivedPosition);
     }
-    
+    console.log( 'ws uid:' + myUserID);
+    //myUserID = primaryUserID;
 };
 
 export { ws, users };
@@ -160,7 +161,7 @@ function createSphereAtPosition(position, userID) {
     outerSphere.position.copy(position);
     scene.add(outerSphere);
     outerSphere.add(innerSphere);
-
+    outerSphere.userData.userID = userID;
     const sprite = attachLabelToObjects(outerSphere, userID);
 
     return {
@@ -170,4 +171,9 @@ function createSphereAtPosition(position, userID) {
     };
 }
 
-export {myUserID};
+export function getMyID(){
+    return myUserID;
+
+}
+
+export { myUserID};
