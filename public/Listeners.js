@@ -1,7 +1,7 @@
 import { raycaster, camera, mouse, cube, userID, showModal } from './scene3.js';
 import { gltfScene } from './Loaders.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
-import {ws} from './WebSockets.js'
+import {ws, myUserID} from './WebSockets.js'
 
 let targetRotationX = 0;
 let targetRotationZ = 0;
@@ -110,11 +110,10 @@ export function addClickListener() {
             }
             // ... inside your if (intersects.length > 0) block after getting the intersection.point
             coordinatesDiv.innerText = `X: ${intersection.point.x.toFixed(2)}, Y: ${intersection.point.y.toFixed(2)}, Z: ${intersection.point.z.toFixed(2)}`;
-
             // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
-                userID: userID,
+                userID: myUserID,
                 position: {
                     x: intersection.point.x,
                     y: intersection.point.y,

@@ -140,7 +140,8 @@ function onUserConnect(userID) {
   sendToUser(userID, {
       type: 'initUsers',
       userID: userID,
-      users: users
+      users: users,
+      position: position
   });
 }
 

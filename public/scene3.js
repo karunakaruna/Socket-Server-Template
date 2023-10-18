@@ -9,6 +9,7 @@ import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, pingMode
 import { addMouseMovementListener, addScrollWheelListener, addClickListener, targetRotationX, targetRotationZ, targetPosition, targetFOV } from './Listeners.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
 import { users, ws } from './WebSockets.js'; 
+import { addLog } from './log.js';
 
 //websockets
 
@@ -216,7 +217,7 @@ export const activeMixers = [];
 
 
 //  Jiggle Sphere
-    const userGeometry = new THREE.SphereGeometry(0.1, 32, 32); 
+    const userGeometry = new THREE.SphereGeometry(0.2, 32, 32); 
     const userMaterial = new THREE.MeshBasicMaterial({color: 0xFFFFFF});  // WHITE
     const userSphere = new THREE.Mesh(userGeometry, userMaterial);
     userSphere.position.set(0, 0.7, 0);  // Slightly above the cube's center
@@ -247,7 +248,7 @@ addMouseMovementListener();
 addScrollWheelListener();
 addClickListener();
 
-
+export {loadedGLTF};
 
 
 //Animation Update Loop

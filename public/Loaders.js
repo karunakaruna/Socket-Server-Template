@@ -49,6 +49,7 @@ export function loadAllWorlds(scene) {
     const loader = new THREE.GLTFLoader();
     loader.load('models/all_worlds.glb', function (gltf) {
     loadedGLTF = gltf;
+    console.log("GLTF loaded:", loadedGLTF);
     gltfScene = gltf.scene;
     scene.add(gltfScene);
 
@@ -133,7 +134,7 @@ export function loadPingModel(scene) {
 export { pingModel };
 export { gltfScene };
 export { loadedGLTF };
-export { sprites };
+export { sprites, boundingBox };
 // Beaconlight Loader ///
 export function loadBeaconLightModel(scene) {
         const beaconLightLoader = new THREE.GLTFLoader();
@@ -162,3 +163,6 @@ export function loadBeaconLightModel(scene) {
         });
 }
 
+export function getLoadedGLTF() {
+    return loadedGLTF;
+}

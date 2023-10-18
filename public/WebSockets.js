@@ -1,10 +1,10 @@
-import { loadedGLTF } from './Loaders';
-import { addLog } from './log.js';
-import { userID, scene } from './scene3.js';
-import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
-import { createLabelSprite } from './Sprite.js';
-import { addUserToList, removeUserFromList } from './Userlist.js';
 
+import { addLog } from './log.js';
+import { camera, userID, scene, loadedGLTF } from './scene3.js';
+import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
+import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
+import { addUserToList, removeUserFromList } from './Userlist.js';
+import { boundingBox, getLoadedGLTF  } from './Loaders';
 
 const users = {}; 
 let myUserID = null;
@@ -23,7 +23,8 @@ ws.onmessage = (event) => {
     // Get object by its name or URL
     const getObjectByProperty = (prop, value) => {
         let foundObject = null;
-        loadedGLTF.scene.traverse((object) => {
+        const GLTF = getLoadedGLTF();
+        GLTF.scene.traverse((object) => {
             if (object.userData && object.userData[prop] === value) {
                 foundObject = object;
             }
@@ -48,75 +49,35 @@ ws.onmessage = (event) => {
             message.position.z
         );
         spawnPingAtPosition(receivedPosition);
-
-        const userPos = new THREE.Vector3(message.position.x, message.position.y, message.position.z);
         
         if (!users[message.userID]) {
             // New user, create a sphere for them
-            const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-            const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
-            const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
-            const sphere = new THREE.Mesh(geometry, trans);
-            const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
-            const sphere2 = new THREE.Mesh(geometrysphere, material);
-
-            sphere.position.copy(userPos);
-            scene.add(sphere);
-            sphere.add(sphere2);
-            
-            users[message.userID] = {
-                sphere: sphere,
-                targetPosition: userPos
-            };
+            console.log(message.userID);
+            users[message.userID] = createSphereAtPosition(receivedPosition, message.userID);
         } else {
             // Existing user, update their position
-            users[message.userID].targetPosition.copy(userPos);
+            users[message.userID].targetPosition.copy(receivedPosition);
         }
-    } else if (message.type === 'initUsers'){ 
-        console.log(message.users);
-    
-        // Loop through the received users and create a sphere for each one
+    }
+    else if (message.type === 'initUsers'){ 
         for (let incomingUserID in message.users) {
             addUserToList(incomingUserID, incomingUserID === myUserID);
-            
+    
             if (message.users[incomingUserID].position) {
                 let userPos = new THREE.Vector3(
                     message.users[incomingUserID].position.x,
                     message.users[incomingUserID].position.y,
                     message.users[incomingUserID].position.z
                 );
-    
+        
                 // Check if we've already created a sphere for this user
                 if (!users[incomingUserID]) {
-                    
-                    // New user, create a sphere for them
-                    const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-                    const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
-                    const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
-                    const sphere = new THREE.Mesh(geometry, trans);
-                    const geometrysphere = new THREE.SphereGeometry(0.1, 32, 32);
-                    const sphere2 = new THREE.Mesh(geometrysphere, material);
-    
-                    sphere.position.copy(userPos);
-                    scene.add(sphere);
-                    sphere.add(sphere2);
-    
-                    const labelSprite = createLabelSprite(incomingUserID);
-                    labelSprite.position.set(0, 4, 0); // Adjust based on your needs
-                    sphere.add(labelSprite);
-                    sphere.updateMatrixWorld();
-                    //labelSprite.position.copy(userPos);
-    
-                    users[incomingUserID] = {
-                        sphere: sphere,
-                        sprite: labelSprite,
-                        targetPosition: userPos
-                    };
+                    //users[incomingUserID] = createSphereAtPosition(userPos, incomingUserID);
                 }
             } else {
                 console.warn(`User ${incomingUserID} has no position data.`);
             }
-        };
+        }
     }
      else if (message.type === 'userDisconnected') {
         // Remove the sphere of the disconnected user
@@ -143,8 +104,10 @@ ws.onmessage = (event) => {
         
         let entranceURL = "";
         let foundObjectName = "";
-        
+        const tempGLTF = getLoadedGLTF();
         // Traverse the scene to find the object with the matching name to fetch its URL
+        console.log("Accessing GLTF in WebSockets.js:", tempGLTF);
+
         loadedGLTF.scene.traverse((object) => {
             if (object.userData && object.userData.Name === message.objectName) {
                 entranceURL = object.userData.URL;
@@ -186,3 +149,25 @@ ws.onclose = (event) => {
     }, 5000);  // Try to reconnect every 5 seconds
 };
         
+
+function createSphereAtPosition(position, userID) {
+    const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+    const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+    const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+    const outerSphere = new THREE.Mesh(geometry, trans);
+    const innerSphere = new THREE.Mesh(geometry, material);
+    
+    outerSphere.position.copy(position);
+    scene.add(outerSphere);
+    outerSphere.add(innerSphere);
+
+    const sprite = attachLabelToObjects(outerSphere, userID);
+
+    return {
+        sphere: outerSphere,
+        sprite: sprite,
+        targetPosition: position
+    };
+}
+
+export {myUserID};
