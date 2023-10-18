@@ -52,9 +52,9 @@ wss.on("connection", function (ws, req) {
   console.log("Client size: ", wss.clients.size);
 
   const userID = uuidv4();  // Generate a UUID for each connected user
-  users[userID] = {
-    position: { x: 0, y: 0, z: 0 } // default position
-};
+      users[userID] = {
+        position: { x: 0, y: 0, z: 0 } // default position
+    };
 
   // Send the assigned user ID to the connected client
   ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
@@ -140,8 +140,7 @@ function onUserConnect(userID) {
   sendToUser(userID, {
       type: 'initUsers',
       userID: userID,
-      users: users,
-      position: position
+      users: users
   });
 }
 
