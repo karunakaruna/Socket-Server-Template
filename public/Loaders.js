@@ -1,6 +1,5 @@
-//import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js';
+//Loaders.js
 
-//import { GLTFLoader } from 'https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js';
 import {cube,camera} from './scene3.js';
 
 //All World Loader//
@@ -16,6 +15,7 @@ export function setBoundingBox(){
     const size = 60;
     boundingBox.setFromCenterAndSize(cubePosition, new THREE.Vector3(size, size, size));
 };
+
 
 export function checkSpriteVisibility() {
     const scaleFactor = camera.fov / 75;

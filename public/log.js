@@ -1,3 +1,5 @@
+//Log.js
+
 // Function to add new log
 export function addLog(message) {
     const logList = document.getElementById('log-list');

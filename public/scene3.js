@@ -1,3 +1,5 @@
+//Scene3.js
+
 let userID = null;
 const scene = new THREE.Scene();
 
@@ -14,6 +16,20 @@ const lerpFactor = 0.05;
 document.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
+
+document.querySelector("#urlMenu > button:nth-child(2)").addEventListener("click", bookmark);
+
+function bookmark() {
+    // Create a JSON message with the user's ID and a dummy URL
+    const message = {
+        type: "bookmark",
+        userID: myUserID,
+        url: "http://dummy-url.com"
+    };
+    console.log('Bookmark sent:', message);
+    // Send the message to the server via WebSocket
+    ws.send(JSON.stringify(message));
+}
 
 
 const urlModal = document.getElementById('urlModal');

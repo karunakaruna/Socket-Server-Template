@@ -1,3 +1,5 @@
+//Userlist.js
+
 export function addUserToList(userID, isSelf = false) {
     const userListUl = document.getElementById('user-list-ul');
 

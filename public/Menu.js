@@ -1,3 +1,5 @@
+//Menu.js
+
 export function showMenu(type, x, y) {
     // First, hide all menus
     document.querySelectorAll('.contextMenu').forEach(menu => {

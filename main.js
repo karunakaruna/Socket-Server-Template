@@ -1,3 +1,4 @@
+
 const http = require("http");
 const express = require("express");
 const cors = require('cors');
@@ -77,7 +78,10 @@ wss.on("connection", function (ws, req) {
         } else if(currData.type === 'loc') {
             onUserPositionUpdate(userID, currData.position);
             broadcast(ws, currData, false);
-        } else if (currData.type === 'entrance') {
+        } else if (currData.type === 'bookmark') {
+          console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
+          addDummyProfileRow();  // call the bookmark function
+       } else if (currData.type === 'entrance') {
           console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
             broadcast(ws, currData, false);
         }
@@ -210,3 +214,66 @@ app.post('/beacon-endpoint', (req, res) => {
   };
   res.json(responseMessage);
 });
+
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    require: true,
+  },
+});
+
+async function getPostgresVersion() {
+  const client = await pool.connect();
+  try {
+    const response = await client.query('SELECT version()');
+    console.log(response.rows[0]);
+  } finally {
+    client.release();
+  }
+}
+
+getPostgresVersion();
+
+async function addDummyProfileRow() {
+  const client = await pool.connect();
+  try {
+    // Define the dummy data
+    const dummyData = {
+      username: 'dummyUser',
+      email: 'dummy@example.com',
+      password: 'dummyPassword',
+      online_time: 3600,
+      homeworld: 'Earth',
+      is_afk: false,
+    };
+
+    // Insert the data into the "profile" table
+    const query = `
+      INSERT INTO profile (username, email, password, online_time, homeworld, is_afk)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id`;
+    
+    const values = [
+      dummyData.username,
+      dummyData.email,
+      dummyData.password,
+      dummyData.online_time,
+      dummyData.homeworld,
+      dummyData.is_afk,
+    ];
+
+    const result = await client.query(query, values);
+    
+    // The ID of the newly inserted row
+    const newProfileId = result.rows[0].id;
+    
+    console.log(`Inserted row with ID: ${newProfileId}`);
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    client.release();
+  }
+}
