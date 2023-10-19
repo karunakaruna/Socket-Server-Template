@@ -1,4 +1,6 @@
 //Websockets.js
+
+
 import { addLog } from './log.js';
 import { camera, userID, scene, loadedGLTF, userSphere } from './scene3.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
