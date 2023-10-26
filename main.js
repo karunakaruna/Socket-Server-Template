@@ -7,7 +7,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
-
+const { v4: uuidv4 } = require('uuid');
+const { addDummyProfileRow} = require('./util/db-actions');
 
 //CORS
 const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000','http://localhost:3000'];
@@ -130,8 +131,7 @@ async function getPostgresVersion() {
 getPostgresVersion();
 
 
-const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow} = require('/util/db-actions');
+
 
 let users = {};
 const isJSON = (message) => {
