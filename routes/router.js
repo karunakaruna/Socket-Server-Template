@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const {broadcast} = require('../util/websocket');
+//const {broadcast} = require('../util/websocket');
+const websocket = require('../util/websocket');
 
 
 //Unity endpoint
@@ -13,7 +14,7 @@ router.post('/unity-endpoint', (req, res) => {
     
     const receivedMessage = req.body.data;
     if(receivedMessage === 'red') {
-      broadcast(null, JSON.stringify({ type: 'color', value: '#ff0000' }), true);
+      websocket.broadcast(null, JSON.stringify({ type: 'color', value: '#ff0000' }), true);
     }
   
     console.log("Received message:", receivedMessage);
@@ -33,7 +34,7 @@ router.post('/unity-endpoint', (req, res) => {
   
     const beaconURL = req.body.beacon;
     if (beaconURL) {
-      broadcast(null, JSON.stringify({ type: 'beacon', url: beaconURL }), true);
+      websocket.broadcast(null, JSON.stringify({ type: 'beacon', url: beaconURL }), true);
     }
   
     console.log("Received beacon URL:", beaconURL);
