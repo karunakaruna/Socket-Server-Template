@@ -1,9 +1,19 @@
 //Spawners.js
 
-import { scene, playSpatialAudio, activeMixers } from './scene3.js';
-import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, pingModel, setBoundingBox, checkSpriteVisibility } from './Loaders.js';
+import { scene, playSpatialAudio, activeMixers, pingModel } from '../scene3.js';
+import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene,  setBoundingBox, checkSpriteVisibility } from './Loaders.js';
+
+
 
 // PING 
+try {
+    console.log("pingModel", pingModel);
+
+}catch{
+    console.log("pingModel not found");
+
+}
+
 
 
 function spawnPingAtPosition(position) {

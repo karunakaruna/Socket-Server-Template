@@ -3,11 +3,11 @@
 let userID = null;
 const scene = new THREE.Scene();
 
-import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, pingModel, setBoundingBox, checkSpriteVisibility, loadedGLTF } from './Loaders.js';
-import { addMouseMovementListener, addScrollWheelListener, addClickListener, targetRotationX, targetRotationZ, targetPosition, targetFOV, addRightClickListener } from './Listeners.js';
-import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
-import { myUserID, getMyID, users, ws } from './WebSockets.js'; 
-import { addLog } from './log.js';
+import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, pingModel, setBoundingBox, checkSpriteVisibility, loadedGLTF } from './js/Loaders';
+import { addMouseMovementListener, addScrollWheelListener, addClickListener, targetRotationX, targetRotationZ, targetPosition, targetFOV, addRightClickListener } from './js/Listeners.js';
+import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './js/Spawners.js';
+import { myUserID, getMyID, users, ws } from './js/WebSockets.js'; 
+import { addLog } from './js/log.js';
 
 const lerpFactor = 0.05;
 
@@ -259,11 +259,11 @@ const imageElem = document.getElementById('imageDisplay');
 loadAllWorlds(scene);
 loadPingModel(scene);
 loadBeaconLightModel(scene); 
-addMouseMovementListener();
+addMouseMovementListener(scene);
 addScrollWheelListener();
-addClickListener();
+addClickListener(scene);
 addRightClickListener(scene,userSphere);
-export {loadedGLTF};
+export {loadedGLTF, pingModel};
 
 
 //Animation Update Loop

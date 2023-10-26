@@ -1,6 +1,6 @@
 //Listeners.js
 
-import { raycaster, camera, mouse, cube, userID, showModal, scene } from './scene3.js';
+import { raycaster, camera, mouse, cube, userID, showModal, scene } from '../scene3.js';
 import { gltfScene } from './Loaders.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
 import {ws, myUserID} from './WebSockets.js'
@@ -11,7 +11,7 @@ let targetRotationZ = 0;
 let maxrot = 25;
 let targetPosition = new THREE.Vector3(0, 0, 0);
 let targetFOV = 60; // Initial target FOV
-export function addMouseMovementListener() {
+export function addMouseMovementListener(map) {
     window.addEventListener('mousemove', (event) => {
     
     const mouseX = event.clientX - window.innerWidth / 2;
@@ -49,25 +49,31 @@ export function addMouseMovementListener() {
     // Ensure the X rotation stays within bounds to avoid over-rotation
     targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2) + 0.4;
 
-    // Check for intersections with 3D objects
-    const intersects = raycaster.intersectObjects(gltfScene.children, true);
-    for (let i = 0; i < intersects.length; i++) {
-        const userData = intersects[i].object.userData;
-    
-        if (userData) {
-            document.getElementById('floatingText').innerText = userData.Name || "";
-            document.getElementById('authorText').innerText = userData.Author || "";
-            document.getElementById('yearText').innerText = userData.Year || "";
-    
-            // Update the image src if 'image' userData is present
-            if (userData.image) {
-                imageElem.src = userData.image;
-            } else {
-                imageElem.src = ''; // Clear the src if no image data is present
+    try {
+        // Check for intersections with 3D objects
+        const intersects = raycaster.intersectObjects(map.children, true);
+        for (let i = 0; i < intersects.length; i++) 
+        {
+            const userData = intersects[i].object.userData;
+        
+            if (userData) 
+            {
+                document.getElementById('floatingText').innerText = userData.Name || "";
+                document.getElementById('authorText').innerText = userData.Author || "";
+                document.getElementById('yearText').innerText = userData.Year || "";
+        
+                // Update the image src if 'image' userData is present
+                if (userData.image) {
+                    imageElem.src = userData.image;
+                } else {
+                    imageElem.src = ''; // Clear the src if no image data is present
+                }
+                
+                return; // Return to break out of loop if we found an intersection with userData
             }
-            
-            return; // Return to break out of loop if we found an intersection with userData
         }
+    } catch (error) {
+        console.error('cant see map');
     }
     
 
@@ -84,7 +90,7 @@ export function addScrollWheelListener() {
         targetFOV = Math.min(Math.max(targetFOV, 25), 80); // Clamp FOV between 25 and 80
     });
 }
-export function addClickListener() {   
+export function addClickListener(map) {   
     window.addEventListener('click', (event) => {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -92,7 +98,7 @@ export function addClickListener() {
             menu.style.display = 'none';
         });
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(gltfScene.children, true);
+        const intersects = raycaster.intersectObjects(map.children, true);
         const coordinatesDiv = document.getElementById('coordinatesText');
 
         if (intersects.length > 0) {

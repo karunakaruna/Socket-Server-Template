@@ -2,7 +2,7 @@
 
 
 import { addLog } from './log.js';
-import { camera, userID, scene, loadedGLTF, userSphere } from './scene3.js';
+import { camera, userID, scene, loadedGLTF, userSphere } from '../scene3.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './Userlist.js';
@@ -130,7 +130,7 @@ ws.onmessage = (event) => {
         );
         spawnEntrancePingAtPosition(receivedPosition);
     }
-    console.log( 'ws uid:' + myUserID);
+    //console.log( 'ws uid:' + myUserID);
     //myUserID = primaryUserID;
 };
 

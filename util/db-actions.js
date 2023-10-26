@@ -1,5 +1,5 @@
 
-export async function addDummyProfileRow() {
+async function addDummyProfileRow() {
     const client = await pool.connect();
     try {
       // Define the dummy data
@@ -39,3 +39,5 @@ export async function addDummyProfileRow() {
       client.release();
     }
   }
+
+  module.export = {addDummyProfileRow};

@@ -8,7 +8,7 @@
   "private": false,
   "scripts": {
     "start": "node ./main.js",
-    "dev": "NODE_ENV=development PORT=5000 node ./main.js"
+    "dev": "nodemon ./main.js"
   },
   "engines": {
     "node": ">=8.9.0"
@@ -17,6 +17,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.17.1",
+    "nodemon": "^3.0.1",
     "pg": "^8.11.3",
     "three": "^0.156.1",
     "uuid": "^9.0.1",
