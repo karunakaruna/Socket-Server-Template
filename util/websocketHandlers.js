@@ -13,6 +13,13 @@ const isJSON = (message) => {
   };
 
 
+const WebSocket = require("ws");
+
+const wss = process.env.NODE_ENV === "production"
+    ? new WebSocket.Server({ server })
+    : new WebSocket.Server({ port: 5001 });
+
+
   // Keep alive interval
   const keepServerAlive = () => {
     keepAliveId = setInterval(() => {
