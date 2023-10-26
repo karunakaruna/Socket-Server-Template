@@ -40,4 +40,4 @@ async function addDummyProfileRow() {
     }
   }
 
-  module.export = {addDummyProfileRow};
+  module.exports = {addDummyProfileRow};
