@@ -38,7 +38,13 @@ app.options('/unity-endpoint', cors(corsOptions));
 //WebSocket
 //let keepAliveId;
 
-handleConnection(wss,server);
+const WebSocket = require("ws");
+
+const wss = process.env.NODE_ENV === "production"
+    ? new WebSocket.Server({ server })
+    : new WebSocket.Server({ port: 5001 });
+
+    handleConnection(wss,server);
 
 
 server.listen(port, () => {

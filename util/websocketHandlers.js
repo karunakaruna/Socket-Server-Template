@@ -1,8 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { addDummyProfileRow} = require('./db-actions');
+const {server} = require('../main');
 let users = {};
-
-
 const isJSON = (message) => {
     try {
       const obj = JSON.parse(message);
