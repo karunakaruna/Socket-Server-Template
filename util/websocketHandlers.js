@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { addDummyProfileRow} = require('./db-actions');
-const {server} = require('../main');
+
 let users = {};
 const isJSON = (message) => {
     try {
@@ -11,12 +11,6 @@ const isJSON = (message) => {
     }
   };
 
-
-const WebSocket = require("ws");
-
-const wss = process.env.NODE_ENV === "production"
-    ? new WebSocket.Server({ server })
-    : new WebSocket.Server({ port: 5001 });
 
 
   // Keep alive interval
