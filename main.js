@@ -44,7 +44,7 @@ const wss = process.env.NODE_ENV === "production"
     ? new WebSocket.Server({ server })
     : new WebSocket.Server({ port: 5001 });
 
-    handleConnection(wss,server);
+    handleConnection(wss);
 
 
 server.listen(port, () => {
@@ -129,4 +129,5 @@ async function getPostgresVersion() {
 
 getPostgresVersion();
 
+module.exports = { wss };
 

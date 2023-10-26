@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { addDummyProfileRow} = require('./db-actions');
+const {wss} = require('../main.js');
 
 let users = {};
 const isJSON = (message) => {
@@ -78,7 +79,7 @@ const broadcast = (ws, message, includeSelf) => {
 
 
 
-  function handleConnection(wss, server) {
+  function handleConnection(wss) {
     wss.on("connection", function (ws, req) {
         console.log("Connection Opened");
         console.log("Client size: ", wss.clients.size);
