@@ -1,6 +1,6 @@
 const WebSocket = require("ws");
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow } = require('db-actions');
+const { addDummyProfileRow } = require('./db-actions');
 
 module.exports = function (server) {
     const wss = process.env.NODE_ENV === "production"
