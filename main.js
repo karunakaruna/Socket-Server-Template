@@ -8,7 +8,9 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow} = require('./util/db-actions');
+const { addDummyProfileRow } = require('./util/db-actions');
+const { pool } = require('./util/dbConfig');
+
 
 //CORS
 const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000','http://localhost:3000'];
@@ -106,17 +108,7 @@ app.post('/beacon-endpoint', (req, res) => {
 });
 
 
-//Database connection
 
-const { Pool } = require('pg');
-require('dotenv').config();
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    require: true,
-  },
-});
 
 async function getPostgresVersion() {
   const client = await pool.connect();

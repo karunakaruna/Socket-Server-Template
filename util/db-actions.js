@@ -1,3 +1,5 @@
+const { pool } = require('../dbConfig');
+
 
 async function addDummyProfileRow() {
     const client = await pool.connect();
