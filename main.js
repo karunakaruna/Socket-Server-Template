@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow } = require('./util/db-actions');
+const { addDummyProfileRow, getPostgresVersion } = require('./util/db-actions');
 const initializeWebsockets = require('./util/websocket');
 const { wss, broadcast } = initializeWebsockets(server);
 
