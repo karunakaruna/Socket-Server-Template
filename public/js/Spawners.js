@@ -14,6 +14,14 @@ try {
 
 }
 
+// PING 
+try {
+    console.log("beaconLight", beaconLightModel);
+
+}catch{
+    console.log("beaconlightModel not found");
+
+}
 
 
 function spawnPingAtPosition(position) {
@@ -50,8 +58,8 @@ function spawnPingAtPosition(position) {
 }
 
 // BEACONLIGHT <<<<<<<<<<<<
-export function spawnBeaconLightAtPosition(position) {
-    const beaconLightInstance = beaconLightModel.clone();
+function spawnBeaconLightAtPosition(position, model) {
+    const beaconLightInstance = model.clone();
     beaconLightInstance.position.copy(position).add(new THREE.Vector3(0, 0, 0));
     beaconLightInstance.visible = true;
 
@@ -120,4 +128,4 @@ export function spawnEntrancePingAtPosition(position) {
     }
     }
 
-    export{spawnPingAtPosition};
+    export{spawnPingAtPosition, spawnBeaconLightAtPosition};

@@ -2,7 +2,7 @@
 
 
 import { addLog } from './log.js';
-import { camera, userID, scene, loadedGLTF, userSphere } from '../scene3.js';
+import { camera, userID, scene, loadedGLTF, userSphere, beaconLightModel } from '../scene3.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './Userlist.js';
@@ -98,7 +98,7 @@ ws.onmessage = (event) => {
         console.log('beacon received');
         let object = getObjectByProperty('URL', message.url);
         if (object) {
-            spawnBeaconLightAtPosition(object.position);
+            spawnBeaconLightAtPosition(object.position, beaconLightModel);
             addLog(`Beacon activated at <a href="${object.userData.URL}" target="_blank">${object.userData.Name}</a>`);
         }
     } else if (message.type === 'entrance') {

@@ -160,7 +160,7 @@ export function loadPingModel(scene) {
         });
         
 }
-export { beaconLightModel};
+export { beaconLightModel };
 export { pingModel };
 export { gltfScene };
 export { loadedGLTF };
