@@ -3,7 +3,7 @@
 let userID = null;
 const scene = new THREE.Scene();
 
-import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, pingModel, setBoundingBox, checkSpriteVisibility, loadedGLTF } from './js/Loaders';
+import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene, setBoundingBox, checkSpriteVisibility, loadedGLTF, pingModel, beaconLightModel     } from './js/Loaders';
 import { addMouseMovementListener, addScrollWheelListener, addClickListener, targetRotationX, targetRotationZ, targetPosition, targetFOV, addRightClickListener } from './js/Listeners.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './js/Spawners.js';
 import { myUserID, getMyID, users, ws } from './js/WebSockets.js'; 
@@ -263,7 +263,7 @@ addMouseMovementListener(scene);
 addScrollWheelListener();
 addClickListener(scene);
 addRightClickListener(scene,userSphere);
-export {loadedGLTF, pingModel};
+export {loadedGLTF, pingModel, beaconLightModel};
 
 
 //Animation Update Loop

@@ -7,6 +7,7 @@ let gltfScene;
 let loadedGLTF;
 //let sprites;
 let pingModel;
+let beaconLightModel;
 const sprites = [];
 const boundingBox = new THREE.Box3();
 
@@ -131,12 +132,8 @@ export function loadPingModel(scene) {
             console.error('An error occurred loading the GLB:', error);
         });
     }
-export { pingModel };
-export { gltfScene };
-export { loadedGLTF };
-export { sprites, boundingBox };
-// Beaconlight Loader ///
-export function loadBeaconLightModel(scene) {
+
+    export function loadBeaconLightModel(scene) {
         const beaconLightLoader = new THREE.GLTFLoader();
         let beaconLightModel; // Store the loaded beacon light model
         beaconLightLoader.load('models/beaconlight.glb', (gltf) => {
@@ -161,7 +158,16 @@ export function loadBeaconLightModel(scene) {
         }, undefined, (error) => {
             console.error('An error occurred loading the beacon light GLB:', error);
         });
+        
 }
+export { beaconLightModel};
+export { pingModel };
+export { gltfScene };
+export { loadedGLTF };
+export { sprites, boundingBox };
+// Beaconlight Loader ///
+
+// export {beaconLightModel};  
 
 export function getLoadedGLTF() {
     return loadedGLTF;
