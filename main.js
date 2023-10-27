@@ -20,7 +20,7 @@ const wss = process.env.NODE_ENV === "production"
       : new WebSocket.Server({ port: 5001 });
 
 
-const homerouter = require('./routes/router');
+// const homerouter = require('./routes/router');
 
 //CORS
 const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000','http://localhost:3000'];
@@ -47,13 +47,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public", { "extensions": ["html", "css", "js"] }));
 app.use(cors(corsOptions));
 app.options('/unity-endpoint', cors(corsOptions));
-app.use('/', homerouter);
-
-//Start Server    
-server.listen(port, () => {
-  console.log(`Server started on port ${port}`);
-});
-console.log(`Server started on port ${process.env.PORT} in stage ${process.env.NODE_ENV}`);
 
 //Home Index
 app.get('/', (req, res) => {
@@ -206,3 +199,13 @@ wss.on("connection", function (ws, req) {
 
 
     module.exports = { broadcast };
+    const homerouter = require('./routes/router');
+
+
+    app.use('/', homerouter);
+
+//Start Server    
+server.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
+console.log(`Server started on port ${process.env.PORT} in stage ${process.env.NODE_ENV}`);
