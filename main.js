@@ -203,3 +203,6 @@ wss.on("connection", function (ws, req) {
             }
         });
     };
+
+
+    module.exports = { broadcast };

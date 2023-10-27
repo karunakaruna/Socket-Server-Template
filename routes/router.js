@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 //const {broadcast} = require('../util/websocket');
 //const websocket = require('../util/websocket');
-const {broadcast} = require('../util/websocket');
+const {broadcast} = require('../main.js');
 
 //Unity endpoint
 router.post('/unity-endpoint', (req, res) => {
