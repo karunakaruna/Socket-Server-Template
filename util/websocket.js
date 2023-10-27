@@ -2,10 +2,85 @@ const WebSocket = require("ws");
 const { v4: uuidv4 } = require('uuid');
 const { addDummyProfileRow } = require('./db-actions');
 
-module.exports = function (server) {
+function initializeWebSocket(server) {
     const wss = process.env.NODE_ENV === "production"
         ? new WebSocket.Server({ server })
         : new WebSocket.Server({ port: 5001 });
+
+        wss.on("connection", function (ws, req) {
+            console.log("Connection Opened");
+            console.log("Client size: ", wss.clients.size);
+          
+            const userID = uuidv4();  // Generate a UUID for each connected user
+                users[userID] = {
+                  position: { x: 0, y: 0, z: 0 } // default position
+              };
+          
+            // Send the assigned user ID to the connected client
+            ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
+          
+            onUserConnect(userID);
+            broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+          
+            if (wss.clients.size === 1) {
+              console.log("first connection. starting keepalive");
+              keepServerAlive();
+            }
+          
+          
+          
+            ws.on("message", (data) => {
+              if (isJSON(data)) {
+                  const currData = JSON.parse(data);
+    
+                  //Ping
+                  if(currData.type === 'ping') {
+                      console.log('Received a server heartbeat ping');
+    
+                  //Location update
+                  } else if(currData.type === 'loc') {
+                      onUserPositionUpdate(userID, currData.position);
+                      broadcast(ws, currData, false);
+    
+                  //Bookmark
+                  } else if (currData.type === 'bookmark') {
+                    console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
+                    addDummyProfileRow();  // call the bookmark function
+    
+                  //Entrance
+                 } else if (currData.type === 'entrance') {
+                    console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
+                      broadcast(ws, currData, false);
+                  }
+    
+                  //String
+              } else if(typeof data === 'string') {
+                  if(data === 'pong') {
+                      console.log('keepAlive');
+                      return;
+                  }
+              } else {
+                  console.error('malformed message', data);
+              }
+            });
+          
+    
+            // Close connection
+            ws.on("close", (data) => {
+                console.log("closing connection");
+                onUserDisconnect(userID);
+                broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+          
+                if (wss.clients.size === 0) {
+                    console.log("last client disconnected, stopping keepAlive interval");
+                    clearInterval(keepAliveId);
+                }
+            });
+          });
+    
+
+
+};
 
     let users = {};
 
@@ -71,87 +146,9 @@ module.exports = function (server) {
             }
         });
     };
-    wss.on("connection", function (ws, req) {
-        console.log("Connection Opened");
-        console.log("Client size: ", wss.clients.size);
-      
-        const userID = uuidv4();  // Generate a UUID for each connected user
-            users[userID] = {
-              position: { x: 0, y: 0, z: 0 } // default position
-          };
-      
-        // Send the assigned user ID to the connected client
-        ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
-      
-        onUserConnect(userID);
-        broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
-      
-        if (wss.clients.size === 1) {
-          console.log("first connection. starting keepalive");
-          keepServerAlive();
-        }
-      
-      
-      
-        ws.on("message", (data) => {
-          if (isJSON(data)) {
-              const currData = JSON.parse(data);
-
-              //Ping
-              if(currData.type === 'ping') {
-                  console.log('Received a server heartbeat ping');
-
-              //Location update
-              } else if(currData.type === 'loc') {
-                  onUserPositionUpdate(userID, currData.position);
-                  broadcast(ws, currData, false);
-
-              //Bookmark
-              } else if (currData.type === 'bookmark') {
-                console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
-                addDummyProfileRow();  // call the bookmark function
-
-              //Entrance
-             } else if (currData.type === 'entrance') {
-                console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
-                  broadcast(ws, currData, false);
-              }
-
-              //String
-          } else if(typeof data === 'string') {
-              if(data === 'pong') {
-                  console.log('keepAlive');
-                  return;
-              }
-          } else {
-              console.error('malformed message', data);
-          }
-        });
-      
-
-        // Close connection
-        ws.on("close", (data) => {
-            console.log("closing connection");
-            onUserDisconnect(userID);
-            broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
-      
-            if (wss.clients.size === 0) {
-                console.log("last client disconnected, stopping keepAlive interval");
-                clearInterval(keepAliveId);
-            }
-        });
-      });
 
 
+module.exports = {initializeWebSocket, broadcast, users, keepServerAlive, onUserConnect, onUserPositionUpdate, onUserDisconnect, sendToUser, isJSON};
 
-    // Export wss and any other functions that routes or other modules might need:
-    return {
-        wss: wss,
-        broadcast: broadcast,
-        sendToUser: sendToUser,
-        onUserConnect: onUserConnect,
-        onUserPositionUpdate: onUserPositionUpdate,
-        onUserDisconnect: onUserDisconnect
 
-    };
-}
+    // Export wss and any other functions that routes or other modules might need
