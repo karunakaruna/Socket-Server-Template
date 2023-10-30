@@ -8,18 +8,12 @@
   "private": false,
   "scripts": {
     "start": "node ./main.js",
-    "dev": "NODE_ENV=development PORT=5000 node ./main.js"
+    "dev": "nodemon ./main.js"
   },
   "engines": {
     "node": ">=8.9.0"
   },
   "dependencies": {
-<<<<<<< Updated upstream
-=======
-    "cors": "^2.8.5",
-    "dat.gui": "^0.7.9",
-    "dotenv": "^16.3.1",
->>>>>>> Stashed changes
     "express": "^4.17.1",
     "ws": "^8.2.2"
   }

@@ -1,5 +1,5 @@
 //functions
-import { globalState } from "./state";
+import { globalState } from "./state.js";
 
 export function loadModel(scene, url) { 
     if (globalState.cachedGltf) {

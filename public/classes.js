@@ -1,27 +1,26 @@
+import { globalState } from "./state.js";
+
 export class cuboid extends THREE.Object3D {
-    constructor(name = 'cuboid', x = 0, y = 0, z = 0, color = 0x00ffff) {
+    constructor(name = 'cuboid', x = 0, y = 0, z = 0, color = 'white') {
         super();
+        
         const geometry = new THREE.BoxGeometry();
         const material = new THREE.MeshPhongMaterial({ color: color });
+        const mesh = new THREE.Mesh(geometry, material);
         
-        // Instead of using 'super', we create a new Mesh and assign it to a property
-        this.mesh = new THREE.Mesh(geometry, material);
-        
-        this.mesh.name = name;
-        this.mesh.position.set(x, y, z);
-        this.add(this.mesh);
-    }
-
-    // You can also add methods to interact with the mesh, e.g.:
-    addToScene(scene) {
-        scene.add(this);
-    }
-
-    // Another example: change color
-    setColor(color) {
-        console.log("Changing color to", color);
-        console.log(this.mesh.material.color);
-        this.mesh.material.color.set(color);
+        this.name = name;
+        this.position.set(x, y, z);
+        this.add(mesh); // Add the mesh as a child of the Object3D
+        this.mesh = mesh; // Keep a reference to the mesh if needed
     }
     
+    // ... Other methods ...
+    
+    setColor(color) {
+        console.log("Changing color to", color);
+        this.mesh.material.color.set(color);
+        this.mesh.material.needsUpdate = true; 
+        globalState.renderer.render(globalState.scene, globalState.camera); // Force a render to see the change immediately
+
+    }
 }
