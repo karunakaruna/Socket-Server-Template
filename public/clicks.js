@@ -12,35 +12,26 @@ const mouse = new THREE.Vector2();
 
 export function addListener() {
     window.addEventListener("click", function(event) {
-            // Calculate mouse position in normalized device coordinates
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    // Calculate mouse position in normalized device coordinates
+    // (-1 to +1) for both components
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-            // Update the picking ray with the camera and mouse position
-            raycaster.setFromCamera(mouse, globalState.camera);
+    // Update the picking ray with the camera and mouse position
+    raycaster.setFromCamera(mouse, globalState.camera);
 
-            // Calculate objects intersecting the picking ray
-            const intersects = raycaster.intersectObjects(globalState.scene.children, true);
+    // Calculate objects intersecting the picking ray
+    const intersects = raycaster.intersectObjects(globalState.scene.children, true);
 
-            // If there is at least one intersection
-            if (intersects.length > 0) {
-                console.log(intersects);
-                // Get the name and world coordinates of the first intersected object
-                const objectName = intersects[0].object.name;
-                const intersectionPoint = intersects[0].point;
-                console.log("Clicked on object:", objectName, "at position:", intersectionPoint);
+    if (intersects.length > 0) {
+        // Create a new cuboid at the intersection point
+        const intersection = intersects[0];
+        const bob = new cuboid('cuboid', intersection.point.x, intersection.point.y, intersection.point.z, 'white');
+        globalState.scene.add(bob);
 
-                // Clone the cached model and add it to the scene
-                const clonedModel = new cuboid;
-                // clonedModel.name = 'cuboid';
-                clonedModel.position.copy(intersectionPoint);
-                clonedModel.userData.instance = clonedModel; // Store reference to the Object3D instance
-                globalState.scene.add(clonedModel);
-                console.log(clonedModel.name);
-                
-            } else if (intersects.length == 0) {
-                console.log("Clicked on nothing");
-            }
+        // Add a right-click listener to change the color of the cuboid
+
+    }
     });
 };           
 
@@ -48,48 +39,29 @@ export function addListener() {
 
 export function addRightListener() {
     window.addEventListener("contextmenu", function(event) { // Change event listener to right click
-        event.preventDefault(); // Prevent default right click behavior
-
+        console.log('right click');
         // Calculate mouse position in normalized device coordinates
+        // (-1 to +1) for both components
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
+    
         // Update the picking ray with the camera and mouse position
         raycaster.setFromCamera(mouse, globalState.camera);
-
-        
-
+    
         // Calculate objects intersecting the picking ray
         const intersects = raycaster.intersectObjects(globalState.scene.children, true);
-
-        // If there is at least one intersection
+    
         if (intersects.length > 0) {
-            console.log(intersects[0].object);
-            console.log(intersects[0].object.material);
-            console.log(intersects[0].object.geometry);
-            console.log(intersects);
-            for (const intersect of intersects) {
-                console.log(intersect.object.parent.name);
+            
+            // Check if the intersected object is an instance of cuboid
+            const intersectedObject = intersects[0].object;
+            console.log(intersectedObject);
+            if (intersectedObject.parent instanceof cuboid) {
+                console.log('right click on cuboid');
+                console.log(intersectedObject.parent.mesh.material.color);
+                // Change the color of the cuboid to red
+                intersectedObject.parent.setColor('red');
             }
-
-            // Get the name and world coordinates of the first intersected object
-            const objectName = intersects[0].object.parent.name;
-            const intersectionPoint = intersects[0].point;
-            console.log("Right clicked on object:", objectName, "at position:", intersectionPoint);
-
-            // Change the color of the target cuboid class to red
-            // Inside the addRightListener function:
-            if (intersects[0].object.parent.name === "cuboid") {
-                console.log("Right clicked on a cuboid");
-
-                // Call setColor on the referenced cuboid instance
-                intersects[0].object.parent.color = 'red';
-                console.log(intersects[0].object.parent.color);
-            }
-
-
-        } else if (intersects.length == 0) {
-            console.log("Right clicked on nothing");
         }
     });
 };           

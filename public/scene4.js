@@ -135,17 +135,3 @@ window.addEventListener("keydown", function(event) {
 addListener();
 addRightListener();
 
-
-
-// Add event listener for space bar
-window.addEventListener("keydown", function(event) {
-    if (event.code === "Space") {
-        document.getElementById('list').innerHTML = '';
-        traverseSceneGraph(scene, "");
-    }
-});
-
-
-
-addListener();
-addRightListener();

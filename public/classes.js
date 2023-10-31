@@ -1,3 +1,5 @@
+//classes.js
+
 import { globalState } from "./state.js";
 
 export class cuboid extends THREE.Object3D {
@@ -20,7 +22,8 @@ export class cuboid extends THREE.Object3D {
         console.log("Changing color to", color);
         this.mesh.material.color.set(color);
         this.mesh.material.needsUpdate = true; 
-        globalState.renderer.render(globalState.scene, globalState.camera); // Force a render to see the change immediately
+        this.mesh.scale.set(.1, 2, .1);
+        // globalState.renderer.render(globalState.scene, globalState.camera); // Force a render to see the change immediately
 
     }
 }
