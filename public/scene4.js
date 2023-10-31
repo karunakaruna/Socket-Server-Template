@@ -1,4 +1,4 @@
-import { loadModel, printGlobalState } from "./functions.js";
+import { loadModel, loadModel2, loadBeacon2, printGlobalState } from "./functions.js";
 import { globalState} from "./state.js";
 import { addListener, addRightListener, mouseCoords } from "./clicks.js";
 import {cuboid} from "./classes.js";
@@ -57,7 +57,8 @@ scene.add(new cuboid('cuboid')   );
 // Load in a GLTF model
 let gBeacon = null;
 
-const beacon = loadModel(scene,'./models/beaconLight.glb');
+// export const beacon = loadBeacon2(scene);
+
 
 console.log('beacon:', gBeacon);
 

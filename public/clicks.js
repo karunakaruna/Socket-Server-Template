@@ -1,5 +1,8 @@
+///clicks.js
+
 import { globalState } from "./state.js";
 import { cuboid } from "./classes.js";
+// import { beacon } from "./scene4.js";
 
 // Create a raycaster
 const raycaster = new THREE.Raycaster();
@@ -11,6 +14,7 @@ const mouse = new THREE.Vector2();
 // Add event listener for mouse click
 
 export function addListener() {
+    // console.log(beacon);
     window.addEventListener("click", function(event) {
     // Calculate mouse position in normalized device coordinates
     // (-1 to +1) for both components
@@ -25,9 +29,13 @@ export function addListener() {
 
     if (intersects.length > 0) {
         // Create a new cuboid at the intersection point
+       
         const intersection = intersects[0];
         const bob = new cuboid('cuboid', intersection.point.x, intersection.point.y, intersection.point.z, 'white');
+        // bc.position.x = intersection.point.x;
+       
         globalState.scene.add(bob);
+        // globalState.scene.add(beacon)
 
         // Add a right-click listener to change the color of the cuboid
 

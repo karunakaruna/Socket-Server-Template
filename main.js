@@ -5,7 +5,7 @@ const app = express();
 app.use(express.static("public"));
 // require("dotenv").config();
 
-const serverPort = process.env.PORT || 3000;
+const serverPort = process.env.PORT || 4000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
 
@@ -78,6 +78,7 @@ const broadcast = (ws, message, includeSelf) => {
 };
 
 
-app.get('/', (req, res) => {
-    res.send('Hello World!');
+app.get('/test', (req, res) => {
+    res.sendFile(__dirname + '/public/discover.html');
+    // res.send('Hello World!');
 });

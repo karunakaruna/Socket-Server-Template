@@ -44,13 +44,14 @@ export function loadBeacon2(scene) {
 };
 
 export function loadBeacon3(scene) { 
+        const loader = new THREE.GLTFLoader();
         loader.load('models/beaconlight.glb', function(gltf) {
             globalState.cachedModel = gltf;
             const object = new THREE.Object3D();
             object.add(gltf.scene);
             // scene.add(object);
             resolve(object);
-        }, undefined, reject);
+        });
     };
 
 
