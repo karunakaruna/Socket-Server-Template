@@ -1,7 +1,7 @@
-import { loadModel, loadModel2, loadBeacon2, printGlobalState } from "./functions.js";
-import { globalState} from "./state.js";
-import { addListener, addRightListener, mouseCoords } from "./clicks.js";
-import {cuboid} from "./classes.js";
+import { loadModel, loadModel2, loadBeacon2, printGlobalState } from "./js/functions.js";
+import { globalState} from "./js/state.js";
+import { addListener, addRightListener, mouseCoords } from "./js/clicks.js";
+import {cuboid} from "./js/classes.js";
 
 
 // Create a scene

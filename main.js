@@ -5,11 +5,13 @@ const app = express();
 app.use(express.static("public"));
 // require("dotenv").config();
 
-const serverPort = process.env.PORT || 4000;
+const serverPort = process.env.PORT || 3000;
 const server = http.createServer(app);
 const WebSocket = require("ws");
 
 let keepAliveId;
+
+
 
 const wss =
   process.env.NODE_ENV === "production"
@@ -81,4 +83,9 @@ const broadcast = (ws, message, includeSelf) => {
 app.get('/test', (req, res) => {
     res.sendFile(__dirname + '/public/discover.html');
     // res.send('Hello World!');
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index2.html');
+  // res.send('Hello World!');
 });

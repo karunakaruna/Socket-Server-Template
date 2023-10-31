@@ -9,12 +9,20 @@
 
   <link rel="icon" href="https://discoverthreejs.com/favicon.ico" type="image/x-icon">
 
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.148.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.148.0/examples/jsm/"
+        }
+    }
+  </script>
+
   <link href="./styles/main.css" rel="stylesheet" type="text/css">
 
-  <script type="module">
-    import * as THREE from '../../node_modules/three/build/three.module.js';
-  </script>
   <script type="module" src="./src/main.js"></script>
+
+
 
 </head>
 

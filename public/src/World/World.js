@@ -12,9 +12,11 @@ import { Resizer } from './systems/Resizer.js';
 import { Loop } from './systems/Loop.js';
 
 let camera;
+let controls;
 let renderer;
 let scene;
 let loop;
+
 
 class World {
   constructor(container) {
@@ -23,25 +25,29 @@ class World {
     scene = createScene();
     loop = new Loop(camera, scene, renderer);
     container.append(renderer.domElement);
+    controls = createControls(camera, renderer.domElement);
 
-    const controls = createControls(camera, renderer.domElement);
     const { ambientLight, mainLight } = createLights();
 
     loop.updatables.push(controls);
     scene.add(ambientLight, mainLight);
 
-    // Create a cube
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    // // Create a cube
+    // const geometry = new THREE.BoxGeometry(1, 1, 1);
 
-    // Create a material
-    const material = new THREE.MeshPhongMaterial({ color: 0x005500 });
+    // // Create a material
+    // const material = new THREE.MeshPhongMaterial({ color: 0x005500 });
 
-    // Add the cube to the geometry
-    const cube = new THREE.Mesh(geometry, material);
+    // // Add the cube to the geometry
+    // const cube = new THREE.Mesh(geometry, material);
 
-    // Add the cube to the scene
-    scene.add(cube);
-
+    // // Add the cube to the scene
+    // scene.add(cube);
+    this.birds = {
+      parrot: null,
+      flamingo: null,
+      stork: null
+    };
 
 
 
@@ -50,8 +56,20 @@ class World {
 
   async init(){
 
-    await loadBirds();
+    const birds = await loadBirds();
+    this.birds.parrot = birds.parrot;
+    this.birds.flamingo = birds.flamingo;
+    this.birds.stork = birds.stork;
 
+    scene.add(this.birds.parrot, this.birds.flamingo, this.birds.stork);
+    controls.target.copy(this.birds.flamingo.position);
+  }
+
+  switch(){
+    const birdsArray = [this.birds.parrot, this.birds.flamingo, this.birds.stork];
+    const currentBird = birdsArray.find(bird => bird.position.equals(controls.target));
+    const nextBird = birdsArray[(birdsArray.indexOf(currentBird) + 1) % birdsArray.length];
+    controls.target.copy(nextBird.position);
   }
 
   render() {
