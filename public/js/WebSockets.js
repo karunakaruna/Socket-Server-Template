@@ -2,11 +2,12 @@
 
 
 import { addLog } from './log.js';
-import { camera, userID, scene, loadedGLTF, userSphere, beaconLightModel } from '../scene3.js';
+import { camera, userID, scene, loadedGLTF,  beaconLightModel, userSphere } from '../scene3.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './Userlist.js';
 import { boundingBox, getLoadedGLTF  } from './Loaders';
+// import {userSphere} from './userSphere';
 
 const users = {}; 
 let myUserID = null;

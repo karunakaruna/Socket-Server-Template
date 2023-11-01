@@ -1,10 +1,11 @@
 //Spawners.js
 
-import { scene, activeMixers, pingModel, beaconLightModel } from '../scene3.js';
+import { scene, pingModel, beaconLightModel } from '../scene3.js';
 import { playSpatialAudio } from './Audio.js';
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene,  setBoundingBox, checkSpriteVisibility } from './Loaders.js';
 
 
+const activeMixers = [];
 
 // PING 
 try {
@@ -129,4 +130,4 @@ export function spawnEntrancePingAtPosition(position) {
     }
     }
 
-    export{spawnPingAtPosition, spawnBeaconLightAtPosition};
+    export{spawnPingAtPosition, spawnBeaconLightAtPosition, activeMixers};

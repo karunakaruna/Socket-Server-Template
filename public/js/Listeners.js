@@ -1,21 +1,25 @@
 //Listeners.js
 
-import { raycaster, camera, mouse, cube, userID, scene } from '../scene3.js';
+import { camera,  cube, userID, scene } from '../scene3.js';
 import { gltfScene } from './Loaders.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
 import {ws, myUserID} from './WebSockets.js'
 import { showMenu } from './Menu.js';
 import { showModal } from './ShowModal.js';
 
-import {targetFOV} from './Camera.js';
-
-
+let targetRotationX = 0;
+let targetRotationZ = 0;
+let targetFOV = 60; // Initial target FOV
 let maxrot = 25;
 let targetPosition = new THREE.Vector3(0, 0, 0);
 
+// Raycaster
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+
 export function addMouseMovementListener(map) {
-    let targetRotationX = 0;
-    let targetRotationZ = 0;
+
     window.addEventListener('mousemove', (event) => {
     
     const mouseX = event.clientX - window.innerWidth / 2;
@@ -52,7 +56,7 @@ export function addMouseMovementListener(map) {
 
     // Ensure the X rotation stays within bounds to avoid over-rotation
     targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2) + 0.4;
-    return {targetRotationX, targetRotationZ};
+    
     try {
         // Check for intersections with 3D objects
         const intersects = raycaster.intersectObjects(map.children, true);
@@ -186,7 +190,7 @@ export function addRightClickListener(scene, yourUserSphere) {
 }
 
 
-export { gltfScene, targetPosition, targetFOV};
+export { gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV};
 
 
 
