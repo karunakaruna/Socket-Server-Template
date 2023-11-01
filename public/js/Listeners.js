@@ -1,10 +1,11 @@
 //Listeners.js
 
-import { raycaster, camera, mouse, cube, userID, showModal, scene } from '../scene3.js';
+import { raycaster, camera, mouse, cube, userID, scene } from '../scene3.js';
 import { gltfScene } from './Loaders.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
 import {ws, myUserID} from './WebSockets.js'
 import { showMenu } from './Menu.js';
+import { showModal } from './ShowModal.js';
 
 let targetRotationX = 0;
 let targetRotationZ = 0;
