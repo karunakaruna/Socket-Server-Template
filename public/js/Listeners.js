@@ -7,12 +7,15 @@ import {ws, myUserID} from './WebSockets.js'
 import { showMenu } from './Menu.js';
 import { showModal } from './ShowModal.js';
 
-let targetRotationX = 0;
-let targetRotationZ = 0;
+import {targetFOV} from './Camera.js';
+
+
 let maxrot = 25;
 let targetPosition = new THREE.Vector3(0, 0, 0);
-let targetFOV = 60; // Initial target FOV
+
 export function addMouseMovementListener(map) {
+    let targetRotationX = 0;
+    let targetRotationZ = 0;
     window.addEventListener('mousemove', (event) => {
     
     const mouseX = event.clientX - window.innerWidth / 2;
@@ -49,7 +52,7 @@ export function addMouseMovementListener(map) {
 
     // Ensure the X rotation stays within bounds to avoid over-rotation
     targetRotationX = Math.max(Math.min(targetRotationX, Math.PI/2), -Math.PI/2) + 0.4;
-
+    return {targetRotationX, targetRotationZ};
     try {
         // Check for intersections with 3D objects
         const intersects = raycaster.intersectObjects(map.children, true);
@@ -73,6 +76,7 @@ export function addMouseMovementListener(map) {
                 return; // Return to break out of loop if we found an intersection with userData
             }
         }
+        
     } catch (error) {
         console.error('cant see map');
     }
@@ -82,6 +86,9 @@ export function addMouseMovementListener(map) {
     divs.forEach(div => div.innerText = '');
     imageElem.src = '';  // Also clear the image if no object is intersected
 });
+
+    
+
 }
 
     // Listen to scroll wheel
@@ -135,6 +142,8 @@ export function addClickListener(map) {
             ws.send(JSON.stringify(payload));
         }
     });
+
+    return targetPosition
 }
 
 
@@ -177,7 +186,7 @@ export function addRightClickListener(scene, yourUserSphere) {
 }
 
 
-export { gltfScene, targetRotationX, targetRotationZ, targetPosition, targetFOV};
+export { gltfScene, targetPosition, targetFOV};
 
 
 
