@@ -50,8 +50,8 @@ const animate = () => {
     TWEEN.update();
 
     // Move Spheres for each user
-    for (const userID in WebSocketConnection.users) {
-        const user = users[userID];
+    for (const userID in wsc.users) {
+        const user = wsc.users[userID];
         user.sphere.position.lerp(user.targetPosition, 0.05);
     }
     renderer.render(scene, camera);
@@ -61,3 +61,4 @@ const animate = () => {
 
 animate();
 // Websocket Error Handling
+

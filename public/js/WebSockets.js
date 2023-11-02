@@ -64,6 +64,7 @@ export class WebSocketConnection {
             }
 
             else if (message.type === 'initUsers') {
+                console.log('initUsers');
                 for (let incomingUserID in message.users) {
                     addUserToList(incomingUserID, incomingUserID === this.myUserID);
 
@@ -125,11 +126,11 @@ export class WebSocketConnection {
 
                 let entranceURL = "";
                 let foundObjectName = "";
-                const tempGLTF = this.getLoadedGLTF();
+                const tempGLTF = getLoadedGLTF();
                 // Traverse the scene to find the object with the matching name to fetch its URL
                 console.log("Accessing GLTF in WebSockets.js:", tempGLTF);
 
-                this.loadedGLTF.scene.traverse((object) => {
+                tempGLTF.scene.traverse((object) => {
                     if (object.userData && object.userData.Name === message.objectName) {
                         entranceURL = object.userData.URL;
                         foundObjectName = object.userData.Name;
@@ -186,7 +187,7 @@ export class WebSocketConnection {
         outerSphere.add(innerSphere);
         outerSphere.userData.userID = userID;
         const sprite = attachLabelToObjects(outerSphere, userID);
-
+        console.log('sphere created');
         return {
             sphere: outerSphere,
             sprite: sprite,

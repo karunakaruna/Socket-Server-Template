@@ -156,11 +156,11 @@ ws.on("message", (data) => {
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
         }
-        sendToUser(userID, {
+        broadcast(ws, userID, {
             type: 'initUsers',
             userID: userID,
             users: users
-        });
+        },false);
     }
 
     function onUserPositionUpdate(userID, position) {
@@ -182,6 +182,14 @@ ws.on("message", (data) => {
     }
 
     function sendToUser(userID, message) {
+        wss.clients.forEach(client => {
+            if (client.userID === userID) {
+                client.send(JSON.stringify(message));
+            }
+        });
+    }
+
+    function sendToAllUsers(userID, message) {
         wss.clients.forEach(client => {
             if (client.userID === userID) {
                 client.send(JSON.stringify(message));
