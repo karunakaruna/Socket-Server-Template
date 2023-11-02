@@ -1,6 +1,6 @@
 //Spawners.js
 
-import { scene, pingModel, beaconLightModel } from '../scene3.js';
+import { scene, pingModel, beaconLightModel } from '../scene.js';
 import { playSpatialAudio } from './Audio.js';
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene,  setBoundingBox, checkSpriteVisibility } from './Loaders.js';
 

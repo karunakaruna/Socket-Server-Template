@@ -1,6 +1,6 @@
 //Loaders.js
 
-import {cube,camera} from '../scene3.js';
+import {cube,camera} from '../scene.js';
 
 //All World Loader//
 let gltfScene;

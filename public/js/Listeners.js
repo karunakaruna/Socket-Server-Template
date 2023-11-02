@@ -1,11 +1,12 @@
 //Listeners.js
 
-import { camera,  cube, userID, scene } from '../scene3.js';
+import { camera,  cube } from '../scene.js';
 import { gltfScene } from './Loaders.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
-import {ws, myUserID} from './WebSockets.js'
+import { WebSocketConnection} from './WebSockets.js'
 import { showMenu } from './Menu.js';
-import { showModal } from './ShowModal.js';
+import { showModal } from './util/ShowModal.js';
+import { wsc } from '../scene.js';
 
 let targetRotationX = 0;
 let targetRotationZ = 0;
@@ -103,7 +104,7 @@ export function addScrollWheelListener() {
     });
 }
 export function addClickListener(map) {   
-    window.addEventListener('click', (event) => {
+        window.addEventListener('click', (event) => {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         document.querySelectorAll('.contextMenu').forEach(menu => {
@@ -115,7 +116,7 @@ export function addClickListener(map) {
 
         if (intersects.length > 0) {
             const intersection = intersects[0];
-            
+            console.log('clicked')
             // Set the intersection point as the target position
             targetPosition.copy(intersection.point);
     
@@ -136,14 +137,15 @@ export function addClickListener(map) {
             // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
-                userID: myUserID,
+                userID: WebSocketConnection.myUserID,
                 position: {
                     x: intersection.point.x,
                     y: intersection.point.y,
                     z: intersection.point.z
                 }
             };
-            ws.send(JSON.stringify(payload));
+            console.log(payload);
+            wsc.wsSend(payload);
         }
     });
 

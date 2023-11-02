@@ -3,16 +3,20 @@
 let userID = null;
 const scene = new THREE.Scene();
 
+import {WebSocketConnection} from './js/WebSockets.js';
+export const wsc= new WebSocketConnection();
+
+wsc.initializeWebSocketConnection();
+
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, setBoundingBox, checkSpriteVisibility, loadedGLTF, pingModel, beaconLightModel     } from './js/Loaders';
 import { addMouseMovementListener, addScrollWheelListener, addClickListener, addRightClickListener } from './js/Listeners.js';
-import { myUserID, getMyID, users, ws } from './js/WebSockets.js'; 
-import { DOM } from './js/DOM';
+import { DOM } from './js/util/DOM';
 import { initCamera, updateCamera } from './js/Camera';
 import { activeMixers } from './js/Spawners.js';
-import { initUserSphere } from './js/userSphere';
-import { initGrid } from './js/grid';
-import { Lights } from './js/lights';
-import { Resizer } from './js/Resizer';
+import { initUserSphere } from './js/scene/userSphere';
+import { initGrid } from './js/scene/grid';
+import { Lights } from './js/scene/lights';
+import { Resizer } from './js/util/Resizer';
 
 
 DOM();
@@ -46,7 +50,7 @@ const animate = () => {
     TWEEN.update();
 
     // Move Spheres for each user
-    for (const userID in users) {
+    for (const userID in WebSocketConnection.users) {
         const user = users[userID];
         user.sphere.position.lerp(user.targetPosition, 0.05);
     }

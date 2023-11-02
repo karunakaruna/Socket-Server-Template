@@ -1,13 +1,9 @@
     
     import { listener } from './Audio';
-    // import { targetPosition} from '../scene3.js';
-
     import { targetRotationX, targetRotationZ, targetPosition, targetFOV} from './Listeners.js'
 
 
     let cubePosition = new THREE.Vector3(0, 0, 0);
-    
-
     //Camera Movement
     const maxMovement = 8;
    

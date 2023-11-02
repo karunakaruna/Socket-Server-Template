@@ -1,4 +1,8 @@
-import { ws } from "./WebSockets";
+// import { wsSend, ws } from "../WebSockets";
+import { loadedGLTF } from "../Loaders";
+import { addLog } from "./log";
+import { spawnEntrancePingAtPosition } from "../Spawners";
+import {wsc} from '../../scene.js';
 
 export function showModal(objectName, url, intersectionPoint) {
     modalText.innerText = `Enter ${objectName}`;
@@ -27,7 +31,8 @@ export function showModal(objectName, url, intersectionPoint) {
             }
         };
         
-        ws.send(JSON.stringify(payload));
+        // wsSend(payload);
+        wsc.wsSend(payload);
         console.log('Payload sent:', payload);
 
         if (loadedGLTF && loadedGLTF.scene) {

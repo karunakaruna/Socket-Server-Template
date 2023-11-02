@@ -1,5 +1,5 @@
 // Audio ///
-import { scene } from '../scene3.js';
+import { scene } from '../scene.js';
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioBuffer; // Store the audio buffer globally

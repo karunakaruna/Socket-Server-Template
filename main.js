@@ -79,10 +79,7 @@ wss.on("connection", function (ws, req) {
     console.log("first connection. starting keepalive");
     keepServerAlive();
   }
-
-
-
-  ws.on("message", (data) => {
+ws.on("message", (data) => {
     if (isJSON(data)) {
         const currData = JSON.parse(data);
 
@@ -94,15 +91,18 @@ wss.on("connection", function (ws, req) {
         } else if(currData.type === 'loc') {
             onUserPositionUpdate(userID, currData.position);
             broadcast(ws, currData, false);
+        } else if (currData.type === 'init') {
+            console.log('welcome new user!')
+            sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
 
         //Bookmark
         } else if (currData.type === 'bookmark') {
-          console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
-          addDummyProfileRow();  // call the bookmark function
+            console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
+            addDummyProfileRow();  // call the bookmark function
 
         //Entrance
-       } else if (currData.type === 'entrance') {
-          console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
+        } else if (currData.type === 'entrance') {
+            console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
             broadcast(ws, currData, false);
         }
 
@@ -115,8 +115,7 @@ wss.on("connection", function (ws, req) {
     } else {
         console.error('malformed message', data);
     }
-  });
-
+});
 
   // Close connection
   ws.on("close", (data) => {
@@ -184,7 +183,9 @@ wss.on("connection", function (ws, req) {
 
     function sendToUser(userID, message) {
         wss.clients.forEach(client => {
-            client.send(JSON.stringify(message));
+            if (client.userID === userID) {
+                client.send(JSON.stringify(message));
+            }
         });
     }
 
