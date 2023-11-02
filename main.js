@@ -156,11 +156,11 @@ ws.on("message", (data) => {
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
         }
-        broadcast(ws, userID, {
+        broadcast(ws, JSON.stringify({
             type: 'initUsers',
             userID: userID,
             users: users
-        },false);
+        }),false);
     }
 
     function onUserPositionUpdate(userID, position) {
