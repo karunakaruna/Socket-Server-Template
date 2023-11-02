@@ -19,6 +19,8 @@ export class WebSocketConnection {
         this.ws = null;
     }
 
+
+    
     initializeWebSocketConnection() {
         // const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         // const wsURL = `${wsProtocol}//${location.host}/ws`;
@@ -32,6 +34,15 @@ export class WebSocketConnection {
 
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
+
+
+            if (event.data === 'ping') {
+                addLog('Received heartbeat!');
+                console.log('this ping!');
+                ws.send('pong'); // reply to keep connection alive
+                return;
+            };
+
 
             if (message.type === 'loc' && message.position) {
                 const receivedPosition = new THREE.Vector3(
@@ -76,12 +87,16 @@ export class WebSocketConnection {
             else if (message.type === 'assignUserID') {
                 this.myUserID = message.userID;
                 console.log(`Assigned userID: ${this.myUserID}`);
+                document.getElementById('username').textContent = this.myUserID;
+                console.log('Assigned UserID:',this. myUserID);
+                addUserToList(this.myUserID, true);
+                userSphere.userData.userID = this.myUserID;
             }
 
 
             else if (message.type === 'userDisconnected') {
                 // Remove the sphere of the disconnected user
-                this.removeUserFromList(message.userID);
+                removeUserFromList(message.userID);
                 let userObject = this.users[message.userID];
                 //console.log(message.userID);
                 if (userObject) {
@@ -178,6 +193,16 @@ export class WebSocketConnection {
             targetPosition: position
         };
     }
+
+    getObjectByProperty = (prop, value) => {
+        let foundObject = null;
+        const GLTF = getLoadedGLTF();
+        GLTF.scene.traverse((object) => {
+            if (object.userData && object.userData[prop] === value) {
+                foundObject = object;
+            }
+        });
+        return foundObject;};
 
     getMyID() {
         return this.myUserID;

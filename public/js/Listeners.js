@@ -137,7 +137,7 @@ export function addClickListener(map) {
             // Send the position data to WebSocket server
             const payload = {
                 type: 'loc',
-                userID: WebSocketConnection.myUserID,
+                userID: wsc.myUserID,
                 position: {
                     x: intersection.point.x,
                     y: intersection.point.y,
