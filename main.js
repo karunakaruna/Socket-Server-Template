@@ -98,14 +98,14 @@ app.use('/modals', modalsRouter);
 
 
 //Home Index from metacarta
-// app.get('/', (req, res) => {
-//     res.sendFile(__dirname + '/index.html');
-// });
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
 
 //Homepage
-app.get('/', checkNotAuthenticated, (req, res) => {
-    res.render('index.ejs');
-    }); 
+// app.get('/', checkNotAuthenticated, (req, res) => {
+//     res.render('index.ejs');
+//     }); 
 
 //Redirects
 app.get('/users/register'  , checkAuthenticated, (req, res) => {
