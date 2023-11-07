@@ -53,31 +53,44 @@ export function loadAllWorlds(scene) {
     console.log("GLTF loaded:", loadedGLTF);
     gltfScene = gltf.scene;
     scene.add(gltfScene);
-
     gltfScene.traverse(function (child) {
-        if (child.userData && child.userData.Name) {
+        if (child.userData && child.userData.name) {
+            if (child.userData.name.includes("Plane")) {
+                console.log(child.userData.name);
+            }
+
+
+            console.log()
             const canvas = document.createElement('canvas');
+            child.layers.enable(1);
             const context = canvas.getContext('2d');
             context.font = '20px Arial';
             const textMetrics = context.measureText(child.userData.Name);
-            
+
             canvas.width = textMetrics.width + 10;
             canvas.height = 40;
             context.font = '20px Arial';
             context.fillStyle = 'white';
             context.fillText(child.userData.Name, 5, 15);
-    
+
             const texture = new THREE.CanvasTexture(canvas);
             const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-    
+
+            //Raycaster Layer
+            const spriteLayer = new THREE.Layers();
+            spriteLayer.set(1); // Set to an arbitrary number different from the default layer (which is 0)
+            
+
             const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.layers.enable(10);
+
             sprite.position.copy(child.position);
             sprite.position.y += 0.5;
-            
+
             const uniformScale = canvas.width / 35;
             sprite.scale.set(uniformScale, uniformScale * (canvas.height / canvas.width), 1);
             sprite.initialScale = sprite.scale.clone();
-            
+
             sprite.center.set(0.5, 0.5);
 
             // Check for the 'Star' userData
@@ -86,7 +99,7 @@ export function loadAllWorlds(scene) {
             } else {
                 sprite.isStar = false;
             }
-            
+
             scene.add(sprite);
             sprites.push(sprite);
         }

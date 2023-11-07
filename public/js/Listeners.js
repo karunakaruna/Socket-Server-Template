@@ -16,6 +16,7 @@ let targetPosition = new THREE.Vector3(0, 0, 0);
 
 // Raycaster
 const raycaster = new THREE.Raycaster();
+raycaster.layers.set(1);
 const mouse = new THREE.Vector2();
 
 
@@ -32,7 +33,7 @@ export function addMouseMovementListener(map) {
 
     // Update the picking ray with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
-
+    
     const divs = [document.getElementById('floatingText'), document.getElementById('authorText'), document.getElementById('yearText')];
     const imageDiv = document.getElementById('displayedImage');
     const imageElem = document.getElementById('imageDisplay');

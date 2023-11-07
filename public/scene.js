@@ -25,9 +25,11 @@ const userSphere = initUserSphere();
 const grid = initGrid();
 cube.add(userSphere);  // Attach to the cube
 scene.add(grid);
+grid.layers.enable(1); // Add to the raycaster layer
 
 new Lights(scene);
 new Resizer(camera, renderer);
+
 
 loadAllWorlds(scene);
 loadPingModel(scene);
