@@ -99,7 +99,7 @@ app.use('/modals', modalsRouter);
 
 //Home Index from metacarta
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+    res.sendFile('/index.html');
 });
 
 //Homepage
