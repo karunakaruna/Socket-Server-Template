@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Three.js scene rendering example with animated geometry</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <!-- <link rel='stylesheet' type='text/css' media='screen' href='main.css'> -->
+    <!-- <script src='main.js'></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
+    <script src="modal.js"></script>
+
+    <style>
+        /* html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            cursor: url("https://raw.githubusercontent.com/karunakaruna/memory/main/white-eye2.ico"), auto;
+        } */
+        #container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+
+        }
+
+    </style>
+
+
+</head>
+<body id="body">
+  
+  
+  <audio id="audio" src="https://raw.githubusercontent.com/karunakaruna/memory/main/eponn.mp3"></audio>
+
+  
+  
+  
+  
+    <!-- create a line of big white bold text floating on top center of the three.js scene that says "Click to start" -->
+    <div id="clickToStart" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 50px; color: white; font-weight: bold; z-index: 100;">
+        Click to start
+    </div>
+
+    <!-- create a div called 'container' that fills the window -->
+    <div id="container"></div>
+    <script>
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera( 40, window.innerWidth/window.innerHeight, 0.1, 1000 );
+        var renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.getElementById("container").appendChild( renderer.domElement );
+        // Function to handle resizing the window
+        window.addEventListener( 'resize', onWindowResize, false );
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+        // create a material that is dull grey and has a wireframe overlay
+        var material = new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true } );
+
+        //create a red wireframe sphere
+        var sphere = new THREE.SphereGeometry( 1, 32, 32 );
+        var red = new THREE.MeshBasicMaterial( { color: 0xff0ffff, wireframe: true } );
+
+        var cube = new THREE.Mesh( geometry, material );
+        var sphere = new THREE.Mesh( sphere, red );
+
+        scene.add( cube , sphere);
+        camera.position.z = 5;
+
+        var animate = function () {
+            requestAnimationFrame( animate );
+            cube.rotation.y += 0.01;
+
+sphere.rotation.x -= 0.01;
+sphere.rotation.y += 0.01;
+
+// Add event listener for window resize
+window.addEventListener('resize', onWindowResize, false);
+
+renderer.render( scene, camera );
+};
+animate();
+
+</script>
+
+<script>
+    var overlay = document.createElement("container");
+    var text = document.getElementById("clickToStart")
+    overlay.style.cssText = "width: 100%; height: 100%; background: black; position: absolute; top: 0; left: 0; z-index: 10;";
+    document.getElementById("body").appendChild(overlay);
+
+    window.onload = function() {
+
+
+    }
+
+    function playAudio() {
+      document.getElementById("audio").play();
+      document.querySelector('#audio').volume = 0.15;
+    }
+
+    var audio = new Audio("https://raw.githubusercontent.com/karunakaruna/memory/main/eponn.mp3");
+    var amb = new Audio("https://raw.githubusercontent.com/karunakaruna/memory/main/353501__inspectorj__ambience-wind-chimes-a.mp3");
+    audio.volume = 0.15;
+    amb.volume = .1;
+    document.addEventListener('click', function() {
+       //play audio here once then disable the event listener
+         audio.play();
+        amb.play();
+            document.removeEventListener('click', arguments.callee);
+            
+       
+            
+
+
+        // fade out the overlay and text
+
+
+       
+        overlay.style.transition = "opacity 2s";
+        overlay.style.opacity = 0;
+        text.style.transition = "opacity 2s";
+        text.style.opacity = 0;
+    });
+</script>
+
+
+
+
+</body>
+</html>

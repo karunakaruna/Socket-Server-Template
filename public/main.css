@@ -140,3 +140,75 @@ body {
 .contextMenu button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* //Passport Styles */
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden; /* Prevent scrolling */
+}
+
+
+.dragbutton {
+  display: flex;
+  justify-content: left;
+  align-items: left;
+  height: 100vh;
+  overflow: hidden; /* Prevent scrolling */
+  text-align: center  ;
+
+}
+
+
+#minimizeButton {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50px;
+  height: 50px;
+  justify-content: center;  /* Updated from left to center */
+  align-items: center;      /* Updated from left to center */
+  background-color: #000;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 40px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 9998;
+}
+
+
+/* .modal {
+  position: relative; /* Changed from absolute to relative */
+  z-index: 1000;
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  backdrop-filter: blur(100px);
+  -webkit-backdrop-filter: blur(50px);
+  opacity: 90%;
+}
+ */
+
+
+.full-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9); /* This gives it a white background with slight transparency */
+  overflow: auto; /* In case the content exceeds the screen size */
+  z-index: 1; /* This ensures it appears above other content */
+}
+
+
+
+

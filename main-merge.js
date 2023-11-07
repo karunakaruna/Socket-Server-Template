@@ -16,6 +16,7 @@ const flash = require('express-flash');
 const passport = require('passport');
 const initializePassport = require('./util/passportConfig');
         initializePassport(passport);
+const bodyParser = require('body-parser');
 const { checkAuthenticated, checkNotAuthenticated } = require('./util/auth');
 
 //ENVIRONMENT VARIABLES
@@ -140,18 +141,6 @@ app.get('/loading-home', (req, res) => {
     }
 });
 
-app.get('/map', (req, res) => {
-    try {
-        const data = {
-            title: 'Modal Title',
-            content: 'Content for the modal'
-        };
-        res.render('map.ejs', data);
-    } catch (error) {
-        console.error("Error rendering EJS:", error);
-        res.status(500).send('Server Error');
-    }
-});
 
 
 

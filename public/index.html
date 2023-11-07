@@ -2,82 +2,86 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Metacarta v1</title>
-    <!-- Link to your external CSS file -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
     <link rel="stylesheet" href="main.css">
-</head>
-<body>
-    <div id="container"></div>
-    <div id="info">
-        <h2>World Tree Map</h2>
-        <h3>Meta-Carta</h3>
-        <div id="usersOnline">Users Online: <span id="userCount">#</span></div>
-        <div id="userName">UserID: <span id="username">...</span></div>
-        <div id="coordinatesText"></div>
-      </div>
+    <!-- <link rel="stylesheet" type="text/css" href="index.css"> -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
-      <div id="userlist-div" class="userlist">
-        <h3>Users Online:</h3>
-        <ul id="user-list-ul"></ul>
-    </div>
-      <div id="floatingText" style="position: fixed; color: white; font-size: 1.5em; pointer-events: none; user-select: none;"></div>
-      <div id="authorText" style="position: fixed; color: white; font-size: 1.5em; pointer-events: none; user-select: none;"></div>
-      <div id="yearText" style="position: fixed; color: white; font-size: 1.5em; pointer-events: none; user-select: none;"></div>
-      <div id="displayedImage" style="width:200px; height:200px; overflow:hidden;position: fixed;">
-        <img id="imageDisplay" src="" style="height:100%;">
-    </div>
-
-    
-    <div id="urlMenu" class="contextMenu">
-        <button>Examine</button>
-        <button>Save Favourite</button>
-        <button>Invite Friend</button>
-    </div>
-    
-    <div id="userMenu" class="contextMenu">
-        <button>Go AFK</button>
-        <button>Player Settings</button>
-        <button>Inventory</button>
-    </div>
-    
-    <div id="otherUserMenu" class="contextMenu">
-        <button>Trust</button>
-        <button>Add Friend</button>
-        <button>View Profile</button>
-    </div>
-
-
-      <div class="activity-log">
-        <ul id="log-list"></ul>
-    </div>
-
-    <div id="urlModal" class="modal">
-        <div class="modal-content">
-            <p id="modalText">Enter</p>
-            <button id="confirmButton">Confirm</button>
-        </div>
-    </div>
-    
-
-
-
-    <script src="/js/log.js"></script>
-
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://unpkg.com/three@0.126.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js" integrity="sha512-WoO4Ih0CDOSLYafy22wZD/mcJ7k0ESLqtQsFa6zFKnEUrbtuGU+GkLtVhgt93xa2qewG5gKEC6CWlN8OaCTSVg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="submit.js"></script>
+    <script src="modal.js"></script>
 
 
-    <script src="lib/CSS2DRenderer.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
-    <script type="module" src="scene.js"></script>
-   <!-- <script src="https://cdn.jsdelivr.net/npm/three-css2drender-types@1.0.3/CSS2DRenderer.min.js"></script> -->
+        <style>
 
-    <script>
+
+        </style>
+
+        <script>
+            $(document).ready(function() {
+                $("#myModal").draggable();
+                $("#dragbutton").draggable();
+
+                $(document).mouseup(function(e) {
+                    var container = $("#myModal");
+
+                    if (!container.is(e.target) && container.has(e.target).length === 0) {
+                        container.hide();
+                        $("#minimizeButton").show();
+                    }
+                });
+
+                $("#minimizeButton").click(function() {
+                    $("#myModal").show();
+                    $("#myModal").animate({
+                        opacity: 1,
+
+                    }, 500);
+                    $("#minimizeButton").hide();
+                });
+            });
+
+        </script>
+
+    </head>
+    <body>
         
-    </script>
-</body>
-</html>
+
+        
+        <button id="minimizeButton" style="display: none;" position="absolute">👁</button>
+
+        <div id="myModal" class="login-modal">
+            <div class="modal-content" id="modal-content">
+                <!-- Rendered EJS content will be inserted here -->
+            </div>
+        </div>
+
+        <div id="fullScreenDiv" class="full-screen">
+            <!-- Content fetched from the server will be inserted here -->
+        </div>
+ 
+        <script>
+            // Your fetch code goes here:
+            fetch('/modals/home')
+                .then(response => response.text())
+                .then(html => {
+                    $('#modal-content').html(html);
+                    $('#myModal').show();
+                })
+                .catch(error => console.error('Error:', error));
+
+            fetch('/map')
+                .then(response => response.text())
+                .then(html => {
+                    $('#fullScreenDiv').html(html);
+                })
+                .catch(error => console.error('Error:', error));
+
+        </script>
+
+
+    </body>    </html>
+

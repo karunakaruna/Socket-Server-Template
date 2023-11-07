@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" integrity="sha512-EZLkOqwILORob+p0BXZc+Vm3RgJBOe1Iq/0fiI7r/wJgzOFZMlsqTa29UEl6v6U6gsV4uIpsNZoV32YZqrCRCQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Document</title>
+</head>
+<body>
+    <h1> Register </h1>
+
+    <ul>
+        <% if(typeof errors != 'undefined') { %>
+            <% errors.forEach(error=>{ %>
+        <li><%= error.message %></li>
+            <% }) %> <% } %>
+    </ul>
+
+    <form action="/users/register" method="POST">
+        <div>
+            <input type="text"
+             name="name"
+             id ="name"
+             placeholder="Name"
+             required>
+        </div>
+        <div>
+            <input type="email"
+             name="email"
+             id ="email"
+             placeholder="Email"
+             required>
+        </div>
+        <div>
+            <input type="password"
+             name="password"
+             id ="password"
+             placeholder="Password"
+             required>
+        </div>
+        <div>
+            <input type="password"
+             name="password2"
+             id ="password2"
+             placeholder="Confirm Password"
+             required>
+        </div>
+        <div>
+            <input type="submit" value="Register">
+        </div>
+        <a href="/users/login">Login</a>
+        <a href="/">Home</a>
+
+    </form>
+</body>
+</html>
