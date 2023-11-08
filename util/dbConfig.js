@@ -8,7 +8,7 @@ const pool = new Pool({
     connectionString: isProduction ? process.env.DATABASE_URL : connectionString,
 
     ssl: {
-        rejectUnauthorized: false // For Heroku, you may need to set this to false
+        rejectUnauthorized: true // For Heroku, you may need to set this to false
       }   
        // ssl: isProduction
 });
