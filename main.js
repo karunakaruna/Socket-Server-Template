@@ -42,7 +42,7 @@ const wss = process.env.NODE_ENV === "production"
 
 
 //CORS
-const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000','http://localhost:3000'];
+const allowedOrigins = ['https://monaverse.com', 'https://hyperfy.io', 'http://localhost','http://localhost:4000','http://localhost:3000', 'https://metacarta-b8f465580dc6.herokuapp.com'];
 const corsOptions = {
   origin: function (origin, callback) {
     console.log("Incoming origin:", origin);  // Log the incoming origin
