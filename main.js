@@ -257,8 +257,18 @@ ws.on("message", (data) => {
     };
 
     function onUserConnect(userID) {
-        let count = 0; // initialize count variable for the user
 
+
+        if (!users[userID].position) {
+            users[userID].position = { x: 0, y: 0, z: 0 };
+        }
+        broadcast(null, JSON.stringify({
+            type: 'initUsers',
+            userID: userID,
+            users: users
+        }),false);
+
+        let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
         const intervalId = setInterval(() => {
             count++;
@@ -271,14 +281,7 @@ ws.on("message", (data) => {
             intervalId: intervalId
         };
 
-        if (!users[userID].position) {
-            users[userID].position = { x: 0, y: 0, z: 0 };
-        }
-        broadcast(null, JSON.stringify({
-            type: 'initUsers',
-            userID: userID,
-            users: users
-        }),false);
+
     }
 
     function onUserPositionUpdate(userID, position) {
