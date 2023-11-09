@@ -181,7 +181,7 @@ export class WebSocketConnection {
         const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
         const outerSphere = new THREE.Mesh(geometry, trans);
         const innerSphere = new THREE.Mesh(geometry, material);
-
+        outerSphere.layers.enable(1); // Add to the raycaster layer
         outerSphere.position.copy(position);
         this.scene.add(outerSphere);
         outerSphere.add(innerSphere);
