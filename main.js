@@ -182,6 +182,7 @@ wss.on("connection", function (ws, req) {
     console.log("first connection. starting keepalive");
     keepServerAlive();
   }
+
 ws.on("message", (data) => {
     if (isJSON(data)) {
         const currData = JSON.parse(data);
@@ -256,6 +257,20 @@ ws.on("message", (data) => {
     };
 
     function onUserConnect(userID) {
+        let count = 0; // initialize count variable for the user
+
+        // increment count every 10 seconds
+        const intervalId = setInterval(() => {
+            count++;
+            console.log(`User ${userID} count: ${count}`);
+        }, 10000);
+
+        // add intervalId to the user object
+        users[userID] = {
+            position: { x: 0, y: 0, z: 0 },
+            intervalId: intervalId
+        };
+
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
         }
@@ -264,6 +279,33 @@ ws.on("message", (data) => {
             userID: userID,
             users: users
         }),false);
+    }
+
+    function onUserPositionUpdate(userID, position) {
+        users[userID].position = position;
+        broadcast(null, {
+            type: 'userPositionUpdate',
+            userID: userID,
+            position: position
+        }, false);
+    }
+
+    function onUserDisconnect(userID) {
+        clearInterval(users[userID].intervalId);
+        delete users[userID];
+        broadcast(null, JSON.stringify({
+            type: 'userDisconnected',
+            userID: userID
+        }), true);
+        console.log(userID);
+    }
+
+    function sendToUser(userID, message) {
+        wss.clients.forEach(client => {
+            if (client.userID === userID) {
+                client.send(JSON.stringify(message));
+            }
+        });
     }
 
     function onUserPositionUpdate(userID, position) {
