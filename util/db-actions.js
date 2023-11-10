@@ -58,7 +58,7 @@ async function addDummyProfileRow() {
       // Get the current online_time value
       const selectQuery = `
         SELECT online_time
-        FROM profile
+        FROM users
         WHERE id = $1`;
       const selectValues = [profileID];
       const selectResult = await client.query(selectQuery, selectValues);
@@ -69,7 +69,7 @@ async function addDummyProfileRow() {
 
       // Update the online_time value in the database
       const updateQuery = `
-        UPDATE profile
+        UPDATE users
         SET online_time = $1
         WHERE id = $2`;
       const updateValues = [newOnlineTime, profileID];
@@ -85,4 +85,4 @@ async function addDummyProfileRow() {
 
   
 
-  module.exports = {addDummyProfileRow, getPostgresVersion, updateOnlineTime};
+  module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime };
