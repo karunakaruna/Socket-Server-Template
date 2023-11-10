@@ -36,12 +36,7 @@ export class WebSocketConnection {
             const message = JSON.parse(event.data);
 
 
-            if (event.data === 'ping') {
-                addLog('Received heartbeat!');
-                console.log('this ping!');
-                ws.send('pong'); // reply to keep connection alive
-                return;
-            };
+          
 
 
             if (message.type === 'loc' && message.position) {
@@ -61,6 +56,13 @@ export class WebSocketConnection {
                     // Existing user, update their position
                     this.users[message.userID].targetPosition.copy(receivedPosition);
                 }
+            }
+
+            else if (message.type === 'ping') {
+                addLog('Received heartbeat!');
+                console.log('this ping!');
+                ws.send('pong'); // reply to keep connection alive
+                return;
             }
 
             else if (message.type === 'initUsers') {
