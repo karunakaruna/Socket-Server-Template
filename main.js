@@ -282,7 +282,7 @@ ws.on("message", (data) => {
             wss.clients.forEach((client) => {
 
                 if (
-                    client.readyState === WebSocket.OPEN &&
+                    client.readyState === WebSocket.OPEN
                     // client.userID === userID - client has no userID
                 ) {
                     console.log('sending count to user');
