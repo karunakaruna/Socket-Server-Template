@@ -280,6 +280,8 @@ ws.on("message", (data) => {
             count++;
             console.log(`User ${userID} count: ${count}`);
             wss.clients.forEach((client) => {
+                console.log(client.readyState);
+                console.log(client.userID);
                 if (
                     client.readyState === WebSocket.OPEN &&
                     client.userID === userID
