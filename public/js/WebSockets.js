@@ -121,6 +121,11 @@ export class WebSocketConnection {
                 }
             }
 
+            else if (message.type === 'count') {
+                document.getElementById('onlineCount').textContent = message.value;
+            }
+
+
             else if (message.type === 'entrance') {
                 console.log('received entrance ping');
 

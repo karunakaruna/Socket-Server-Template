@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow, getPostgresVersion } = require('./util/db-actions');
+const { addDummyProfileRow, getPostgresVersion, updateOnlineTime } = require('./util/db-actions');
 
 //server.js (passport logic)
 
@@ -273,6 +273,12 @@ ws.on("message", (data) => {
         const intervalId = setInterval(() => {
             count++;
             console.log(`User ${userID} count: ${count}`);
+            updateOnlineTime(count, '1'); // call the updateOnlineTime function
+            wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN && client.userID === userID) {
+                    client.send(JSON.stringify({ type: 'count', count: count }));
+                }
+            });
         }, 10000);
 
         // add intervalId to the user object
@@ -311,31 +317,6 @@ ws.on("message", (data) => {
         });
     }
 
-    function onUserPositionUpdate(userID, position) {
-        users[userID].position = position;
-        broadcast(null, {
-            type: 'userPositionUpdate',
-            userID: userID,
-            position: position
-        }, false);
-    }
-
-    function onUserDisconnect(userID) {
-        delete users[userID];
-        broadcast(null, JSON.stringify({
-            type: 'userDisconnected',
-            userID: userID
-        }), true);
-        console.log(userID);
-    }
-
-    function sendToUser(userID, message) {
-        wss.clients.forEach(client => {
-            if (client.userID === userID) {
-                client.send(JSON.stringify(message));
-            }
-        });
-    }
 
     function sendToAllUsers(userID, message) {
         wss.clients.forEach(client => {

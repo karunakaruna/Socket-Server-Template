@@ -52,4 +52,37 @@ async function addDummyProfileRow() {
     }
   }
 
-  module.exports = {addDummyProfileRow, getPostgresVersion};
+  async function updateOnlineTime(intervalID, profileID) {
+    const client = await pool.connect();
+    try {
+      // Get the current online_time value
+      const selectQuery = `
+        SELECT online_time
+        FROM profile
+        WHERE id = $1`;
+      const selectValues = [profileID];
+      const selectResult = await client.query(selectQuery, selectValues);
+      const currentOnlineTime = selectResult.rows[0].online_time;
+
+      // Calculate the new online_time value
+      const newOnlineTime = currentOnlineTime + intervalID;
+
+      // Update the online_time value in the database
+      const updateQuery = `
+        UPDATE profile
+        SET online_time = $1
+        WHERE id = $2`;
+      const updateValues = [newOnlineTime, profileID];
+      await client.query(updateQuery, updateValues);
+
+      console.log(`Updated online_time for profile ${profileID} to ${newOnlineTime}`);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      client.release();
+    }
+  }
+
+  
+
+  module.exports = {addDummyProfileRow, getPostgresVersion, updateOnlineTime};
