@@ -264,11 +264,15 @@ ws.on("message", (data) => {
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
         }
-        broadcast(null, JSON.stringify({
-            type: 'initUsers',
-            userID: userID,
-            users: users
-        }),false);
+        broadcast(
+            null,
+            JSON.stringify({
+                type: "initUsers",
+                userID: userID,
+                users: users,
+            }),
+            false
+        );
 
         let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
@@ -276,22 +280,26 @@ ws.on("message", (data) => {
             count++;
             console.log(`User ${userID} count: ${count}`);
             wss.clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN && client.userID === userID) {
-                    client.send(JSON.stringify({ type: 'count', count: count }));
+                if (
+                    client.readyState === WebSocket.OPEN &&
+                    client.userID === userID
+                ) {
+                    client.send(JSON.stringify({ type: "count", count: count }));
                 }
             });
+            return count;
         }, 10000);
-        
+
         // add intervalId to the user object
         users[userID] = {
             position: { x: 0, y: 0, z: 0 },
-            intervalId: intervalId
+            count: intervalId,
         };
     }
 
     function logIntervalIds() {
         for (const userID in users) {
-            console.log(`User ${userID} intervalId: ${users[userID].intervalId}`);
+            console.log(`User ${userID} intervalId: ${users[userID].count}`);
         }
     }
 
@@ -308,7 +316,7 @@ ws.on("message", (data) => {
 
     function onUserDisconnect(userID) {
         // updateOnlineTime(count, '1'); // call the updateOnlineTime function
-        clearInterval(users[userID].intervalId);
+        clearInterval(users[userID].count);
         delete users[userID];
         
         broadcast(null, JSON.stringify({
