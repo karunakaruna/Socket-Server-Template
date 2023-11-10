@@ -61,7 +61,7 @@ export class WebSocketConnection {
             else if (message.type === 'ping') {
                 addLog('Received heartbeat!');
                 console.log('this ping!');
-                ws.send('pong'); // reply to keep connection alive
+                this.ws.send('pong'); // reply to keep connection alive
                 return;
             }
 

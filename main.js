@@ -276,7 +276,7 @@ ws.on("message", (data) => {
 
         let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
-        const intervalId = setInterval(() => {
+        setInterval(() => {
             count++;
             console.log(`User ${userID} count: ${count}`);
             wss.clients.forEach((client) => {
