@@ -83,6 +83,28 @@ async function addDummyProfileRow() {
     }
   }
 
+
+  
+  async function getOnlineTime(profileID) {
+    const client = await pool.connect();
+    try {
+      // Get the current online_time value
+      const selectQuery = `
+        SELECT online_time
+        FROM users
+        WHERE id = $1`;
+      const selectValues = [profileID];
+      const selectResult = await client.query(selectQuery, selectValues);
+      const currentOnlineTime = selectResult.rows[0].online_time;
+
+      return currentOnlineTime;
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      client.release();
+    }
+  }
+
   
 
-  module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime };
+  module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime };

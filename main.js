@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow, getPostgresVersion, updateOnlineTime } = require('./util/db-actions');
+const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime} = require('./util/db-actions');
 
 //server.js (passport logic)
 
@@ -159,7 +159,8 @@ app.get('/map', (req, res) => {
 
 
 
-let users = {};      
+let users = {};   
+  
 getPostgresVersion();
 
 //Websockets
@@ -175,6 +176,7 @@ wss.on("connection", function (ws, req) {
   // Send the assigned user ID to the connected client
   ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
 
+  getOnlineTime('1'); // call the getOnlineTime function
   onUserConnect(userID);
   broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
@@ -248,6 +250,8 @@ ws.on("message", (data) => {
 
     const keepServerAlive = () => {
         keepAliveId = setInterval(() => {
+            console.log('Sending heartbeat to keep server alive');
+            logIntervalIds();
             wss.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify({ type: 'ping'}));
@@ -257,8 +261,6 @@ ws.on("message", (data) => {
     };
 
     function onUserConnect(userID) {
-
-
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
         }
@@ -273,23 +275,28 @@ ws.on("message", (data) => {
         const intervalId = setInterval(() => {
             count++;
             console.log(`User ${userID} count: ${count}`);
-            updateOnlineTime(count, '1'); // call the updateOnlineTime function
             wss.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN && client.userID === userID) {
                     client.send(JSON.stringify({ type: 'count', count: count }));
                 }
             });
         }, 10000);
-
+        
         // add intervalId to the user object
         users[userID] = {
             position: { x: 0, y: 0, z: 0 },
             intervalId: intervalId
         };
-
-
     }
 
+    function logIntervalIds() {
+        for (const userID in users) {
+            console.log(`User ${userID} intervalId: ${users[userID].intervalId}`);
+        }
+    }
+
+
+    
     function onUserPositionUpdate(userID, position) {
         users[userID].position = position;
         broadcast(null, {
@@ -300,8 +307,10 @@ ws.on("message", (data) => {
     }
 
     function onUserDisconnect(userID) {
+        updateOnlineTime(count, '1'); // call the updateOnlineTime function
         clearInterval(users[userID].intervalId);
         delete users[userID];
+        
         broadcast(null, JSON.stringify({
             type: 'userDisconnected',
             userID: userID

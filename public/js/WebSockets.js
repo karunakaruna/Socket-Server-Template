@@ -122,6 +122,7 @@ export class WebSocketConnection {
             }
 
             else if (message.type === 'count') {
+                console.log('count received');
                 document.getElementById('onlineCount').textContent = message.value;
             }
 
