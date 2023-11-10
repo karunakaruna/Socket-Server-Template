@@ -307,7 +307,7 @@ ws.on("message", (data) => {
     }
 
     function onUserDisconnect(userID) {
-        updateOnlineTime(count, '1'); // call the updateOnlineTime function
+        // updateOnlineTime(count, '1'); // call the updateOnlineTime function
         clearInterval(users[userID].intervalId);
         delete users[userID];
         
