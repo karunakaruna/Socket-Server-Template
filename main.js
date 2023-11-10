@@ -280,11 +280,10 @@ ws.on("message", (data) => {
             count++;
             console.log(`User ${userID} count: ${count}`);
             wss.clients.forEach((client) => {
-                console.log(client.readyState);
-                console.log(client.userID);
+
                 if (
                     client.readyState === WebSocket.OPEN &&
-                    client.userID === userID
+                    // client.userID === userID - client has no userID
                 ) {
                     console.log('sending count to user');
                     client.send(JSON.stringify({ type: "count", value: count }));
