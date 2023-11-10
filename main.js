@@ -287,14 +287,18 @@ ws.on("message", (data) => {
                     client.send(JSON.stringify({ type: "count", count: count }));
                 }
             });
-            return count;
+            users[userID] = {
+                position: { x: 0, y: 0, z: 0 },
+                count: count,
+            };
+
         }, 10000);
 
         // add intervalId to the user object
-        users[userID] = {
-            position: { x: 0, y: 0, z: 0 },
-            count: intervalId,
-        };
+        // users[userID] = {
+        //     position: { x: 0, y: 0, z: 0 },
+        //     count: intervalId,
+        // };
     }
 
     function logIntervalIds() {
