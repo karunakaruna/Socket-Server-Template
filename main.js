@@ -276,7 +276,9 @@ ws.on("message", (data) => {
 
         let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
-        setInterval(() => {
+
+
+        const intervalID = setInterval(() => {
             count++;
             console.log(`User ${userID} count: ${count}`);
             wss.clients.forEach((client) => {
@@ -290,8 +292,10 @@ ws.on("message", (data) => {
                 }
             });
             users[userID] = {
-                position: { x: 0, y: 0, z: 0 },
+                // position: { x: 0, y: 0, z: 0 },
                 count: count,
+                intervalID: intervalID
+
             };
 
         }, 10000);
@@ -322,7 +326,7 @@ ws.on("message", (data) => {
 
     function onUserDisconnect(userID) {
         // updateOnlineTime(count, '1'); // call the updateOnlineTime function
-        clearInterval(users[userID].count);
+        clearInterval(users[userID].intervalID);
         delete users[userID];
         
         broadcast(null, JSON.stringify({
