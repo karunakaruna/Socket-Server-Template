@@ -278,27 +278,24 @@ ws.on("message", (data) => {
         // increment count every 10 seconds
 
 
-        const intervalID = setInterval(() => {
-            count++;
-            console.log(`User ${userID} count: ${count}`);
-            wss.clients.forEach((client) => {
+        // const intervalID = setInterval(() => {
+        //     count++;
+        //     console.log(`User ${userID} count: ${count}`);
+        //     wss.clients.forEach((client) => {
 
-                if (
-                    client.readyState === WebSocket.OPEN
-                    // client.userID === userID - client has no userID
-                ) {
-                    console.log('sending count to user');
-                    client.send(JSON.stringify({ type: "count", value: count }));
-                }
-            });
-            users[userID] = {
-                // position: { x: 0, y: 0, z: 0 },
-                count: count,
-                intervalID: intervalID
-
-            };
-
-        }, 10000);
+        //         if (
+        //             client.readyState === WebSocket.OPEN
+        //         ) {
+        //             console.log('sending count to user');
+        //             client.send(JSON.stringify({ type: "count", value: count }));
+        //         }
+        //     });
+        //     users[userID] = {
+        //         // position: { x: 0, y: 0, z: 0 },
+        //         count: count,
+        //         intervalID: intervalID
+        //     };
+        // }, 10000);
 
         // add intervalId to the user object
         // users[userID] = {
