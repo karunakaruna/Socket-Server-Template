@@ -383,7 +383,7 @@ ws.on("message", (data) => {
                 if (
                     client.readyState === WebSocket.OPEN
                 ) {
-                    console.log('sending count to' + client.userID);
+                    console.log(users[userID].count);
                     client.send(JSON.stringify({ type: "count", value: users[userID].count }));
                 }
             });
