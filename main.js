@@ -360,6 +360,66 @@ ws.on("message", (data) => {
     };
 
 
+
+
+
+
+
+
+
+
+
+    // Global game tick function
+    const gameTickInterval = 10000; // 10 seconds
+    setInterval(() => {
+        for (let userID in users) {
+            if (users.hasOwnProperty(userID)) {
+                users[userID].count = (users[userID].count || 0) + 1;
+                // Broadcast the updated count to all users
+                // ... (your broadcasting logic here)
+        //     console.log(`User ${userID} count: ${count}`);
+            wss.clients.forEach((client) => {
+
+                if (
+                    client.readyState === WebSocket.OPEN
+                ) {
+                    console.log('sending count to' + client.userID);
+                    client.send(JSON.stringify({ type: "count", value: users[userID].count }));
+                }
+            });
+
+
+
+            } else {
+                users[userID].count = 0;
+            }
+        }
+    }, gameTickInterval);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     module.exports = { broadcast };
 
 
