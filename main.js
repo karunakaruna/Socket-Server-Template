@@ -170,7 +170,8 @@ wss.on("connection", function (ws, req) {
 
   const userID = uuidv4();  // Generate a UUID for each connected user
       users[userID] = {
-        position: { x: 0, y: 0, z: 0 } // default position
+        position: { x: 0, y: 0, z: 0 }, // default position
+        count: 0
     };
 
   // Send the assigned user ID to the connected client
@@ -367,31 +368,19 @@ ws.on("message", (data) => {
 
 
 
-
-
     // Global game tick function
     const gameTickInterval = 1000; // 10 seconds
     setInterval(() => {
         for (let userID in users) {
             if (users.hasOwnProperty(userID)) {
-                users[userID].count = (users[userID].count || 0) + 1;
+                users[userID].count += 1;
                 // Broadcast the updated count to all users
-                // ... (your broadcasting logic here)
-        //     console.log(`User ${userID} count: ${count}`);
-            wss.clients.forEach((client) => {
-
-                if (
-                    client.readyState === WebSocket.OPEN
-                ) {
-                    console.log(users[userID].count, users[userID], userID);
-                    client.send(JSON.stringify({ type: "count", value: users[userID].count }));
-                }
-            });
-
-
-
-            } else {
-                users[userID].count = 0;
+                wss.clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN && client.userID === userID) {
+                        console.log(users[userID].count, users[userID], userID);
+                        client.send(JSON.stringify({ type: "count", value: users[userID].count }));
+                    }
+                });
             }
         }
     }, gameTickInterval);
