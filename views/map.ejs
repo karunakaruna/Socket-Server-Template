@@ -51,21 +51,27 @@
 
     
     <div id="urlMenu" class="contextMenu">
-        <button>Examine</button>
-        <button>Save Favourite</button>
-        <button>Invite Friend</button>
+        <button id="examineButton">Examine</button>
+        <button id="saveFavouriteButton">Save Favourite</button>
+        <button id="inviteFriendButton">Invite Friend</button>
     </div>
     
     <div id="userMenu" class="contextMenu">
-        <button>Go AFK</button>
-        <button>Player Settings</button>
-        <button>Inventory</button>
+        <button id="goAFKButton">Go AFK</button>
+        <button id="playerSettingsButton">Player Settings</button>
+        <button id="inventoryButton">Inventory</button>
     </div>
     
     <div id="otherUserMenu" class="contextMenu">
-        <button>Trust</button>
-        <button>Add Friend</button>
-        <button>View Profile</button>
+        <button id="trustButton">Trust</button>
+        <button id="addFriendButton">Add Friend</button>
+        <button id="viewProfileButton">View Profile</button>
+    </div>
+
+    <div id="defaultMenu" class="contextMenu">
+        <button id="createButton">Create</button>
+        <button id="listUsersButton">List Users</button>
+        <button id="addButton">Add</button>
     </div>
 
 
@@ -98,8 +104,20 @@
     <script type="module" src="scene.js"></script>
    <!-- <script src="https://cdn.jsdelivr.net/npm/three-css2drender-types@1.0.3/CSS2DRenderer.min.js"></script> -->
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        
+        $(document).ready(function() {
+            console.log('DOM loaded');
+            // Function to stop click event propagation
+            function stopClickPropagation(event) {
+                event.stopPropagation();
+            }
+
+            // Add event listeners to each menu div
+            var menuDivs = $('.contextMenu');
+            menuDivs.on('click', stopClickPropagation);
+            console.log('stopping click propagation');
+        });
     </script>
 </body>
 </html>

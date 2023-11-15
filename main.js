@@ -274,7 +274,7 @@ ws.on("message", (data) => {
             false
         );
 
-        let count = 0; // initialize count variable for the user
+        // let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
 
 
@@ -370,7 +370,7 @@ ws.on("message", (data) => {
 
 
     // Global game tick function
-    const gameTickInterval = 10000; // 10 seconds
+    const gameTickInterval = 1000; // 10 seconds
     setInterval(() => {
         for (let userID in users) {
             if (users.hasOwnProperty(userID)) {

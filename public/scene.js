@@ -5,7 +5,6 @@ const scene = new THREE.Scene();
 
 import {WebSocketConnection} from './js/WebSockets.js';
 export const wsc= new WebSocketConnection();
-
 wsc.initializeWebSocketConnection();
 
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, setBoundingBox, checkSpriteVisibility, loadedGLTF, pingModel, beaconLightModel     } from './js/Loaders';

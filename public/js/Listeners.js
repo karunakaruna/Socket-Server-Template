@@ -2,8 +2,7 @@
 
 import { camera,  cube } from '../scene.js';
 import { gltfScene } from './Loaders.js';
-import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition } from './Spawners.js';
-import { WebSocketConnection} from './WebSockets.js'
+import { spawnPingAtPosition } from './Spawners.js';
 import { showMenu } from './Menu.js';
 import { showModal } from './util/ShowModal.js';
 import { wsc } from '../scene.js';
@@ -186,6 +185,8 @@ export function addRightClickListener(scene, yourUserSphere) {
                     showMenu('user', event.clientX, event.clientY);
                 } else if (isObjectAnotherUserSphere(object)) {
                     showMenu('otherUser', event.clientX, event.clientY);
+                } else {
+                    showMenu('default', event.clientX, event.clientY);
                 }
             }
         }

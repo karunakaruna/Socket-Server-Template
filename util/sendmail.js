@@ -21,7 +21,7 @@ async function sendMail(email, link){
                 clientId: CLIENT_ID,
                 clientSecret: CLIENT_SECRET,
                 refreshToken: REFRESH_TOKEN,
-                accessToken: accessToken
+                accessToken: accessToken,
             }
         })
 
