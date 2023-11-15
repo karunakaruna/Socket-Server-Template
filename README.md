@@ -33,3 +33,6 @@ World Tree is a landscape of portals, points of interest, and features activated
 
 The project is built around the idea of metaverse cartography - that the Metaverse is an unmapped space and that we as users are early explorers. The project takes inspiration from the early nautical cartography, where landmasses are represented as a combination of geometric approximation and imaginative illustration of features and potential resources.
 
+
+
+v.05 - Cookie Sessions
