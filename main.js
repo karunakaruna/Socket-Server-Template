@@ -22,6 +22,8 @@ const { checkAuthenticated, checkNotAuthenticated } = require('./util/auth');
 require("dotenv").config();
 const sessionsecret = process.env.SECRET;
 
+const cookieParser = require('cookie-parser');
+const { parse } = require('cookie');
 
 
 
@@ -73,12 +75,13 @@ app.set('view engine', 'ejs');
 app.use(session({  
     secret: sessionsecret, //ENV FILE
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: true
 }));
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
+app.use(cookieParser());
 
 
 
@@ -164,29 +167,53 @@ let users = {};
 getPostgresVersion();
 
 //Websockets
-wss.on("connection", function (ws, req) {
-  console.log("Connection Opened");
-  console.log("Client size: ", wss.clients.size);
 
-  const userID = uuidv4();  // Generate a UUID for each connected user
-      users[userID] = {
+wss.on("connection", function (ws, req) {
+    console.log("Connection Opened");
+    console.log("Client size: ", wss.clients.size);
+
+    let userID;
+    if (req.headers.cookie) {
+        const cookies = parse(req.headers.cookie);
+        const sessionID = cookies['connect.sid']; // Replace 'connect.sid' with your session cookie name
+
+        // Here you should add code to retrieve the session from your session store
+        // For example, if using express-session with a MemoryStore (as an example):
+        sessionStore.get(sessionID, (error, session) => {
+            if (session && session.userID) {
+                userID = session.userID; // Use existing userID from session
+            } else {
+                userID = uuidv4(); // Generate new userID if not found in session
+                // Optionally update the session with the new userID
+            }
+            initializeUser(userID, ws);
+        });
+    } else {
+        userID = uuidv4(); // Generate new userID if no cookies are present
+        initializeUser(userID, ws);
+    }
+
+
+function initializeUser(userID, ws) {
+    users[userID] = {
         position: { x: 0, y: 0, z: 0 }, // default position
         count: 0
     };
 
     ws.userID = userID;
 
-  // Send the assigned user ID to the connected client
-  ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
+    // Send the assigned user ID to the connected client
+    ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
 
-  getOnlineTime('1'); // call the getOnlineTime function
-  onUserConnect(userID);
-  broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+    getOnlineTime('1'); // call the getOnlineTime function
+    onUserConnect(userID);
+    broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
-  if (wss.clients.size === 1) {
-    console.log("first connection. starting keepalive");
-    keepServerAlive();
-  }
+    if (wss.clients.size === 1) {
+        console.log("first connection. starting keepalive");
+        keepServerAlive();
+    }
+}
 
 ws.on("message", (data) => {
     if (isJSON(data)) {
