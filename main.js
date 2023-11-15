@@ -369,13 +369,13 @@ ws.on("message", (data) => {
 
 
     // Global game tick function
-    const gameTickInterval = 1000; // 10 seconds
+    const gameTickInterval = 10000; // 10 seconds
     setInterval(() => {
         for (let userID in users) {
             if (users.hasOwnProperty(userID)) {
                 users[userID].count += 1;
                 // Broadcast the updated count to all users
-                console.log(users[userID]);
+                console.log(users[userID].count);
                 // wss.clients.forEach((client) => {
 
                     // if (client.readyState === WebSocket.OPEN) {
