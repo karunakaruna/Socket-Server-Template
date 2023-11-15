@@ -376,10 +376,11 @@ ws.on("message", (data) => {
                 users[userID].count += 1;
                 // Broadcast the updated count to all users
                 wss.clients.forEach((client) => {
-                    if (client.readyState === WebSocket.OPEN) {
-                        console.log(users[userID].count, users[userID], userID);
-                        client.send(JSON.stringify({ type: "count", value: users[userID].count }));
-                    }
+                    console.log(client);
+                    // if (client.readyState === WebSocket.OPEN) {
+                    //     console.log(users[userID].count, users[userID], userID);
+                    //     client.send(JSON.stringify({ type: "count", value: users[userID].count }));
+                    // }
                 });
             }
         }
