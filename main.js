@@ -74,18 +74,24 @@ app.options('/unity-endpoint', cors(corsOptions));
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 
-app.use(session({
+// app.use(session({
+//     secret: sessionsecret, //ENV FILE
+//     resave: false,
+//     cookie: {
+//         httpOnly: true, // Important: prevents client-side JS from reading the cookie
+//         sameSite: 'None', // Important: enable this if your site is served over HTTPS
+//         secure: true, // Important: ensures the cookie is sent over HTTPS
+//         maxAge: 60000,
+//         name: 'connect.sid' // This should match the name used to parse the cookie
+//     },
+//     saveUninitialized: true,
+//     store
+// }));
+
+app.use(session({  
     secret: sessionsecret, //ENV FILE
     resave: false,
-    cookie: {
-        httpOnly: true, // Important: prevents client-side JS from reading the cookie
-        sameSite: 'None', // Important: enable this if your site is served over HTTPS
-        secure: true, // Important: ensures the cookie is sent over HTTPS
-        maxAge: 60000,
-        name: 'connect.sid' // This should match the name used to parse the cookie
-    },
-    saveUninitialized: true,
-    store
+    saveUninitialized: false
 }));
 
 app.use(flash());

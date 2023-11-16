@@ -26,7 +26,6 @@ router.post('/login', limiter, function(req, res, next) {
                 return res.status(500).json({error: 'Could not log in user'});
             }
             const jsonMsg = JSON.stringify({ message: 'thanks' , updateModal: '/users/dashboard'});
-            // req.session.userID = user.id;
             return res.send(jsonMsg);
         });
     })(req, res, next);
