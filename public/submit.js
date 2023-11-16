@@ -23,6 +23,8 @@ async function submitForm() {
             const errorList = document.querySelector('ul');
             errorList.innerHTML = `<li>${message.error}</li>`;
         } else if (message.updateModal) {
+            console.log('form submitted');
+            console.log(message.updateModal);
             updateModalContent(message.updateModal);
         }
     } catch (error) {
