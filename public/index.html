@@ -65,7 +65,9 @@
  
         <script>
             // Your fetch code goes here:
-            fetch('/modals/home')
+            fetch('/modals/home', {
+                    credentials: 'include'  // Include credentials with the request
+                })
                 .then(response => response.text())
                 .then(html => {
                     $('#modal-content').html(html);
@@ -73,12 +75,15 @@
                 })
                 .catch(error => console.error('Error:', error));
 
-            fetch('/map')
+                fetch('/map', {
+                    credentials: 'include'  // Include credentials with the request
+                })
                 .then(response => response.text())
                 .then(html => {
                     $('#fullScreenDiv').html(html);
                 })
                 .catch(error => console.error('Error:', error));
+
 
         </script>
 
