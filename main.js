@@ -183,15 +183,16 @@ wss.on("connection", function (ws, req) {
     console.log("Client size: ", wss.clients.size);
 
     let userID;
-    
+    console.log('sessionID:');
+    console.log(req.sessionID);
+
     if (req.headers.cookie) {
         // const cookies = parse(req.headers.cookie);
         // const rawSessionCookie = cookies['metacarta'];
         // const sessionID = rawSessionCookie.split('.')[0].substring(4); // Adjust based on how your cookie is structured
 
         // Retrieve session from the store
-        console.log(req.sessionID);
-        console.log('test');
+       
         store.get(sessionID, (error, session) => {
             if (error || !session) {
                 console.error('Error retrieving session:', error);
