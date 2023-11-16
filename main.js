@@ -73,16 +73,21 @@ app.options('/unity-endpoint', cors(corsOptions));
 //app use from passport-sql-login
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
-app.use(session({  
+
+app.use(session({
     secret: sessionsecret, //ENV FILE
     resave: false,
-    cookie: { 
+    cookie: {
+        httpOnly: true, // Important: prevents client-side JS from reading the cookie
+        sameSite: 'None', // Important: enable this if your site is served over HTTPS
+        secure: true, // Important: ensures the cookie is sent over HTTPS
         maxAge: 60000,
-        name: 'metacarta' // set the cookie name here
+        name: 'connect.sid' // This should match the name used to parse the cookie
     },
     saveUninitialized: true,
     store
 }));
+
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
@@ -186,20 +191,22 @@ wss.on("connection", function (ws, req) {
 
     let userID;
 
-    // Safely parse the cookie
     if (req.headers.cookie) {
         const cookies = parse(req.headers.cookie);
-        const rawSessionCookie = cookies['metacarta']; // Ensure this matches your cookie name
+        
+        // Correctly decode the session ID from the cookie
+        let rawSessionCookie = cookies['connect.sid'] || '';
+        rawSessionCookie = decodeURIComponent(rawSessionCookie);
 
-        if (rawSessionCookie) {
-            const sessionID = rawSessionCookie.split('.')[0].substring(4); // Adjust based on your cookie structure
+        if (rawSessionCookie.startsWith('s:')) {
+            const sessionID = rawSessionCookie.split('.')[0].substring(2);
             console.log("Session ID: ", sessionID);
 
             // Retrieve the session from the store
             store.get(sessionID, (error, session) => {
                 if (error || !session) {
                     console.error('Error retrieving session:', error);
-                    userID = uuidv4(); // Handle error or no session case
+                    userID = uuidv4();
                 } else {
                     userID = session.userID || uuidv4();
                     session.userID = userID; // Save in session if not present
@@ -209,15 +216,16 @@ wss.on("connection", function (ws, req) {
                 initializeUser(userID, ws);
             });
         } else {
+            console.log('Session cookie has an unexpected format.');
             userID = uuidv4();
-            console.log("User ID: ", userID);
             initializeUser(userID, ws);
         }
     } else {
+        console.log('No cookie found in the request.');
         userID = uuidv4();
-        console.log("User ID: ", userID);
         initializeUser(userID, ws);
     }
+
 
 
 function initializeUser(userID, ws) {
