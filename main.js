@@ -12,6 +12,7 @@ const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime}
 //server.js (passport logic)
 
 const session = require('express-session');
+const store = new session.MemoryStore();
 const flash = require('express-flash');
 const passport = require('passport');
 const initializePassport = require('./util/passportConfig');
@@ -75,7 +76,12 @@ app.set('view engine', 'ejs');
 app.use(session({  
     secret: sessionsecret, //ENV FILE
     resave: false,
-    saveUninitialized: true
+    cookie: { 
+        maxAge: 60000,
+        name: 'metacarta' // set the cookie name here
+    },
+    saveUninitialized: true,
+    store
 }));
 app.use(flash());
 app.use(passport.initialize());
@@ -102,6 +108,7 @@ app.use('/modals', modalsRouter);
 
 //Home Index from metacarta
 app.get('/', (req, res) => {
+
     res.sendFile('index.html');
 });
 
@@ -144,6 +151,9 @@ app.get('/loading-home', (req, res) => {
 });
 
 app.get('/map', (req, res) => {
+    // console.log('hi');
+    console.log(req.sessionID);
+    // console.log(store);
     try {
         const data = {
             title: 'Modal Title',
@@ -173,22 +183,31 @@ wss.on("connection", function (ws, req) {
     console.log("Client size: ", wss.clients.size);
 
     let userID;
+    
     if (req.headers.cookie) {
         const cookies = parse(req.headers.cookie);
-        const sessionID = cookies['connect.sid']; // Replace 'connect.sid' with your session cookie name
+        const rawSessionCookie = cookies['metacarta'];
+        const sessionID = rawSessionCookie.split('.')[0].substring(4); // Adjust based on how your cookie is structured
 
-        // Here you should add code to retrieve the session from your session store
-        // For example, if using express-session with a MemoryStore (as an example):
-        sessionStore.get(sessionID, (error, session) => {
-            if (session && session.userID) {
-                userID = session.userID; // Use existing userID from session
-            } else {
+        // Retrieve session from the store
+        console.log(sessionID);
+        console.log('test');
+        store.get(sessionID, (error, session) => {
+            if (error || !session) {
+                console.error('Error retrieving session:', error);
+                return; // Handle error or lack of session appropriately
+            }
+
+            let userID = session.userID;
+            if (!userID) {
                 userID = uuidv4(); // Generate new userID if not found in session
-                // Optionally update the session with the new userID
+                session.userID = userID; // Store it in the session
+                store.set(sessionID, session); // Save the updated session
             }
             initializeUser(userID, ws);
         });
     } else {
+        console.log('no cookie');
         userID = uuidv4(); // Generate new userID if no cookies are present
         initializeUser(userID, ws);
     }
@@ -201,7 +220,6 @@ function initializeUser(userID, ws) {
     };
 
     ws.userID = userID;
-
     // Send the assigned user ID to the connected client
     ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
 

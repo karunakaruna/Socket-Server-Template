@@ -44,11 +44,25 @@ router.get('/forgotpassword', limiter, (req, res) => {
     }
 });
 
+// router.get('/home', (req, res) => {
+//     try {
+//         const data = {
+//             title: 'Modal Title',
+//             content: 'Content for the modal'
+//         };
+//         res.render('modal-content-home.ejs', data);
+//     } catch (error) {
+//         console.error("Error rendering EJS:", error);
+//         res.status(500).send('Server Error');
+//     }
+// });
+
 router.get('/home', (req, res) => {
     try {
         const data = {
             title: 'Modal Title',
-            content: 'Content for the modal'
+            content: 'Content for the modal',
+            isAuthenticated: req.isAuthenticated() // true if the user is logged in
         };
         res.render('modal-content-home.ejs', data);
     } catch (error) {
@@ -56,6 +70,7 @@ router.get('/home', (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
 
 
 module.exports = router;

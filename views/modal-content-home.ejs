@@ -16,6 +16,16 @@
         <h1> Metacarta </h1>
         <p style="text-align: right;">v.04</p>
 
+
+    <!-- ... -->
+
+    <% if (isAuthenticated) { %>
+        <a>⭐</a>
+    <% } else { %>
+
+    <% } %>
+
+        
         <ul>
             <% if(messages.success_msg) { %>
                 <li><%= messages.success_msg %></li>
@@ -29,10 +39,15 @@
             <% } %>
         </ul>
 
-
-
+        <% if (isAuthenticated) { %>
+            <a href="#" onclick="updateModalContent('/users/dashboard')">Dashboard</a>
+        <% } else { %>
             <a href="#" onclick="updateModalContent('/modals/login')">Login</a>
             <a href="#" onclick="updateModalContent('/modals/register')">Register</a>
+        <% } %>
+
+
+
 
 
     </body>    
