@@ -190,6 +190,9 @@ wss.on("connection", function (ws, req) {
     console.log("Client size: ", wss.clients.size);
 
     let userID;
+    const session = req.session;
+    console.log("Session: ");
+    console.log(session);
 
     if (req.headers.cookie) {
         const cookies = parse(req.headers.cookie);
