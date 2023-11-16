@@ -185,34 +185,37 @@ wss.on("connection", function (ws, req) {
     console.log("Client size: ", wss.clients.size);
 
     let userID;
-    // console.log('sessionID:');
-    // console.log(req.sessionID);
 
+    // Safely parse the cookie
     if (req.headers.cookie) {
         const cookies = parse(req.headers.cookie);
-        const rawSessionCookie = cookies['metacarta'];
-        const sessionID = req.sessionID;
-        // rawSessionCookie.split('.')[0].substring(4); // Adjust based on how your cookie is structured
+        const rawSessionCookie = cookies['metacarta']; // Ensure this matches your cookie name
 
-        // Retrieve session from the store
-       
-        store.get(sessionID, (error, session) => {
-            if (error || !session) {
-                console.error('Error retrieving session:', error);
-                return; // Handle error or lack of session appropriately
-            }
+        if (rawSessionCookie) {
+            const sessionID = rawSessionCookie.split('.')[0].substring(4); // Adjust based on your cookie structure
+            console.log("Session ID: ", sessionID);
 
-            let userID = session.userID;
-            if (!userID) {
-                userID = uuidv4(); // Generate new userID if not found in session
-                session.userID = userID; // Store it in the session
-                store.set(sessionID, session); // Save the updated session
-            }
+            // Retrieve the session from the store
+            store.get(sessionID, (error, session) => {
+                if (error || !session) {
+                    console.error('Error retrieving session:', error);
+                    userID = uuidv4(); // Handle error or no session case
+                } else {
+                    userID = session.userID || uuidv4();
+                    session.userID = userID; // Save in session if not present
+                    store.set(sessionID, session); // Save updated session
+                }
+                console.log("User ID: ", userID);
+                initializeUser(userID, ws);
+            });
+        } else {
+            userID = uuidv4();
+            console.log("User ID: ", userID);
             initializeUser(userID, ws);
-        });
+        }
     } else {
-        console.log('no cookie');
-        userID = uuidv4(); // Generate new userID if no cookies are present
+        userID = uuidv4();
+        console.log("User ID: ", userID);
         initializeUser(userID, ws);
     }
 
