@@ -152,6 +152,8 @@ app.get('/loading-home', (req, res) => {
 
 app.get('/map', (req, res) => {
     // console.log('hi');
+    console.log('sessionID:');
+
     console.log(req.sessionID);
     // console.log(store);
     try {
@@ -183,8 +185,8 @@ wss.on("connection", function (ws, req) {
     console.log("Client size: ", wss.clients.size);
 
     let userID;
-    console.log('sessionID:');
-    console.log(req.sessionID);
+    // console.log('sessionID:');
+    // console.log(req.sessionID);
 
     if (req.headers.cookie) {
         // const cookies = parse(req.headers.cookie);
