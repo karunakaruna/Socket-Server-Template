@@ -185,12 +185,12 @@ wss.on("connection", function (ws, req) {
     let userID;
     
     if (req.headers.cookie) {
-        const cookies = parse(req.headers.cookie);
-        const rawSessionCookie = cookies['metacarta'];
-        const sessionID = rawSessionCookie.split('.')[0].substring(4); // Adjust based on how your cookie is structured
+        // const cookies = parse(req.headers.cookie);
+        // const rawSessionCookie = cookies['metacarta'];
+        // const sessionID = rawSessionCookie.split('.')[0].substring(4); // Adjust based on how your cookie is structured
 
         // Retrieve session from the store
-        console.log(sessionID);
+        console.log(req.sessionID);
         console.log('test');
         store.get(sessionID, (error, session) => {
             if (error || !session) {
