@@ -273,9 +273,10 @@ function getUserCount(userID, currData) {
         const user = users[userID];
         console.log(`User ${userID} count: ${user.count}`);
         
-        if (user.count > 2) {
-            user.count -= 10;
+        if (user.count >= 2) {
+            user.count -= 2;
             console.log(`Subtracted 10 from User ${userID} count. New count: ${user.count}`);
+            sendToUser(userID, { type: "count", value: users[userID].count });
             addObject(currData.point, currData.userID);
             return 1;
             
