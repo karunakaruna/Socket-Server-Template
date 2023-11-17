@@ -96,6 +96,11 @@ export class WebSocketConnection {
                 userSphere.userData.userID = this.myUserID;
             }
 
+            else if (message.type === 'objects') {
+                // Handle userConnected message
+                console.log(message);
+            }
+
 
             else if (message.type === 'userDisconnected') {
                 // Remove the sphere of the disconnected user

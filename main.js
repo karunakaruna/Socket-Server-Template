@@ -185,7 +185,8 @@ app.get('/map', (req, res) => {
 
 
 
-let users = {};   
+let users = {};
+let objects = [];    
   
 getPostgresVersion();
 
@@ -257,10 +258,33 @@ function initializeUser(userID, ws) {
     }
 }
 
+    function addObject(point, id) {
+        objects.push({ point, id });
+        console.log(`Added object with point ${point} and id ${id} to objects.`);
+        broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+    }
+
+
+
+
+
 function getUserCount(userID) {
     if (users.hasOwnProperty(userID)) {
         const user = users[userID];
         console.log(`User ${userID} count: ${user.count}`);
+        
+        if (user.count > 10) {
+            user.count -= 10;
+            console.log(`Subtracted 10 from User ${userID} count. New count: ${user.count}`);
+            return 1;
+            
+        } else {
+            console.log("Not enough mana");
+            return 0;
+        }
+
+
+
     } else {
         console.log(`User ${userID} not found.`);
     }
@@ -295,11 +319,13 @@ ws.on("message", (data) => {
             broadcast(ws, currData, false);
         }  else if (currData.type === 'create') {
             console.log(`Received a create message from user: ${currData.userID}`);
-
+            console.log("Intersection Point:", message.point);
 
             // Example usage
-
-            getUserCount(currData.userID);
+            if (getUserCount(currData.userID) === 1) {
+                // Call your function here
+                addObject(currData.point, currData.userID);
+            }
         }
 
         //String
