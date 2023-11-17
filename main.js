@@ -319,7 +319,7 @@ ws.on("message", (data) => {
             broadcast(ws, currData, false);
         }  else if (currData.type === 'create') {
             console.log(`Received a create message from user: ${currData.userID}`);
-            console.log("Intersection Point:", message.point);
+            console.log("Intersection Point:", currData.point);
 
             // Example usage
             if (getUserCount(currData.userID) === 1) {
