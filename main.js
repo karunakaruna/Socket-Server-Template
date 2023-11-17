@@ -286,6 +286,11 @@ ws.on("message", (data) => {
             broadcast(ws, currData, false);
         }  else if (currData.type === 'create') {
             console.log(`Received a create message from user: ${currData.userID}`);
+
+
+            // Example usage
+
+            getUserCount(currData.userID);
         }
 
         //String
@@ -350,6 +355,15 @@ ws.on("message", (data) => {
             false
         );
 
+
+        function getUserCount(userID) {
+            if (users.hasOwnProperty(userID)) {
+                const user = users[userID];
+                console.log(`User ${userID} count: ${user.count}`);
+            } else {
+                console.log(`User ${userID} not found.`);
+            }
+        }
         // let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
 

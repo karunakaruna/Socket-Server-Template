@@ -91,7 +91,8 @@ export function DOM(){
     function sendIntersectionPoint(intersectionPoint) {
         const message = {
             type: 'create',
-            point: intersectionPoint
+            point: intersectionPoint,
+            userID: wsc.myUserID
         };
         wsc.wsSend(message);
     }
