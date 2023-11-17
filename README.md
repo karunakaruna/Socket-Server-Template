@@ -35,4 +35,4 @@ The project is built around the idea of metaverse cartography - that the Metaver
 
 
 
-v.05 - Cookie Sessions
+v.06 - right click - > create
