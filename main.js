@@ -247,9 +247,9 @@ function initializeUser(userID, ws) {
     ws.userID = userID;
     // Send the assigned user ID to the connected client
     ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
-
     getOnlineTime('1'); // call the getOnlineTime function
     onUserConnect(userID);
+    updateObjects(userID);
     broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
     if (wss.clients.size === 1) {
@@ -262,6 +262,11 @@ function addObject(point, id) {
     objects.push({ point, id });
     console.log(`Added object with point ${point} and id ${id} to objects.`);
     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+}
+
+function updateObjects(userID){
+    sendToUser(userID, { type: 'objects', value: objects});
+
 }
 
 

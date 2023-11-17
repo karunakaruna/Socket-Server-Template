@@ -130,4 +130,40 @@ export function spawnEntrancePingAtPosition(position) {
     }
     }
 
+
+    export function updateUserObjects(scene, objects) {
+        const objectArray = [];
+        console.log(objects);
+        // Iterate through the objects array
+        for (const object of objects) {
+            const { point, id } = object;
+
+            // Create a cube geometry
+            const geometry = new THREE.BoxGeometry(.1, .1, .1);
+
+            // Create a simple material
+            const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+            // Create a cube mesh
+            const cube = new THREE.Mesh(geometry, material);
+
+            // Set the position of the cube
+            cube.position.copy(point);
+
+            // Add the cube to the object array
+            objectArray.push(cube);
+        }
+
+        // Create a group to hold all the objects
+        const group = new THREE.Group();
+
+        // Add all the objects to the group
+        for (const object of objectArray) {
+            group.add(object);
+        }
+
+        // Add the group to the scene
+        scene.add(group);
+    }
+
     export{spawnPingAtPosition, spawnBeaconLightAtPosition, activeMixers};

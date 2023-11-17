@@ -66,7 +66,7 @@ export function showModal(objectName, url, intersectionPoint) {
 export function displayOverlayText(text, time, textSize) {
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
-    overlay.style.top = '50%';
+    overlay.style.top = '45%'; // Move the overlay 20% up
     overlay.style.left = '50%';
     overlay.style.transform = 'translate(-50%, -50%)';
     overlay.style.fontSize = `${textSize}px`;

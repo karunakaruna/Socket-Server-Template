@@ -81,10 +81,6 @@ export function DOM(){
         console.log("Create");
         sendIntersectionPoint(intersectionPoint);
         closeContextMenu();
-
-
-
-
     });
 
 

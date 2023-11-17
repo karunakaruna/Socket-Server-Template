@@ -3,11 +3,12 @@
 
 import { addLog } from './util/log.js';
 import { scene, loadedGLTF,  beaconLightModel, userSphere } from '../scene.js';
-import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition} from './Spawners.js';
+import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './util/Userlist.js';
 import { boundingBox, getLoadedGLTF  } from './Loaders';
 import { displayOverlayText } from './util/ShowModal.js';
+
 // import {userSphere} from './userSphere';
 
 export class WebSocketConnection {
@@ -100,6 +101,8 @@ export class WebSocketConnection {
             else if (message.type === 'objects') {
                 // Handle userConnected message
                 console.log(message);
+                console.log('objects');
+                updateUserObjects(scene, message.value);
             
             
             }
