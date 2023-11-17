@@ -258,11 +258,11 @@ function initializeUser(userID, ws) {
     }
 }
 
-    function addObject(point, id) {
-        objects.push({ point, id });
-        console.log(`Added object with point ${point} and id ${id} to objects.`);
-        broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
-    }
+    // function addObject(point, id) {
+    //     objects.push({ point, id });
+    //     console.log(`Added object with point ${point} and id ${id} to objects.`);
+    //     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+    // }
 
 
 
@@ -320,12 +320,12 @@ ws.on("message", (data) => {
         }  else if (currData.type === 'create') {
             console.log(`Received a create message from user: ${currData.userID}`);
             console.log("Intersection Point:", currData.point);
-
+            getUserCount(currData.userID);
             // Example usage
-            if (getUserCount(currData.userID) === 1) {
-                // Call your function here
-                addObject(currData.point, currData.userID);
-            }
+            // if (getUserCount(currData.userID) === 1) {
+            //     // Call your function here
+            //     addObject(currData.point, currData.userID);
+            // }
         }
 
         //String
