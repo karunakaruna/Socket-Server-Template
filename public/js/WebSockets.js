@@ -7,6 +7,7 @@ import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPos
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './util/Userlist.js';
 import { boundingBox, getLoadedGLTF  } from './Loaders';
+import { displayOverlayText } from './util/ShowModal.js';
 // import {userSphere} from './userSphere';
 
 export class WebSocketConnection {
@@ -99,9 +100,14 @@ export class WebSocketConnection {
             else if (message.type === 'objects') {
                 // Handle userConnected message
                 console.log(message);
+            
+            
             }
+            else if (message.type === 'overlay') {
+                console.log('overlay');
+                displayOverlayText(message.value , 2000, 24);
 
-
+            }
             else if (message.type === 'userDisconnected') {
                 // Remove the sphere of the disconnected user
                 removeUserFromList(message.userID);

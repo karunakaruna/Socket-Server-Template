@@ -1,7 +1,7 @@
 import { bookmark } from "./Bookmark.js";
 import { wsc } from "../../scene.js";
 import { intersectionPoint } from "../Listeners.js";
-
+import { displayOverlayText } from "./ShowModal.js";
 
 
 
@@ -106,6 +106,7 @@ export function DOM(){
 
     const addButton = document.querySelector("#addButton").addEventListener("click", () => {
         console.log("Add");
+        displayOverlayText('Hello, World!', 3000, 24);
         closeContextMenu();
     });
 

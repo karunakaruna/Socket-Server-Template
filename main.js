@@ -258,14 +258,11 @@ function initializeUser(userID, ws) {
     }
 }
 
-    function addObject(point, id) {
-        objects.push({ point, id });
-        console.log(`Added object with point ${point} and id ${id} to objects.`);
-        broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
-    }
-
-
-
+function addObject(point, id) {
+    objects.push({ point, id });
+    console.log(`Added object with point ${point} and id ${id} to objects.`);
+    broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+}
 
 
 function getUserCount(userID, currData) {
@@ -278,15 +275,14 @@ function getUserCount(userID, currData) {
             console.log(`Subtracted 10 from User ${userID} count. New count: ${user.count}`);
             sendToUser(userID, { type: "count", value: users[userID].count });
             addObject(currData.point, currData.userID);
+            sendToUser(userID, { type: "overlay", value: 'Spell Cast :)' });
             return 1;
             
         } else {
+            sendToUser(userID, { type: "overlay", value: 'Not enough mana' });
             console.log("Not enough mana");
             return 0;
         }
-
-
-
     } else {
         console.log(`User ${userID} not found.`);
     }
@@ -323,11 +319,6 @@ ws.on("message", (data) => {
             console.log(`Received a create message from user: ${currData.userID}`);
             console.log("Intersection Point:", currData.point);
             getUserCount(currData.userID, currData);
-            // Example usage
-            // if (getUserCount(currData.userID) === 1) {
-            //     // Call your function here
-            //     addObject(currData.point, currData.userID);
-            // }
         }
 
         //String

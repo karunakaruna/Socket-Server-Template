@@ -59,3 +59,40 @@ export function showModal(objectName, url, intersectionPoint) {
     };
     
 }
+
+
+
+// Function to display overlay text
+export function displayOverlayText(text, time, textSize) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '50%';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, -50%)';
+    overlay.style.fontSize = `${textSize}px`;
+    overlay.style.opacity = '0';
+    overlay.innerText = text;
+    document.body.appendChild(overlay);
+
+    // Fade in the overlay text
+    setTimeout(() => {
+        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.opacity = '1';
+    }, 0);
+
+    // Display the overlay text for the specified time
+    setTimeout(() => {
+        // Fade out the overlay text
+        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.opacity = '0';
+
+        // Remove the overlay element from the DOM after fading out
+        setTimeout(() => {
+            document.body.removeChild(overlay);
+        }, 500);
+    }, time);
+}
+
+// Example usage of the displayOverlayText function
+
+
