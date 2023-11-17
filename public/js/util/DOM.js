@@ -1,6 +1,6 @@
 import { bookmark } from "./Bookmark.js";
-
-
+import { wsc } from "../../scene.js";
+import { intersectionPoint } from "../Listeners.js";
 
 
 
@@ -79,8 +79,24 @@ export function DOM(){
     //Default Menu
     const createButton = document.querySelector("#createButton").addEventListener("click", () => {
         console.log("Create");
+        sendIntersectionPoint(intersectionPoint);
         closeContextMenu();
+
+
+
+
     });
+
+
+    function sendIntersectionPoint(intersectionPoint) {
+        const message = {
+            type: 'create',
+            point: intersectionPoint
+        };
+        wsc.wsSend(JSON.stringify(message));
+    }
+
+    
 
     const listUsersButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
         console.log("List Users");

@@ -85,6 +85,20 @@
                 .catch(error => console.error('Error:', error));
 
 
+            $(document).ready(function() {
+            console.log('DOM loaded');
+            // Function to stop click event propagation
+            function stopClickPropagation(event) {
+                event.stopPropagation();
+            }
+
+            // Add event listeners to each menu div
+            var modalDivs = $('.login-modal');
+            modalDivs.on('click', stopClickPropagation);
+            console.log('stopping click propagation');
+        });
+
+
         </script>
 
 

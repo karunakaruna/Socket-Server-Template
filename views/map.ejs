@@ -42,9 +42,9 @@
         <h3>Users Online:</h3>
         <ul id="user-list-ul"></ul>
     </div>
-      <div id="floatingText" style="position: fixed; color: white; font-size: 1.5em; pointer-events: none; user-select: none;"></div>
-      <div id="authorText" style="position: fixed; color: white; font-size: 1.5em; pointer-events: none; user-select: none;"></div>
-      <div id="yearText" style="position: fixed; color: white; font-size: 1.5em; pointer-events: none; user-select: none;"></div>
+      <div id="floatingText" style="position: fixed; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
+      <div id="authorText" style="position: fixed; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
+      <div id="yearText" style="position: fixed; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
       <div id="displayedImage" style="width:200px; height:200px; overflow:hidden;position: fixed;">
         <img id="imageDisplay" src="" style="height:100%;">
     </div>
@@ -74,6 +74,9 @@
         <button id="addButton">Add</button>
     </div>
 
+    <script>
+        
+    </script>
 
       <div class="activity-log">
         <ul id="log-list"></ul>
@@ -85,11 +88,36 @@
             <button id="confirmButton">Confirm</button>
         </div>
     </div>
+
+    <script>
+    const hoverSound = new Audio('/audio/420997__eponn__click.mp3');
+    const clickSound = new Audio('/audio/multichime2.mp3');
+
+    const contextMenus = document.querySelectorAll('.contextMenu');
+    contextMenus.forEach(menu => {
+        const buttons = menu.querySelectorAll('button');
+        buttons.forEach(button => {
+            button.addEventListener('mouseover', () => {
+                hoverSound.currentTime = 0;
+                hoverSound.play();
+                hoverSound.volume = 0.01;
+
+            });
+            button.addEventListener('click', () => {
+                clickSound.currentTime = 0;
+                clickSound.play();
+                clickSound.volume = 0.1;
+            });
+        });
+    });
+
+    </script>
     
 
 
 
     <script src="/js/log.js"></script>
+
 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
@@ -116,6 +144,19 @@
             // Add event listeners to each menu div
             var menuDivs = $('.contextMenu');
             menuDivs.on('click', stopClickPropagation);
+            console.log('stopping click propagation');
+        });
+
+        $(document).ready(function() {
+            console.log('DOM loaded');
+            // Function to stop click event propagation
+            function stopClickPropagation(event) {
+                event.stopPropagation();
+            }
+
+            // Add event listeners to each menu div
+            var urlDivs = $('.map-modal');
+            urlDivs.on('click', stopClickPropagation);
             console.log('stopping click propagation');
         });
     </script>

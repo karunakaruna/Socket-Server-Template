@@ -119,9 +119,9 @@ app.use('/modals', modalsRouter);
 
 //Home Index from metacarta
 app.get('/', (req, res) => {
-
-    res.sendFile('index.html');
+    res.sendFile(__dirname + '/public/index2.html');
 });
+
 
 //Homepage
 // app.get('/', checkNotAuthenticated, (req, res) => {
@@ -273,6 +273,8 @@ ws.on("message", (data) => {
             console.log('welcome new user!')
             sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
 
+            
+
         //Bookmark
         } else if (currData.type === 'bookmark') {
             console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
@@ -282,6 +284,8 @@ ws.on("message", (data) => {
         } else if (currData.type === 'entrance') {
             console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
             broadcast(ws, currData, false);
+        }  else if (currData.type === 'create') {
+            console.log(`Received a create message from user: ${currData.userID}`);
         }
 
         //String

@@ -155,6 +155,10 @@ export function addClickListener(map) {
 
 
 
+
+// Define a variable to store the intersection point coordinates
+let intersectionPoint = null;
+
 export function addRightClickListener(scene, yourUserSphere) {
     const menu = document.getElementById('yourMenuID'); // Replace 'yourMenuID' with the actual ID of your menu, if it has one
     function isObjectAnotherUserSphere(object) {
@@ -177,6 +181,8 @@ export function addRightClickListener(scene, yourUserSphere) {
 
             if (intersects.length > 0) {
                 const object = intersects[0].object;
+                intersectionPoint = intersects[0].point; // Save the intersection point coordinates
+
                 console.log(object);
                 // Now decide what menu to show based on the object
                 if (object.userData.URL) {
@@ -192,6 +198,9 @@ export function addRightClickListener(scene, yourUserSphere) {
         }
     });
 }
+
+// Export the intersection point variable
+export { intersectionPoint };
 
 
 export { gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV};
