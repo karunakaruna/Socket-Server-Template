@@ -93,7 +93,7 @@ export function DOM(){
             type: 'create',
             point: intersectionPoint
         };
-        wsc.wsSend(JSON.stringify(message));
+        wsc.wsSend(message);
     }
 
     
