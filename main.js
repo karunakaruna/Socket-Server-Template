@@ -257,6 +257,15 @@ function initializeUser(userID, ws) {
     }
 }
 
+function getUserCount(userID) {
+    if (users.hasOwnProperty(userID)) {
+        const user = users[userID];
+        console.log(`User ${userID} count: ${user.count}`);
+    } else {
+        console.log(`User ${userID} not found.`);
+    }
+}
+
 ws.on("message", (data) => {
     if (isJSON(data)) {
         const currData = JSON.parse(data);
@@ -356,14 +365,7 @@ ws.on("message", (data) => {
         );
 
 
-        function getUserCount(userID) {
-            if (users.hasOwnProperty(userID)) {
-                const user = users[userID];
-                console.log(`User ${userID} count: ${user.count}`);
-            } else {
-                console.log(`User ${userID} not found.`);
-            }
-        }
+
         // let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
 
