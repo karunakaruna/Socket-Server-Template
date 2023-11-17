@@ -258,24 +258,25 @@ function initializeUser(userID, ws) {
     }
 }
 
-    // function addObject(point, id) {
-    //     objects.push({ point, id });
-    //     console.log(`Added object with point ${point} and id ${id} to objects.`);
-    //     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
-    // }
+    function addObject(point, id) {
+        objects.push({ point, id });
+        console.log(`Added object with point ${point} and id ${id} to objects.`);
+        broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+    }
 
 
 
 
 
-function getUserCount(userID) {
+function getUserCount(userID, currData) {
     if (users.hasOwnProperty(userID)) {
         const user = users[userID];
         console.log(`User ${userID} count: ${user.count}`);
         
-        if (user.count > 10) {
+        if (user.count > 2) {
             user.count -= 10;
             console.log(`Subtracted 10 from User ${userID} count. New count: ${user.count}`);
+            addObject(currData.point, currData.userID);
             return 1;
             
         } else {
@@ -320,7 +321,7 @@ ws.on("message", (data) => {
         }  else if (currData.type === 'create') {
             console.log(`Received a create message from user: ${currData.userID}`);
             console.log("Intersection Point:", currData.point);
-            getUserCount(currData.userID);
+            getUserCount(currData.userID, currData);
             // Example usage
             // if (getUserCount(currData.userID) === 1) {
             //     // Call your function here
