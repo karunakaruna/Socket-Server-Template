@@ -29,12 +29,12 @@ export function attachLabelToObjects(parent, text) {
 
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    context.font = '15px Arial';
+    context.font = '30px Arial';
     const textMetrics = context.measureText(labelText);
 
     canvas.width = textMetrics.width + 10;
     canvas.height = 40;
-    context.font = '15px Arial';
+    context.font = '30px Arial';
     context.fillStyle = 'red';
     context.fillText(labelText, 5, 30);
 
@@ -42,9 +42,9 @@ export function attachLabelToObjects(parent, text) {
     const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
     const sprite = new THREE.Sprite(spriteMaterial);
 
-    sprite.position.y = 2;
+    sprite.position.y = 1;
 
-    const uniformScale = canvas.width / 35;
+    const uniformScale = canvas.width / 100;
     sprite.scale.set(uniformScale, uniformScale * (canvas.height / canvas.width), 1);
     sprite.center.set(0.5, 0.5);
 
