@@ -80,7 +80,7 @@ export function DOM(){
     const createButton = document.querySelector("#createButton").addEventListener("click", () => {
         console.log("Create");
         
-        closeContextMenu();
+        //closeContextMenu();
     });
 
 

@@ -37,17 +37,15 @@ contextMenus.forEach(menu => {
 contextMenus.forEach(menu => {
     const buttons = menu.querySelectorAll('button');
     buttons.forEach(button => {
-        button.addEventListener('mouseenter', (event) => { // Add event as an argument
-            console.log('mouseenter');
-            setTimeout(() => {
-                if (button.id === 'createButton') {
-                    console.log('createButton');
+        button.addEventListener('click', (event) => { // Change mouseenter to click
+            console.log('click'); // Add console.log for testing
+            if (button.id === 'createButton') {
+                console.log('createButton');
 
-                    const secondMenu = document.getElementById('secondMenu');
-                    showMenu('second', event.clientX, event.clientY);
-                    // secondMenu.classList.add('show');
-                }
-            }, 500);
+                const secondMenu = document.getElementById('secondMenu');
+                showMenu('second', event.clientX, event.clientY);
+                // secondMenu.classList.add('show');
+            }
         });
     });
 });

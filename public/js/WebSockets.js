@@ -3,6 +3,7 @@
 
 import { addLog } from './util/log.js';
 import { scene, loadedGLTF,  beaconLightModel, userSphere } from '../scene.js';
+import { UserSphere } from './scene/userSphere.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './util/Userlist.js';
@@ -199,8 +200,29 @@ export class WebSocketConnection {
 
     createSphereAtPosition(position, userID) {
         const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+        const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
+        const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+        const outerSphere = new THREE.Mesh(geometry, trans);
+        const innerSphere = new UserSphere(outerSphere, 1);
+        outerSphere.layers.enable(1); // Add to the raycaster layer
+        innerSphere.layers.enable(1); // Add to the raycaster layer
+        outerSphere.position.copy(position);
+        this.scene.add(outerSphere);
+        outerSphere.add(innerSphere);
+        outerSphere.userData.userID = userID;
+        const sprite = attachLabelToObjects(outerSphere, userID);
+        console.log('sphere created');
+        return {
+            sphere: outerSphere,
+            sprite: sprite,
+            targetPosition: position
+        };
+    };
+
+    createSphereAtPositionbackup(position, userID) {
+        const geometry = new THREE.SphereGeometry(0.1, 32, 32);
         const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
-        const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
         const outerSphere = new THREE.Mesh(geometry, trans);
         const innerSphere = new THREE.Mesh(geometry, material);
         outerSphere.layers.enable(1); // Add to the raycaster layer
@@ -215,8 +237,30 @@ export class WebSocketConnection {
             sprite: sprite,
             targetPosition: position
         };
-    }
+    };
 
+    createSphereAtPosition2(position, userID) {
+        // const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+        // const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+        // const outerSphere = new THREE.Mesh(geometry, trans);
+
+
+        const outerSphere = new UserSphere(scene, 1);
+        // this.scene.add(outerSphere);
+        outerSphere.layers.enable(1); // Add to the raycaster layer
+        outerSphere.position.copy(position);
+        outerSphere.userData.userID = userID;
+        const sprite = attachLabelToObjects(outerSphere, userID);
+        console.log('sphere created');
+        return {
+            sphere: outerSphere,
+            sprite: sprite,
+            targetPosition: position
+        };
+    };
+
+
+    
     getObjectByProperty = (prop, value) => {
         let foundObject = null;
         const GLTF = getLoadedGLTF();

@@ -12,7 +12,7 @@ import { addMouseMovementListener, addScrollWheelListener, addClickListener, add
 import { DOM } from './js/util/DOM';
 import { initCamera, updateCamera } from './js/Camera';
 import { activeMixers } from './js/Spawners.js';
-import { initUserSphere } from './js/scene/userSphere';
+import { UserSphere } from './js/scene/userSphere';
 import { initGrid } from './js/scene/grid';
 import { Lights } from './js/scene/lights';
 import { Resizer } from './js/util/Resizer';
@@ -20,9 +20,11 @@ import { Resizer } from './js/util/Resizer';
 
 DOM();
 const { camera, renderer, cube } = initCamera(scene);
-const userSphere = initUserSphere();
+const {userSphere} = new UserSphere(cube, 1);
+
+
 const grid = initGrid();
-cube.add(userSphere);  // Attach to the cube
+// cube.add(usercircle);
 scene.add(grid);
 grid.layers.enable(1); // Add to the raycaster layer
 
