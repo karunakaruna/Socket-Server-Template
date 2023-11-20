@@ -259,8 +259,8 @@ function initializeUser(userID, ws) {
 }
 
 function addObject(point, id) {
-    objects.push({ point, id });
-    console.log(`Added object with point ${point} and id ${id} to objects.`);
+    objects.push({ point, id, text });
+    console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
 }
 
@@ -279,7 +279,7 @@ function getUserCount(userID, currData) {
             user.count -= 2;
             console.log(`Subtracted 10 from User ${userID} count. New count: ${user.count}`);
             sendToUser(userID, { type: "count", value: users[userID].count });
-            addObject(currData.point, currData.userID);
+            addObject(currData.point, currData.userID, currData.text);
             sendToUser(userID, { type: "overlay", value: 'Spell Cast :)' });
             return 1;
             
@@ -321,7 +321,7 @@ ws.on("message", (data) => {
             console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
             broadcast(ws, currData, false);
         }  else if (currData.type === 'create') {
-            console.log(`Received a create message from user: ${currData.userID}`);
+            console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
             console.log("Intersection Point:", currData.point);
             getUserCount(currData.userID, currData);
         }

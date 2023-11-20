@@ -24,6 +24,7 @@
         }
 
     </style>
+    <script src ="../public/js/Menu.js"></script>
 
 
 </head>
@@ -33,7 +34,7 @@
         <h2>World Tree Map</h2>
         <h3>Meta-Carta</h3>
         <div id="usersOnline">Users Online: <span id="userCount">#</span></div>
-        <div id="userName">UserID: <span id="username">...</span></div>
+        <div id="userName">UserID: <span id="username">...</span></div>`
         <div id="onlineCountDiv">OnlineTime: <span id="onlineCount">...</span></div>
         <div id="coordinatesText"></div>
       </div>
@@ -70,12 +71,26 @@
 
     <div id="defaultMenu" class="contextMenu">
         <button id="createButton">Create</button>
+        
         <button id="listUsersButton">List Users</button>
         <button id="addButton">Add</button>
+
+
     </div>
 
+    <div id="secondMenu" class="contextMenu">
+        <button id="demoButtonA">A</button>
+        <button id="demoButtonB">B</button>
+        <button id="demoButtonC">C</button>
+    </div>
+
+
+
+
+
+
     <script>
-        
+
     </script>
 
       <div class="activity-log">
@@ -90,26 +105,6 @@
     </div>
 
     <script>
-    const hoverSound = new Audio('/audio/420997__eponn__click.mp3');
-    const clickSound = new Audio('/audio/multichime2.mp3');
-
-    const contextMenus = document.querySelectorAll('.contextMenu');
-    contextMenus.forEach(menu => {
-        const buttons = menu.querySelectorAll('button');
-        buttons.forEach(button => {
-            button.addEventListener('mouseover', () => {
-                hoverSound.currentTime = 0;
-                hoverSound.play();
-                hoverSound.volume = 0.01;
-
-            });
-            button.addEventListener('click', () => {
-                clickSound.currentTime = 0;
-                clickSound.play();
-                clickSound.volume = 0.1;
-            });
-        });
-    });
 
     </script>
     
@@ -129,6 +124,7 @@
     <script src="lib/CSS2DRenderer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    
     <script type="module" src="scene.js"></script>
    <!-- <script src="https://cdn.jsdelivr.net/npm/three-css2drender-types@1.0.3/CSS2DRenderer.min.js"></script> -->
 

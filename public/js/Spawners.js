@@ -143,7 +143,7 @@ export function spawnEntrancePingAtPosition(position) {
 
         // Iterate through the objects array
         for (const object of objects) {
-            const { point, id } = object;
+            const { point, id, text } = object;
 
             // Create a cube mesh by cloning the geometry and material
             const cube = new THREE.Mesh(geometry.clone(), material.clone());
@@ -151,7 +151,7 @@ export function spawnEntrancePingAtPosition(position) {
             // Set the position of the cube
             cube.position.copy(point);
             //Attach Label to Objects
-            attachLabelToObjects(cube, '✨');
+            attachLabelToObjects(cube, text);
             // Add the cube to the object array
             objectArray.push(cube);
         }

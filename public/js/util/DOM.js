@@ -79,19 +79,20 @@ export function DOM(){
     //Default Menu
     const createButton = document.querySelector("#createButton").addEventListener("click", () => {
         console.log("Create");
-        sendIntersectionPoint(intersectionPoint);
+        
         closeContextMenu();
     });
 
 
-    function sendIntersectionPoint(intersectionPoint) {
-        const message = {
-            type: 'create',
-            point: intersectionPoint,
-            userID: wsc.myUserID
-        };
-        wsc.wsSend(message);
-    }
+        function sendIntersectionPoint(intersectionPoint, text) {
+            const message = {
+                type: 'create',
+                point: intersectionPoint,
+                userID: wsc.myUserID,
+                text: text
+            };
+            wsc.wsSend(message);
+        }
 
     
 
@@ -107,6 +108,29 @@ export function DOM(){
     });
 
 
+    const demoButtonA = document.querySelector("#demoButtonA").addEventListener("click", () => {
+        console.log("Demo Button A clicked");
+        sendIntersectionPoint(intersectionPoint, '🌷');
+        closeContextMenu();
+    });
+
+    const demoButtonB = document.querySelector("#demoButtonB").addEventListener("click", () => {
+        console.log("Demo Button B clicked");
+        sendIntersectionPoint(intersectionPoint, '🌟');
+        closeContextMenu();
+    });
+
+    const demoButtonC = document.querySelector("#demoButtonC").addEventListener("click", () => {
+        console.log("Demo Button C clicked");
+        sendIntersectionPoint(intersectionPoint, '♥');
+        closeContextMenu();
+    });
+
+
+
+
+
+    //Close Context Menu
     function closeContextMenu() {
         const contextMenus = document.querySelectorAll('.contextMenu');
         Array.prototype.forEach.call(contextMenus, (menu) => {
