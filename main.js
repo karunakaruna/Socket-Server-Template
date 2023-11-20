@@ -119,6 +119,7 @@ app.use('/modals', modalsRouter);
 
 //Home Index from metacarta
 app.get('/', (req, res) => {
+    console.log('appget Session ID:', req.sessionID);
     res.sendFile(__dirname + '/public/index2.html');
 });
 
