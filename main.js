@@ -258,7 +258,7 @@ function initializeUser(userID, ws) {
     }
 }
 
-function addObject(point, id) {
+function addObject(point, id, text) {
     objects.push({ point, id, text });
     console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
