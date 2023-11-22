@@ -286,6 +286,7 @@ function getUserCount(userID, currData) {
 }
 
 ws.on("message", (data) => {
+    let userID = ws.userID;
     if (isJSON(data)) {
         const currData = JSON.parse(data);
 
