@@ -38,10 +38,6 @@ export class WebSocketConnection {
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
 
-
-          
-
-
             if (message.type === 'loc' && message.position) {
                 const receivedPosition = new THREE.Vector3(
                     message.position.x,
@@ -54,7 +50,7 @@ export class WebSocketConnection {
                 if (!this.users[message.userID]) {
                     // New user, create a sphere for them
                     console.log(message.userID);
-                    this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID);
+                    this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID, message.level);
                 } else {
                     // Existing user, update their position
                     this.users[message.userID].targetPosition.copy(receivedPosition);
@@ -198,12 +194,12 @@ export class WebSocketConnection {
         this.ws.send(JSON.stringify(message));
     }
 
-    createSphereAtPosition(position, userID) {
+    createSphereAtPosition(position, userID, level) {
         const geometry = new THREE.SphereGeometry(0.1, 32, 32);
         const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
         const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
         const outerSphere = new THREE.Mesh(geometry, trans);
-        const innerSphere = new UserSphere(outerSphere, 1);
+        const innerSphere = new UserSphere(outerSphere, level);
         outerSphere.layers.enable(1); // Add to the raycaster layer
         innerSphere.layers.enable(1); // Add to the raycaster layer
         outerSphere.position.copy(position);

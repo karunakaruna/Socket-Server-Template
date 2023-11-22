@@ -3,7 +3,7 @@
 import { scene, pingModel, beaconLightModel } from '../scene.js';
 import { playSpatialAudio } from './Audio.js';
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene,  setBoundingBox, checkSpriteVisibility } from './Loaders.js';
-import { attachLabelToObjects } from './Sprite.js';
+import { attachLabelToObjectsAdv } from './Sprite.js';
 
 
 const activeMixers = [];
@@ -139,7 +139,7 @@ export function spawnEntrancePingAtPosition(position) {
         const geometry = new THREE.BoxGeometry(.1, .1, .1);
 
         // Create a simple material
-        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
         // Iterate through the objects array
         for (const object of objects) {
@@ -151,7 +151,7 @@ export function spawnEntrancePingAtPosition(position) {
             // Set the position of the cube
             cube.position.copy(point);
             //Attach Label to Objects
-            attachLabelToObjects(cube, text);
+            attachLabelToObjectsAdv(cube, text, 0 , .25, 0);
             // Add the cube to the object array
             objectArray.push(cube);
         }

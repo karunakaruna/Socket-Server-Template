@@ -1,7 +1,9 @@
 import { bookmark } from "./Bookmark.js";
-import { wsc } from "../../scene.js";
+import { wsc, userSphere } from "../../scene.js";
 import { intersectionPoint } from "../Listeners.js";
 import { displayOverlayText } from "./ShowModal.js";
+import { attachLabelToObjectsAdv } from "../Sprite.js";
+
 
 
 
@@ -106,6 +108,17 @@ export function DOM(){
         displayOverlayText('Hello, World!', 3000, 24);
         closeContextMenu();
     });
+
+
+    const levelButton = document.querySelector("#levelUpButton").addEventListener("click", () => {
+        console.log("Level");
+        userSphere.setLevel(userSphere.getLevel()+1);
+        
+        displayOverlayText('Level Up!', 3000, 24);
+        closeContextMenu();
+    });
+
+
 
 
     const demoButtonA = document.querySelector("#demoButtonA").addEventListener("click", () => {

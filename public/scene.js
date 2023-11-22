@@ -16,11 +16,15 @@ import { UserSphere } from './js/scene/userSphere';
 import { initGrid } from './js/scene/grid';
 import { Lights } from './js/scene/lights';
 import { Resizer } from './js/util/Resizer';
+import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
 
 DOM();
 const { camera, renderer, cube } = initCamera(scene);
-const {userSphere} = new UserSphere(cube, 1);
+const userSphere = new UserSphere(cube, 2);
+const userSphereLevel = userSphere.getLevel();
+userSphere.layers.enable(1); // Add userSphere to specified level
+console.log('userSphereLevel: ' + userSphereLevel);
 
 
 const grid = initGrid();
@@ -38,7 +42,7 @@ loadBeaconLightModel(scene);
 addMouseMovementListener(scene);
 addScrollWheelListener();
 addClickListener(scene);
-addRightClickListener(scene,userSphere);
+addRightClickListener(scene,userSphere.getSphere());
 
 export {loadedGLTF, pingModel, beaconLightModel, scene, cube, camera, userID, renderer, userSphere};
 

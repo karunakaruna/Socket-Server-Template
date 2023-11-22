@@ -184,7 +184,7 @@ app.get('/map', (req, res) => {
 
 
 
-
+//Database
 
 let users = {};
 let objects = [];    
@@ -242,7 +242,8 @@ wss.on("connection", function (ws, req) {
 function initializeUser(userID, ws) {
     users[userID] = {
         position: { x: 0, y: 0, z: 0 }, // default position
-        count: 0
+        count: 0,
+        level: 1,
     };
 
     ws.userID = userID;
