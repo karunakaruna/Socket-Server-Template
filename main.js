@@ -83,7 +83,7 @@ app.use(session({
         secure: true, // Ensure this is set to true if you're using HTTPS
         sameSite: 'lax', // Or 'strict' if you want to enforce same-site policy strictly
         // If you have a custom domain like 'example.com', set the domain like this:
-        domain: 'heroku.com',
+        domain: 'herokuapp.com',
         // Set a specific expiration time for the cookie (optional)
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
