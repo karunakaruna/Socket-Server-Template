@@ -31,6 +31,8 @@ export class WebSocketConnection {
         const wsURL = 'wss://metacarta-b8f465580dc6.herokuapp.com/';
         this.ws = new WebSocket(wsURL);
 
+        this.ws.withCredentials = true; // Set withCredentials to true
+
         this.ws.onopen = () => {
             console.log('WebSocket connection established');
             console.log('Cookies sent: ' + this.ws.withCredentials); // Check if cookies are sent
