@@ -203,7 +203,6 @@ getPostgresVersion();
 wss.on("connection", function (ws, req) {
     // Parse the cookies from the request
     const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
-
     // Retrieve the session ID from the parsed cookies
     const rawSessionCookie = cookies['connect.sid'] || '';
     const sessionID = rawSessionCookie ? cookieParser.signedCookie(rawSessionCookie, sessionsecret) : null;
@@ -213,15 +212,19 @@ wss.on("connection", function (ws, req) {
         store.get(sessionID, (error, session) => {
             if (error || !session) {
                 console.error('Error retrieving session:', error);
-                assignUnauthenticatedUserID(ws);
+                // You might want to handle this case differently, e.g., by closing the connection
+                ws.close(4001, 'Session error');
+            } else if (session.publicUserID) {
+                // Session found and it has a publicUserID, use that for the WebSocket user ID
+                initializeUser(session.publicUserID, ws);
             } else {
-                // Use the publicUserID if it exists in the session
-                const userID = session.publicUserID || uuidv4();
-                initializeUser(userID, ws);
+                // Session found but no publicUserID, perhaps the user is not authenticated
+                // Handle accordingly, e.g., by requesting authentication or assigning a temporary ID
+                assignUnauthenticatedUserID(ws);
             }
         });
     } else {
-        // If there's no sessionID cookie, assign a new UUID
+        // No sessionID found, assign a temporary ID or handle as unauthenticated user
         assignUnauthenticatedUserID(ws);
     }
 
