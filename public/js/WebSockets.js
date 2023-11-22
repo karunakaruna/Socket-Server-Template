@@ -33,9 +33,9 @@ export class WebSocketConnection {
 
         this.ws.onopen = () => {
             console.log('WebSocket connection established');
+            console.log('Cookies sent: ' + this.ws.withCredentials); // Check if cookies are sent
             this.wsSend({ type: 'init', userID: this.myUserID });
         };
-
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
 
