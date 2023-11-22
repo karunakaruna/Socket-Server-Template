@@ -79,9 +79,13 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        httpOnly: true, // The cookie only accessible by the web server
-        secure: true, // The cookie will only be sent over HTTPS
-        sameSite: 'lax' // The cookie will only be sent for requests initiated from the same origin
+        httpOnly: true,
+        secure: true, // Ensure this is set to true if you're using HTTPS
+        sameSite: 'lax', // Or 'strict' if you want to enforce same-site policy strictly
+        // If you have a custom domain like 'example.com', set the domain like this:
+        domain: 'heroku.com',
+        // Set a specific expiration time for the cookie (optional)
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 
