@@ -398,12 +398,13 @@ ws.on("message", (data) => {
     }
 
     function userLevelsUp(userID){
-        users[userID].level += 1;
+        const level = users[userID].level += 1;
         broadcast(
                     null,
                     JSON.stringify({
                         type: "userUpdate",
                         userID: userID,
+                        level: level,
                         users: users,
                     }),
                     false
@@ -513,8 +514,9 @@ ws.on("message", (data) => {
                 // Send the count to the user
                 sendToUser(userID, { type: "count", value: users[userID].count });
 
-                //Check all users counts, for every 10, level up
-                if(users[userID].count >= 10){
+                // Check all users counts, for every 10, level up
+                // && users[userID].level === 1
+                if (users[userID].count >= 3 ) {
                     userLevelsUp(userID);
                 }
             }

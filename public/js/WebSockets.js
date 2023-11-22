@@ -55,14 +55,12 @@ export class WebSocketConnection {
                     this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID, message.level);
                 } else {
                     // Existing user, update their position and level
-                    const sphere = this.userSpheres[message.userID];
                     this.users[message.userID].targetPosition.copy(receivedPosition);
-                    //console log all the userSpheres
-                    console.log(this.userSpheres);
 
-
-
-                    sphere.setLevel(message.level);
+                    const sphere = this.userSpheres.find(user => user.userID === message.userID);
+                    if (sphere) {
+                        sphere.setLevel(message.level);
+                    }
                 }
             }
 
@@ -95,6 +93,11 @@ export class WebSocketConnection {
                 }
             } else if (message.type === 'userUpdate') {
                 console.log('userUpdate');
+                const sphere = this.userSpheres.find(user => user.userID === message.userID);
+                
+                if (sphere) {
+                    sphere.setLevel(message.level);
+                }
                 // for users in user, use the setLevel method to update the user's level
 
 
