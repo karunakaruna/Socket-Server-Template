@@ -3,9 +3,10 @@ import { attachLabelToObjectsAdv } from "../Sprite.js";
 
 
 export class UserSphere extends THREE.Object3D {
-    constructor(parent, level) {
+    constructor(parent, level, userID) {
         super();
         this.userSphere = null;
+        this.userID = null;
         //this.circle = null;
         this.color = 0xFFFFFF; // default color
         this.level = level || 1; // set the level parameter or use the default value of 1

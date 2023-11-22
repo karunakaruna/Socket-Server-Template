@@ -46,6 +46,7 @@ export class WebSocketConnection {
                     message.position.z
                 );
                 console.log(message.userID);
+                console.log('Message Level:' + message.level)
                 spawnPingAtPosition(receivedPosition);
 
                 if (!this.users[message.userID]) {
@@ -213,7 +214,7 @@ export class WebSocketConnection {
         const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
         const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
         const outerSphere = new THREE.Mesh(geometry, trans);
-        const innerSphere = new UserSphere(outerSphere, level);
+        const innerSphere = new UserSphere(outerSphere, level, userID);
         outerSphere.layers.enable(1); // Add to the raycaster layer
         innerSphere.layers.enable(1); // Add to the raycaster layer
         outerSphere.position.copy(position);
