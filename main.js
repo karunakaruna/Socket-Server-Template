@@ -306,6 +306,8 @@ ws.on("message", (data) => {
         //Location update
         } else if(currData.type === 'loc') {
             onUserPositionUpdate(userID, currData.position);
+            //grab user's level and combine it with the rest of the currData
+            currData.level = users[userID].level;
             broadcast(ws, currData, false);
         } else if (currData.type === 'init') {
             console.log('welcome new user!')
@@ -389,6 +391,20 @@ ws.on("message", (data) => {
             }),
             false
         );
+
+    function userLevelsUp(userID){
+        users[userID].level += 1;
+        broadcast(
+                    null,
+                    JSON.stringify({
+                        type: "userUpdate",
+                        userID: userID,
+                        users: users,
+                    }),
+                    false
+        );
+
+    }
 
 
 
@@ -495,6 +511,11 @@ ws.on("message", (data) => {
                 console.log(users[userID].count);
                 // Send the count to the user
                 sendToUser(userID, { type: "count", value: users[userID].count });
+
+                //Check all users counts, for every 10, level up
+                if(users[userID].count >= 10){
+                    userLevelsUp(userID);
+                }
             }
         }
     }, gameTickInterval);

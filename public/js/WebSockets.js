@@ -54,6 +54,8 @@ export class WebSocketConnection {
                 } else {
                     // Existing user, update their position
                     this.users[message.userID].targetPosition.copy(receivedPosition);
+                    //use the setLevel method to update the user's level
+                    this.users[message.userID].setLevel(message.level);
                 }
             }
 
@@ -84,9 +86,15 @@ export class WebSocketConnection {
                         console.warn(`User ${incomingUserID} has no position data.`);
                     }
                 }
-            }
+            } else if (message.type === 'userUpdate') {
+                console.log('userUpdate');
+                // for users in user, use the setLevel method to update the user's level
 
-            else if (message.type === 'assignUserID') {
+
+
+
+
+            } else if (message.type === 'assignUserID') {
                 this.myUserID = message.userID;
                 console.log(`Assigned userID: ${this.myUserID}`);
                 document.getElementById('username').textContent = this.myUserID;
