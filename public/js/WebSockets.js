@@ -93,11 +93,17 @@ export class WebSocketConnection {
                 }
             } else if (message.type === 'userUpdate') {
                 console.log('userUpdate');
-                const sphere = this.userSpheres.find(user => user.userID === message.userID);
-                
-                if (sphere) {
-                    sphere.setLevel(message.level);
+                if (message.userID === this.myUserID) {
+                    userSphere.setLevel(message.level);
+                } else {
+                    const sphere = this.userSpheres.find(user => user.userID === message.userID);
+
+                    if (sphere) {
+                        sphere.setLevel(message.level);
+                        console.log('sphere found');
+                    }
                 }
+                // for users in user, use the setLevel method to update the user's level
                 // for users in user, use the setLevel method to update the user's level
 
 
