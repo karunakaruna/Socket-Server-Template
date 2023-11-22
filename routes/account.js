@@ -32,6 +32,8 @@ router.post('/login', limiter, function(req, res, next) {
                 // Include publicUserID in the session or send it in the response
                 req.session.publicUserID = publicUserID;
                 
+                console.log('>>>>>>>>> User publicUserID:', publicUserID); // Add this line to log the publicUserID
+                
                 const jsonMsg = JSON.stringify({ 
                     message: 'thanks', 
                     updateModal: '/users/dashboard',
