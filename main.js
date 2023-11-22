@@ -333,17 +333,20 @@ ws.on("message", (data) => {
     }
 });
 
-  // Close connection
-  ws.on("close", (data) => {
-      console.log("closing connection");
-      onUserDisconnect(userID);
-      broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+ws.on("close", (data) => {
+    // Retrieve userID from the WebSocket object
+    let userID = ws.userID;
 
-      if (wss.clients.size === 0) {
-          console.log("last client disconnected, stopping keepAlive interval");
-          clearInterval(keepAliveId);
-      }
-  });
+    console.log("closing connection");
+    onUserDisconnect(userID);
+    broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+
+    if (wss.clients.size === 0) {
+        console.log("last client disconnected, stopping keepAlive interval");
+        clearInterval(keepAliveId);
+    }
+});
+
 });
 
 
