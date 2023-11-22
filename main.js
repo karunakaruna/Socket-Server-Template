@@ -73,7 +73,7 @@ app.options('/unity-endpoint', cors(corsOptions));
 //app use from passport-sql-login
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
-
+app.set('trust proxy', 1) // trust first proxy
 app.use(session({
     secret: sessionsecret,
     resave: false,
