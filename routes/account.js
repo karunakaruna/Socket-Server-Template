@@ -8,6 +8,7 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const jwtSecret =  process.env.JWT_SECRET; 
+const { v4: uuidv4 } = require('uuid');
 
 
 
@@ -60,6 +61,7 @@ router.post('/register', limiter, async (req, res) => {
         res.json({ errors });  // Send errors as JSON
     } else {
         //Form validation has passed
+        let publicID = uuidv4();
         let hashedPassword = await bcrypt.hash(password, 10);
 
         pool.query(
@@ -77,10 +79,10 @@ router.post('/register', limiter, async (req, res) => {
                    res.json({ errors });  // Send errors as JSON
                  }else{
                     pool.query(
-                        `INSERT INTO users (name, email, password)
-                        VALUES ($1, $2, $3)
-                        RETURNING id, password`,
-                        [name, email, hashedPassword],(err, results) => {
+                        `INSERT INTO users (name, email, password, publicID)
+                        VALUES ($1, $2, $3, $4)
+                        RETURNING id, publicID`,
+                       [name, email, hashedPassword, publicID],(err, results) => {
                             if(err){
                                 throw err;
                             }
