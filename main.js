@@ -392,6 +392,10 @@ ws.on("message", (data) => {
             false
         );
 
+
+
+    }
+
     function userLevelsUp(userID){
         users[userID].level += 1;
         broadcast(
@@ -403,10 +407,6 @@ ws.on("message", (data) => {
                     }),
                     false
         );
-
-    }
-
-
 
         // let count = 0; // initialize count variable for the user
         // increment count every 10 seconds
