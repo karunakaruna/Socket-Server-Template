@@ -308,6 +308,7 @@ ws.on("message", (data) => {
             onUserPositionUpdate(userID, currData.position);
             //grab user's level and combine it with the rest of the currData
             currData.level = users[userID].level;
+            console.log(currData);
             broadcast(ws, currData, false);
         } else if (currData.type === 'init') {
             console.log('welcome new user!')

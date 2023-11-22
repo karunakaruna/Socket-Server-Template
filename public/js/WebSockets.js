@@ -15,7 +15,7 @@ import { displayOverlayText } from './util/ShowModal.js';
 export class WebSocketConnection {
     constructor() {
         this.users = {};
-        this.userSpheres = {};
+        this.userSpheres = [];
         this.myUserID = null;
         this.loadedGLTF = null;
         this.scene = scene;
@@ -54,9 +54,14 @@ export class WebSocketConnection {
                     this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID, message.level);
                 } else {
                     // Existing user, update their position and level
-                    const userSphere = this.userSpheres[message.userID];
-                    userSphere.targetPosition.copy(receivedPosition);
-                    userSphere.setLevel(message.level);
+                    const sphere = this.userSpheres[message.userID];
+                    this.users[message.userID].targetPosition.copy(receivedPosition);
+                    //console log all the userSpheres
+                    console.log(this.userSpheres);
+
+
+
+                    sphere.setLevel(message.level);
                 }
             }
 
