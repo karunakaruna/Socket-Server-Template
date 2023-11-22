@@ -80,7 +80,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true, // The cookie only accessible by the web server
-        secure: true, // The cookie will only be sent over HTTPS
+        // secure: true, // The cookie will only be sent over HTTPS
         // sameSite: 'strict' // The cookie will only be sent for requests initiated from the same origin
     }
 }));
