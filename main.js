@@ -195,7 +195,8 @@ getPostgresVersion();
 
 wss.on("connection", function (ws, req) {
     // Parse the cookies from the request
-    const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
+    const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
+
 
     // Attempt to retrieve the session ID from the parsed cookies
     const sessionID = cookies['connect.sid'] ? cookieParser.signedCookie(cookies['connect.sid'], sessionsecret) : null;
