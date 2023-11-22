@@ -74,25 +74,24 @@ app.options('/unity-endpoint', cors(corsOptions));
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 
-// app.use(session({
+app.use(session({
+    secret: sessionsecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true, // The cookie only accessible by the web server
+        secure: true, // The cookie will only be sent over HTTPS
+        sameSite: 'strict' // The cookie will only be sent for requests initiated from the same origin
+    }
+}));
+
+
+//Working
+// app.use(session({  
 //     secret: sessionsecret, //ENV FILE
 //     resave: false,
-//     cookie: {
-//         httpOnly: true, // Important: prevents client-side JS from reading the cookie
-//         sameSite: 'None', // Important: enable this if your site is served over HTTPS
-//         secure: true, // Important: ensures the cookie is sent over HTTPS
-//         maxAge: 60000,
-//         name: 'connect.sid' // This should match the name used to parse the cookie
-//     },
-//     saveUninitialized: true,
-//     store
+//     saveUninitialized: false
 // }));
-
-app.use(session({  
-    secret: sessionsecret, //ENV FILE
-    resave: false,
-    saveUninitialized: false
-}));
 
 app.use(flash());
 app.use(passport.initialize());
