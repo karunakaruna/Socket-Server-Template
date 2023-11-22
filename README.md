@@ -36,3 +36,7 @@ The project is built around the idea of metaverse cartography - that the Metaver
 
 
 v.06 - right click - > create
+
+v.07 
+    Todo:
+    -Login + User ID Sync
