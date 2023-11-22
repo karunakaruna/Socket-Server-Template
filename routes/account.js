@@ -15,6 +15,8 @@ const { v4: uuidv4 } = require('uuid');
 
 router.post('/login', limiter, function(req, res, next) {
     passport.authenticate('local', function(err, account, info) {
+        console.log('Account ID:', account.id);
+
         if (err) {
             return res.status(500).json({error: 'Internal server error'});
         }
@@ -49,21 +51,24 @@ router.post('/login', limiter, function(req, res, next) {
 });
 
 async function getPublicUserID(userID) {
+    console.log('Fetching publicUserID for user ID:', userID);
     const query = `SELECT publicID FROM users WHERE id = $1`;
     const values = [userID];
 
     try {
         const result = await pool.query(query, values);
+        console.log('Database query result:', result.rows);
         if (result.rows.length > 0) {
             return result.rows[0].publicID;
         } else {
             throw new Error("User not found");
         }
     } catch (err) {
-        console.error(err.message);
+        console.error('Database query error:', err.message);
         throw err;
     }
 }
+
 
 
 
