@@ -194,82 +194,71 @@ getPostgresVersion();
 //Websockets
 
 wss.on("connection", function (ws, req) {
-    console.log("Connection Opened");
-    console.log("Client size: ", wss.clients.size);
+    // Parse the cookies from the request
+    const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
 
-    let userID;
-    const session = req.session;
-    console.log("Session: ");
-    console.log(session);
+    // Attempt to retrieve the session ID from the parsed cookies
+    const sessionID = cookies['connect.sid'] ? cookieParser.signedCookie(cookies['connect.sid'], sessionsecret) : null;
 
-    if (req.headers.cookie) {
-        const cookies = parse(req.headers.cookie);
-        
-        // Correctly decode the session ID from the cookie
-        let rawSessionCookie = cookies['connect.sid'] || '';
-        rawSessionCookie = decodeURIComponent(rawSessionCookie);
-
-        if (rawSessionCookie.startsWith('s:')) {
-            const sessionID = rawSessionCookie.split('.')[0].substring(2);
-            console.log("Session ID: ", sessionID);
-
-            // Retrieve the session from the store
-            store.get(sessionID, (error, session) => {
-                if (error || !session) {
-                    console.error('Error retrieving session:', error);
-                    userID = uuidv4();
+    if (sessionID) {
+        // Retrieve the session from the store using the sessionID
+        store.get(sessionID, (error, session) => {
+            if (error || !session) {
+                console.error('Error retrieving session:', error);
+                assignUnauthenticatedUserID(ws);
+            } else {
+                // Check if session has publicUserID
+                if (session.publicUserID) {
+                    initializeUser(session.publicUserID, ws);
                 } else {
-                    userID = session.userID || uuidv4();
-                    session.userID = userID; // Save in session if not present
-                    store.set(sessionID, session); // Save updated session
+                    assignUnauthenticatedUserID(ws);
                 }
-                console.log("User ID: ", userID);
-                initializeUser(userID, ws);
-            });
-        } else {
-            console.log('Session cookie has an unexpected format.');
-            userID = uuidv4();
-            initializeUser(userID, ws);
-        }
+            }
+        });
     } else {
-        console.log('No cookie found in the request.');
-        userID = uuidv4();
+        // No sessionID found, assign a new UUID
+        assignUnauthenticatedUserID(ws);
+    }
+
+
+
+    function initializeUser(userID, ws) {
+        users[userID] = {
+            position: { x: 0, y: 0, z: 0 }, // default position
+            count: 0,
+            level: 1,
+        };
+
+        ws.userID = userID;
+        // Send the assigned user ID to the connected client
+        ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
+        getOnlineTime('1'); // call the getOnlineTime function
+        onUserConnect(userID);
+        updateObjects(userID);
+        broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+
+        if (wss.clients.size === 1) {
+            console.log("first connection. starting keepalive");
+            keepServerAlive();
+        }
+    }
+
+    //New Function to Generate a UUID for an Authenticated User:
+    function assignUnauthenticatedUserID(ws) {
+        const userID = uuidv4(); // Generate a new UUID for unauthenticated user
         initializeUser(userID, ws);
     }
 
-
-
-function initializeUser(userID, ws) {
-    users[userID] = {
-        position: { x: 0, y: 0, z: 0 }, // default position
-        count: 0,
-        level: 1,
-    };
-
-    ws.userID = userID;
-    // Send the assigned user ID to the connected client
-    ws.send(JSON.stringify({ type: 'assignUserID', userID: userID }));
-    getOnlineTime('1'); // call the getOnlineTime function
-    onUserConnect(userID);
-    updateObjects(userID);
-    broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
-
-    if (wss.clients.size === 1) {
-        console.log("first connection. starting keepalive");
-        keepServerAlive();
+    function addObject(point, id, text) {
+        objects.push({ point, id, text });
+        console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
+        broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
     }
-}
 
-function addObject(point, id, text) {
-    objects.push({ point, id, text });
-    console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
-    broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
-}
+    function updateObjects(userID){
+        sendToUser(userID, { type: 'objects', value: objects});
 
-function updateObjects(userID){
-    sendToUser(userID, { type: 'objects', value: objects});
-
-}
+    }
 
 
 function getUserCount(userID, currData) {
@@ -357,7 +346,7 @@ ws.on("message", (data) => {
 
 
 
-
+//Utility Functions
     const isJSON = (message) => {
         try {
             const obj = JSON.parse(message);
@@ -410,36 +399,7 @@ ws.on("message", (data) => {
                     false
         );
 
-        // let count = 0; // initialize count variable for the user
-        // increment count every 10 seconds
-
-
-        // const intervalID = setInterval(() => {
-        //     count++;
-        //     console.log(`User ${userID} count: ${count}`);
-        //     wss.clients.forEach((client) => {
-
-        //         if (
-        //             client.readyState === WebSocket.OPEN
-        //         ) {
-        //             console.log('sending count to user');
-        //             client.send(JSON.stringify({ type: "count", value: count }));
-        //         }
-        //     });
-        //     users[userID] = {
-        //         // position: { x: 0, y: 0, z: 0 },
-        //         count: count,
-        //         intervalID: intervalID
-        //     };
-        // }, 10000);
-
-        // add intervalId to the user object
-        // users[userID] = {
-        //     position: { x: 0, y: 0, z: 0 },
-        //     count: intervalId,
-        // };
-    }
-
+                }
     function logIntervalIds() {
         for (const userID in users) {
             console.log(`User ${userID} intervalId: ${users[userID].count}`);
@@ -503,7 +463,7 @@ ws.on("message", (data) => {
 
 
 
-    // Global game tick function
+// Global game tick function
     const gameTickInterval = 10000; // 10 seconds
     setInterval(() => {
         for (let userID in users) {

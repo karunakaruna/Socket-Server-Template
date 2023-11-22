@@ -13,7 +13,6 @@ const { v4: uuidv4 } = require('uuid');
 
 
 
-//Login
 router.post('/login', limiter, function(req, res, next) {
     passport.authenticate('local', function(err, account, info) {
         if (err) {
@@ -22,25 +21,48 @@ router.post('/login', limiter, function(req, res, next) {
         if (!account) {
             return res.status(401).json({error: 'Incorrect email or password'});
         }
-        req.logIn(account, function(err) {
+        req.logIn(account, async function(err) {
             if (err) {
                 return res.status(500).json({error: 'Could not log in user'});
             }
-            const jsonMsg = JSON.stringify({ message: 'thanks' , updateModal: '/users/dashboard'});
-            return res.send(jsonMsg);
+
+            try {
+                // Fetch publicUserID from the database
+                const publicUserID = await getPublicUserID(account.id);
+                // Include publicUserID in the session or send it in the response
+                req.session.publicUserID = publicUserID;
+                
+                const jsonMsg = JSON.stringify({ 
+                    message: 'thanks', 
+                    updateModal: '/users/dashboard',
+                    publicUserID: publicUserID // Send publicUserID to the client
+                });
+                return res.send(jsonMsg);
+            } catch (error) {
+                console.error("Error fetching publicUserID:", error);
+                return res.status(500).json({error: 'Failed to retrieve public user ID'});
+            }
         });
     })(req, res, next);
 });
 
+async function getPublicUserID(userID) {
+    const query = `SELECT publicID FROM users WHERE id = $1`;
+    const values = [userID];
 
-//Logout
-router.get("/logout", function(req, res, next){
-    req.logout(function(err) {
-      if (err) { return next(err); }
-      req.flash("succes_msg", "You' was logged out.");
-      //res.redirect("login");
-    });
-});
+    try {
+        const result = await pool.query(query, values);
+        if (result.rows.length > 0) {
+            return result.rows[0].publicID;
+        } else {
+            throw new Error("User not found");
+        }
+    } catch (err) {
+        console.error(err.message);
+        throw err;
+    }
+}
+
 
 
 //Register
@@ -106,6 +128,16 @@ router.post('/register', limiter, async (req, res) => {
         );
 
     }
+});
+
+
+//Logout
+router.get("/logout", function(req, res, next){
+    req.logout(function(err) {
+      if (err) { return next(err); }
+      req.flash("succes_msg", "You' was logged out.");
+      //res.redirect("login");
+    });
 });
 
 //Forgot Password Request
