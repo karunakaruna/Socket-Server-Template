@@ -16,6 +16,7 @@ async function submitForm() {
                 'Accept': 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
+            credentials: 'include',
             body: data, 
         });
         const message = await response.json();
@@ -48,6 +49,7 @@ async function submitRegisterForm() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify(data),
         });
         const responseData = await response.json();
@@ -77,6 +79,7 @@ async function logOut() {
             headers: {
                 'Accept': 'application/json',
             },
+            credentials: 'include',
         });
         const message = await response.json();
         console.log(message);
@@ -102,6 +105,7 @@ async function submitEmail() {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: data,
+            credentials: 'include',
         });
         const message = await response.json();
         setTimeout(function(){ 
@@ -138,6 +142,7 @@ async function updatePassword() {
                 'Accept': 'application/json',
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
+            credentials: 'include',
             body: data, 
         });
         const message = await response.json();
