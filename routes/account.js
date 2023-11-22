@@ -52,14 +52,15 @@ router.post('/login', limiter, function(req, res, next) {
 
 async function getPublicUserID(userID) {
     console.log('Fetching publicUserID for user ID:', userID);
-    const query = `SELECT publicID FROM users WHERE id = $1`;
+    const query = `SELECT publicid FROM users WHERE id = $1`; // Ensure this matches the column name case in your DB
     const values = [userID];
 
     try {
         const result = await pool.query(query, values);
         console.log('Database query result:', result.rows);
         if (result.rows.length > 0) {
-            return result.rows[0].publicID;
+            // Access the column name in the correct case, as returned by the query
+            return result.rows[0].publicid; // Use the correct case as per your DB schema
         } else {
             throw new Error("User not found");
         }
@@ -68,6 +69,7 @@ async function getPublicUserID(userID) {
         throw err;
     }
 }
+
 
 
 
