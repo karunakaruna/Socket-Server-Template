@@ -405,7 +405,7 @@ ws.on("message", (data) => {
                         type: "userUpdate",
                         userID: userID,
                         level: level,
-                        users: users,
+                        // users: users,
                     }),
                     false
         );
