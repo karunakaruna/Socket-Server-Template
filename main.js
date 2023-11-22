@@ -197,9 +197,9 @@ wss.on("connection", function (ws, req) {
     // Parse the cookies from the request
     const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
 
-
-    // Attempt to retrieve the session ID from the parsed cookies
-    const sessionID = cookies['connect.sid'] ? cookieParser.signedCookie(cookies['connect.sid'], sessionsecret) : null;
+    // Retrieve the session ID from the parsed cookies
+    const rawSessionCookie = cookies['connect.sid'] || '';
+    const sessionID = rawSessionCookie ? cookieParser.signedCookie(rawSessionCookie, sessionsecret) : null;
 
     if (sessionID) {
         // Retrieve the session from the store using the sessionID
@@ -208,19 +208,15 @@ wss.on("connection", function (ws, req) {
                 console.error('Error retrieving session:', error);
                 assignUnauthenticatedUserID(ws);
             } else {
-                // Check if session has publicUserID
-                if (session.publicUserID) {
-                    initializeUser(session.publicUserID, ws);
-                } else {
-                    assignUnauthenticatedUserID(ws);
-                }
+                // Use the publicUserID if it exists in the session
+                const userID = session.publicUserID || uuidv4();
+                initializeUser(userID, ws);
             }
         });
     } else {
-        // No sessionID found, assign a new UUID
+        // If there's no sessionID cookie, assign a new UUID
         assignUnauthenticatedUserID(ws);
     }
-
 
 
     function initializeUser(userID, ws) {
@@ -299,7 +295,6 @@ ws.on("message", (data) => {
             onUserPositionUpdate(userID, currData.position);
             //grab user's level and combine it with the rest of the currData
             currData.level = users[userID].level;
-            console.log(currData);
             broadcast(ws, currData, false);
         } else if (currData.type === 'init') {
             console.log('welcome new user!')
