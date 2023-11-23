@@ -232,11 +232,6 @@ wss.on("connection", function (ws, req) {
     console.log( '>>SessionID:' + req.sessionID);
 
 
-    const sessionIDD = req.cookies['connect.sid'];
-    const sessionStore = req.sessionStore;
-
-    console.log('^^sessionID:', sessionIDD);
-    console.log('^^sessionStore:', sessionStore);
 
 
     const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
