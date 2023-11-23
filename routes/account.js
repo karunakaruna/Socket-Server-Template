@@ -144,7 +144,7 @@ router.post('/register', limiter, async (req, res) => {
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
       if (err) { return next(err); }
-      res.json({ message: 'Logged out successfully', updateModal: '/modals/login' });
+      res.json({ message: 'Logged out successfully', updateModal: '/modals/home' });
     });
 });
 
