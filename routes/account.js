@@ -147,12 +147,15 @@ router.get("/logout", function(req, res, next){
       req.session.destroy(() => { // Destroy session
         req.flash("succes_msg", "You' was logged out.");
         // res.json({ message: "Logged out successfully" });
-        res.redirect("/"); // Redirect to homepage after logout
+        
     });
-      
-
+    try {
+        const jsonMsg = JSON.stringify({ message: 'thanks' , updateModal: '/modals/login'});
+        res.send(jsonMsg);
+    } catch (error) {
+        
       //res.redirect("login");
-    });
+    }});
 });
 
 //Forgot Password Request
