@@ -144,28 +144,10 @@ router.post('/register', limiter, async (req, res) => {
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
       if (err) { return next(err); }
-    //   req.session.destroy(() => { // Destroy session
-    //     req.flash("succes_msg", "You' was logged out.");
-    //     // res.json({ message: "Logged out successfully" });
-        
-    // });
-    try {
-        const data = {
-            title: 'Modal Title',
-            content: 'Content for the modal',
-            isAuthenticated: req.isAuthenticated() // true if the user is logged in
-        };
-        res.render('modal-content-home.ejs', data);
-
-
-
-        // const jsonMsg = JSON.stringify({ message: 'thanks' , updateModal: '/modals/login'});
-        // res.send(jsonMsg);
-    } catch (error) {
-        
-      //res.redirect("login");
-    }});
+      res.json({ message: 'Logged out successfully', updateModal: '/modals/login' });
+    });
 });
+
 
 //Forgot Password Request
 router.post('/forgot-password', limiter, (req, res) => {

@@ -71,7 +71,6 @@ async function submitRegisterForm() {
 
 
 
-
 async function logOut() {
     try {
         const response = await fetch('/account/logout', {
@@ -83,7 +82,9 @@ async function logOut() {
         });
         const message = await response.json();
         console.log(message);
-        updateModalContent(message.updateModal);
+        if (message.updateModal) {
+            updateModalContent(message.updateModal);
+        }
     } catch (error) {
         console.error('Error submitting form:', error);
     }
