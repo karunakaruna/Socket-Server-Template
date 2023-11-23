@@ -83,7 +83,7 @@ async function logOut() {
         });
         const message = await response.json();
         console.log(message);
-        updateModalContent('/users/dashboard');
+        updateModalContent('/users/home');
     } catch (error) {
         console.error('Error submitting form:', error);
     }

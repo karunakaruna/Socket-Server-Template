@@ -144,7 +144,12 @@ router.post('/register', limiter, async (req, res) => {
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
       if (err) { return next(err); }
-      req.flash("succes_msg", "You' was logged out.");
+      req.session.destroy(() => { // Destroy session
+        req.flash("succes_msg", "You' was logged out.");
+        // res.json({ message: "Logged out successfully" });
+    });
+      
+
       //res.redirect("login");
     });
 });
