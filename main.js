@@ -110,6 +110,10 @@ app.use((req, res, next) => {
 });
 
 
+// //session store
+// app.use(function (req, res, next) {
+//     sessionMiddleware(req, res, next);
+//   });
 
 //Routes
 const homerouter = require('./routes/router');
@@ -205,6 +209,15 @@ wss.on("connection", function (ws, req) {
     console.log(req.headers.cookie);
     console.log( '>>Session:' + req.session);
     console.log( '>>SessionID:' + req.sessionID);
+
+
+    const sessionIDD = req.cookies['connect.sid'];
+    const sessionStore = req.sessionStore;
+
+    console.log('^^sessionID:', sessionIDD);
+    console.log('^^sessionStore:', sessionStore);
+
+
     const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
 
     // Retrieve the session ID from the parsed cookies
