@@ -74,21 +74,35 @@ app.options('/unity-endpoint', cors(corsOptions));
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 app.set('trust proxy', 1) // trust first proxy
-app.use(session({
+// app.use(session({
+//     secret: sessionsecret,
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: {
+//         httpOnly: true,
+//         secure: true, // Ensure this is set to true if you're using HTTPS
+//         sameSite: 'lax', // Or 'strict' if you want to enforce same-site policy strictly
+//         // If you have a custom domain like 'example.com', set the domain like this:
+//         // domain: 'herokuapp.com',
+//         // Set a specific expiration time for the cookie (optional)
+//         maxAge: 24 * 60 * 60 * 1000 // 24 hours
+//     }
+// }));
+
+
+const sessionParser = session({
     secret: sessionsecret,
+    store: store,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        httpOnly: true,
-        secure: true, // Ensure this is set to true if you're using HTTPS
-        sameSite: 'lax', // Or 'strict' if you want to enforce same-site policy strictly
-        // If you have a custom domain like 'example.com', set the domain like this:
-        // domain: 'herokuapp.com',
-        // Set a specific expiration time for the cookie (optional)
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
-}));
-
+  });
+  app.use(sessionParser);
 
 //Working
 // app.use(session({  
@@ -205,6 +219,13 @@ getPostgresVersion();
 //Websockets
 
 wss.on("connection", function (ws, req) {
+    sessionParser(req, {}, () => {
+        if (req.session) {
+          // Now you can access req.session
+          console.log('Parsed Session:', req.session);}
+        });
+
+
     // Parse the cookies from the request
     console.log(req.headers.cookie);
     console.log( '>>Session:' + req.session);
