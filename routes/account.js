@@ -144,11 +144,11 @@ router.post('/register', limiter, async (req, res) => {
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
       if (err) { return next(err); }
-      req.session.destroy(() => { // Destroy session
-        req.flash("succes_msg", "You' was logged out.");
-        // res.json({ message: "Logged out successfully" });
+    //   req.session.destroy(() => { // Destroy session
+    //     req.flash("succes_msg", "You' was logged out.");
+    //     // res.json({ message: "Logged out successfully" });
         
-    });
+    // });
     try {
         const jsonMsg = JSON.stringify({ message: 'thanks' , updateModal: '/modals/login'});
         res.send(jsonMsg);
