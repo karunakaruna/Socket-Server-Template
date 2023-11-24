@@ -162,6 +162,7 @@ router.get("/logout", function(req, res, next){
     req.logout(function(err) {
         if (err) { return next(err); }
         const users = req.app.get('users');
+        console.log('users:', users);
         if (users[req.user.publicUserID]) {
             updateOnlineTime(req.user.publicUserID, users[req.user.publicUserID].count);
             delete users[req.user.publicUserID];
