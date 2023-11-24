@@ -52,59 +52,45 @@ async function addDummyProfileRow() {
     }
   }
 
-  async function updateOnlineTime(intervalID, profileID) {
+  async function updateOnlineTime(userID, onlineTime) {
     const client = await pool.connect();
     try {
-      // Get the current online_time value
-      const selectQuery = `
-        SELECT online_time
-        FROM users
-        WHERE id = $1`;
-      const selectValues = [profileID];
-      const selectResult = await client.query(selectQuery, selectValues);
-      const currentOnlineTime = selectResult.rows[0].online_time;
-
-      // Calculate the new online_time value
-      const newOnlineTime = currentOnlineTime + intervalID;
-
-      // Update the online_time value in the database
-      const updateQuery = `
-        UPDATE users
-        SET online_time = $1
-        WHERE id = $2`;
-      const updateValues = [newOnlineTime, profileID];
-      await client.query(updateQuery, updateValues);
-
-      console.log(`Updated online_time for profile ${profileID} to ${newOnlineTime}`);
+        const updateQuery = `
+            UPDATE users
+            SET online_time = $1
+            WHERE id = $2`;
+        const updateValues = [onlineTime, userID];
+        await client.query(updateQuery, updateValues);
     } catch (error) {
-      console.error('Error:', error);
+        console.error('Error updating online time:', error);
     } finally {
-      client.release();
+        client.release();
     }
-  }
+}
 
 
-  
-  async function getOnlineTime(profileID) {
+// Get current online time from the database
+async function getOnlineTime(userID) {
     const client = await pool.connect();
     try {
-      // Get the current online_time value
-      const selectQuery = `
-        SELECT online_time
-        FROM users
-        WHERE id = $1`;
-      const selectValues = [profileID];
-      const selectResult = await client.query(selectQuery, selectValues);
-      const currentOnlineTime = selectResult.rows[0].online_time;
-
-      return currentOnlineTime;
+        const selectQuery = `
+            SELECT online_time
+            FROM users
+            WHERE id = $1`;
+        const selectValues = [userID];
+        const selectResult = await client.query(selectQuery, selectValues);
+        if (selectResult.rows.length > 0) {
+            return selectResult.rows[0].online_time || 0;
+        } else {
+            return 0; // Default to 0 if no record found
+        }
     } catch (error) {
-      console.error('Error:', error);
+        console.error('Error getting online time:', error);
+        return 0; // Default to 0 in case of error
     } finally {
-      client.release();
+        client.release();
     }
-  }
-
+}
   
 
   module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime };

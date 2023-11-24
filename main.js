@@ -258,12 +258,16 @@ wss.on("connection", function (ws, req) {
     }
 
 
-    function initializeUser(userID, ws) {
+    async function initializeUser(userID, ws) {
+        const currentOnlineTime = await getOnlineTime(userID);
+
         users[userID] = {
             position: { x: 0, y: 0, z: 0 }, // default position
-            count: 0,
+            count: currentOnlineTime || 0, // Initialize count with the last online time from the database
+
             level: 1,
         };
+
 
         ws.userID = userID;
         // Send the assigned user ID to the connected client
@@ -459,11 +463,21 @@ ws.on("close", (data) => {
         }, false);
     }
 
-    function onUserDisconnect(userID) {
+    async function onUserDisconnect(userID) {
+        if (users[userID]) {
+            let totalTimeOnline = users[userID].count; // Count is the total online time in ticks
+            
+            // Update online time in the database
+            await updateOnlineTime(userID, totalTimeOnline);
+
         // updateOnlineTime(count, '1'); // call the updateOnlineTime function
         clearInterval(users[userID].intervalID);
         delete users[userID];
+    };
         
+
+
+
         broadcast(null, JSON.stringify({
             type: 'userDisconnected',
             userID: userID
