@@ -33,6 +33,7 @@ async function submitForm() {
             console.log('Assigned UserID:',publicUserID);
             removeUserFromList(previousID);
             addUserToList(publicUserID, true);
+            prioritizeGreenUser();
         }
     } catch (error) {
         console.error('Error submitting form:', error);
