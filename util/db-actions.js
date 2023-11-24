@@ -58,7 +58,7 @@ async function addDummyProfileRow() {
         const updateQuery = `
             UPDATE users
             SET online_time = $1
-            WHERE id = $2`;
+            WHERE publicid = $2`;
         const updateValues = [onlineTime, userID];
         await client.query(updateQuery, updateValues);
     } catch (error) {
@@ -76,7 +76,7 @@ async function getOnlineTime(userID) {
         const selectQuery = `
             SELECT online_time
             FROM users
-            WHERE id = $1`;
+            WHERE publicid = $1`;
         const selectValues = [userID];
         const selectResult = await client.query(selectQuery, selectValues);
         if (selectResult.rows.length > 0) {
