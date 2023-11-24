@@ -28,8 +28,10 @@ async function submitForm() {
             console.log(message.updateModal);
             updateModalContent(message.updateModal);
             publicUserID = message.publicUserID;
+            previousID = document.getElementById('username').textContent
             document.getElementById('username').textContent = publicUserID;
             console.log('Assigned UserID:',publicUserID);
+            removeUserFromList(previousID);
             addUserToList(publicUserID, true);
         }
     } catch (error) {
