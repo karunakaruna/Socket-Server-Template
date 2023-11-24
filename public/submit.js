@@ -27,7 +27,10 @@ async function submitForm() {
             console.log('form submitted');
             console.log(message.updateModal);
             updateModalContent(message.updateModal);
-            wsc.send(JSON.stringify({type: 'reinit'}));
+            publicUserID = message.publicUserID;
+            document.getElementById('username').textContent = publicUserID;
+            console.log('Assigned UserID:',publicUserID);
+            addUserToList(publicUserID, true);
         }
     } catch (error) {
         console.error('Error submitting form:', error);
