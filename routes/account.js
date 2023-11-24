@@ -43,7 +43,6 @@ router.post('/login', limiter, function(req, res, next) {
                     updateModal: '/users/dashboard',
                     publicUserID: publicUserID // Send publicUserID to the client
                 });
-                ws.send(JSON.stringify({ type: 'assignUserID', userID: publicUserID}));
 
                 return res.send(jsonMsg);
             } catch (error) {
