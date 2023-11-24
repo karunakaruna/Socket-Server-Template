@@ -340,6 +340,7 @@ ws.on("message", (data) => {
             sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
         } else if (currData.type === 'reinit'){
             //User is logged in and needs their userID reinitialized
+            console.log('reinit user recieved');
             ws.send(JSON.stringify({ type: 'assignUserID', userID: ws.userID }));
             
             
