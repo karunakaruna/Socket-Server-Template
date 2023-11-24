@@ -18,7 +18,7 @@ const passport = require('passport');
 const initializePassport = require('./util/passportConfig');
         initializePassport(passport);
 const { checkAuthenticated, checkNotAuthenticated } = require('./util/auth');
-const {users, getUsers}  = require('./users.js');
+// const {users, getUsers}  = require('./users.js');
 
 
 //ENVIRONMENT VARIABLES
@@ -213,8 +213,8 @@ app.get('/map', (req, res) => {
 
 //Database
 
-// let users = {};
-
+let users = {};
+app.set('users', users);
 // let users = userlist;
 let objects = [];    
   

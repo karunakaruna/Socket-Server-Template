@@ -15,7 +15,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getOnlineTime,updateOnlineTime } = require('../util/db-actions.js');
 
 
-const { users, getUsers } = require('../users.js');
+// const { users, getUsers } = require('../users.js');
 
 
 router.post('/login', limiter, function(req, res, next) {
@@ -47,9 +47,7 @@ router.post('/login', limiter, function(req, res, next) {
                     publicUserID: publicUserID // Send publicUserID to the client
                 });
 
-                const tempusers = getUsers();
-                console.log('users length:', tempusers.length); // Log the length of tempusers
-                console.log('users:', tempusers);
+                const users = req.app.get('users');
                 console.log('users length:', Object.keys(users).length); // Log the length of users
                 console.log('users:', users);
                 return res.send(jsonMsg);
