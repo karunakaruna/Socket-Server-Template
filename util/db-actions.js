@@ -55,42 +55,45 @@ async function addDummyProfileRow() {
   async function updateOnlineTime(userID, onlineTime) {
     const client = await pool.connect();
     try {
-        const updateQuery = `
-            UPDATE users
-            SET online_time = $1
-            WHERE publicid = $2`;
-        const updateValues = [onlineTime, userID];
-        await client.query(updateQuery, updateValues);
+      const updateQuery = `
+        UPDATE users
+        SET online_time = $1
+        WHERE publicid = $2`;
+      const updateValues = [onlineTime, userID];
+      console.log('Executing update query:', updateQuery);
+      console.log('Update values:', updateValues);
+      await client.query(updateQuery, updateValues);
     } catch (error) {
-        console.error('Error updating online time:', error);
+      console.error('Error updating online time:', error);
     } finally {
-        client.release();
+      client.release();
     }
-}
+  }
 
-
-// Get current online time from the database
-async function getOnlineTime(userID) {
+  // Get current online time from the database
+  async function getOnlineTime(userID) {
     const client = await pool.connect();
     try {
-        const selectQuery = `
-            SELECT online_time
-            FROM users
-            WHERE publicid = $1`;
-        const selectValues = [userID];
-        const selectResult = await client.query(selectQuery, selectValues);
-        if (selectResult.rows.length > 0) {
-            return selectResult.rows[0].online_time || 0;
-        } else {
-            return 0; // Default to 0 if no record found
-        }
+      const selectQuery = `
+        SELECT online_time
+        FROM users
+        WHERE publicid = $1`;
+      const selectValues = [userID];
+      console.log('Executing select query:', selectQuery);
+      console.log('Select values:', selectValues);
+      const selectResult = await client.query(selectQuery, selectValues);
+      if (selectResult.rows.length > 0) {
+        return selectResult.rows[0].online_time || 0;
+      } else {
+        return 0; // Default to 0 if no record found
+      }
     } catch (error) {
-        console.error('Error getting online time:', error);
-        return 0; // Default to 0 in case of error
+      console.error('Error getting online time:', error);
+      return 0; // Default to 0 in case of error
     } finally {
-        client.release();
+      client.release();
     }
-}
-  
+  }
+
 
   module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime };
