@@ -12,7 +12,10 @@ require("dotenv").config();
 const jwtSecret =  process.env.JWT_SECRET; 
 const { v4: uuidv4 } = require('uuid');
 
+const { getOnlineTime,updateOnlineTime } = require('../util/db-actions.js');
 
+
+const { users, getUsers } = require('../users.js');
 
 
 router.post('/login', limiter, function(req, res, next) {
@@ -35,15 +38,20 @@ router.post('/login', limiter, function(req, res, next) {
                 const publicUserID = await getPublicUserID(account.id);
                 // Include publicUserID in the session or send it in the response
                 req.session.publicUserID = publicUserID;
-                
+
                 console.log('>>>>>>>>> User publicUserID:', publicUserID); // Add this line to log the publicUserID
-                
+
                 const jsonMsg = JSON.stringify({ 
                     message: 'thanks', 
                     updateModal: '/users/dashboard',
                     publicUserID: publicUserID // Send publicUserID to the client
                 });
 
+                const tempusers = getUsers();
+                console.log('users length:', tempusers.length); // Log the length of tempusers
+                console.log('users:', tempusers);
+                console.log('users length:', Object.keys(users).length); // Log the length of users
+                console.log('users:', users);
                 return res.send(jsonMsg);
             } catch (error) {
                 console.error("Error fetching publicUserID:", error);
@@ -147,6 +155,13 @@ router.post('/register', limiter, async (req, res) => {
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
       if (err) { return next(err); }
+
+      if (users[req.user.publicUserID]) {
+        updateOnlineTime(req.user.publicUserID, users[req.user.publicUserID].count);
+        delete users[req.user.publicUserID];
+    }
+
+
       res.json({ message: 'Logged out successfully', updateModal: '/modals/home' });
     });
 });

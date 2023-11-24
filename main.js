@@ -18,6 +18,8 @@ const passport = require('passport');
 const initializePassport = require('./util/passportConfig');
         initializePassport(passport);
 const { checkAuthenticated, checkNotAuthenticated } = require('./util/auth');
+const {users, getUsers}  = require('./users.js');
+
 
 //ENVIRONMENT VARIABLES
 require("dotenv").config();
@@ -117,11 +119,11 @@ app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
 app.use(cookieParser());
 
-
-app.use((req, res, next) => {
-    console.log("Session data:", req.session);
-    next();
-});
+// SEssion Peeker
+// app.use((req, res, next) => {
+//     console.log("Session data:", req.session);
+//     next();
+// });
 
 
 // //session store
@@ -211,7 +213,9 @@ app.get('/map', (req, res) => {
 
 //Database
 
-let users = {};
+// let users = {};
+
+// let users = userlist;
 let objects = [];    
   
 getPostgresVersion();
@@ -562,7 +566,7 @@ ws.on("close", (data) => {
 
 
 
-    module.exports = { broadcast };
+    module.exports = { users, broadcast };
 
 
 //Start Server    
