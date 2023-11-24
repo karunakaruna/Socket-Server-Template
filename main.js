@@ -338,7 +338,10 @@ ws.on("message", (data) => {
         } else if (currData.type === 'init') {
             console.log('welcome new user!')
             sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
-
+        } else if (currData.type === 'reinit'){
+            //User is logged in and needs their userID reinitialized
+            ws.send(JSON.stringify({ type: 'assignUserID', userID: ws.userID }));
+            
             
 
         //Bookmark

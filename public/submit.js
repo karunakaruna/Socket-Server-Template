@@ -1,4 +1,5 @@
 // submit.js
+import { wsc } from "./scene";
 
 async function submitForm() {
     const form = document.getElementById('loginForm');
@@ -27,6 +28,7 @@ async function submitForm() {
             console.log('form submitted');
             console.log(message.updateModal);
             updateModalContent(message.updateModal);
+            wsc.send(JSON.stringify({type: 'reinit'}));
         }
     } catch (error) {
         console.error('Error submitting form:', error);

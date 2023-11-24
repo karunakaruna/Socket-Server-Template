@@ -20,6 +20,8 @@ body {
     text-align: center;
     z-index: 100;
     display: block;
+    pointer-events: none; /* Disable mouse interactions */
+    user-select: none; /* Disable text highlighting */
   }
   #info a {
     color: #75ddc1;
