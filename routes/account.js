@@ -160,15 +160,15 @@ router.post('/register', limiter, async (req, res) => {
 //Logout
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
-      if (err) { return next(err); }
-      const users = req.app.get('users');
-      if (users[req.user.publicUserID]) {
-        updateOnlineTime(req.user.publicUserID, users[req.user.publicUserID].count);
-        delete users[req.user.publicUserID];
-    }
-
-
-      res.json({ message: 'Logged out successfully', updateModal: '/modals/home' });
+        if (err) { return next(err); }
+        const users = req.app.get('users');
+        if (users[req.user.publicUserID]) {
+            updateOnlineTime(req.user.publicUserID, users[req.user.publicUserID].count);
+            delete users[req.user.publicUserID];
+        } else {
+            console.log('User not logged in');
+        }
+        res.json({ message: 'Logged out successfully', updateModal: '/modals/home' });
     });
 });
 
