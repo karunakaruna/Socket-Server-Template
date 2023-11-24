@@ -50,6 +50,12 @@ router.post('/login', limiter, function(req, res, next) {
                 const users = req.app.get('users');
                 console.log('users length:', Object.keys(users).length); // Log the length of users
                 console.log('users:', users);
+
+                const onlineTime = await getOnlineTime(publicUserID);
+                if (users[publicUserID]) {
+                    users[publicUserID].count = onlineTime || 0;
+                }
+
                 return res.send(jsonMsg);
             } catch (error) {
                 console.error("Error fetching publicUserID:", error);
@@ -153,7 +159,7 @@ router.post('/register', limiter, async (req, res) => {
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
       if (err) { return next(err); }
-
+      const users = req.app.get('users');
       if (users[req.user.publicUserID]) {
         updateOnlineTime(req.user.publicUserID, users[req.user.publicUserID].count);
         delete users[req.user.publicUserID];
