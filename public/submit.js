@@ -1,5 +1,4 @@
 // submit.js
-import { wsc } from "./scene";
 
 async function submitForm() {
     const form = document.getElementById('loginForm');
