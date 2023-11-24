@@ -52,7 +52,9 @@ router.post('/login', limiter, function(req, res, next) {
                 console.log('users:', users);
 
                 const onlineTime = await getOnlineTime(publicUserID);
+                console.log('Stored onlineTime:', onlineTime);
                 if (users[publicUserID]) {
+                    console.log('User already logged in');
                     users[publicUserID].count = onlineTime || 0;
                 }
 
