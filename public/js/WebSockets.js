@@ -117,6 +117,8 @@ export class WebSocketConnection {
                 console.log(`Assigned userID: ${this.myUserID}`);
                 document.getElementById('username').textContent = this.myUserID;
                 console.log('Assigned UserID:',this. myUserID);
+                document.getElementById('onlineCount').textContent = message.count;
+
                 addUserToList(this.myUserID, true);
                 userSphere.userData.userID = this.myUserID;
             }
