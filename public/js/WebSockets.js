@@ -139,11 +139,11 @@ export class WebSocketConnection {
                 document.getElementById('username').textContent = publicUserID;
                 document.getElementById('onlineCount').textContent = onlineTime;
                 
-                this.wsSend(JSON.stringify({
+                this.wsSend({
                      type: 'remove',
                      value: oldID,
                      new: publicUserID
-                     }));
+                     });
             }
 
 
