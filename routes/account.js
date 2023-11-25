@@ -199,6 +199,7 @@ router.get("/logout", function(req, res, next){
             console.log('User not logged in');
         }
         res.json({ message: 'Logged out successfully', updateModal: '/modals/home' });
+        res.redirect('/');
     });
 });
 

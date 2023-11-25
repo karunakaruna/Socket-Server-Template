@@ -196,13 +196,9 @@ wss.on("connection", function (ws, req) {
 
 
     // Parse the cookies from the request
-    console.log(req.headers.cookie);
-    console.log( '>>Session:' + req.session);
-    console.log( '>>SessionID:' + req.sessionID);
-
-
-
-
+    // console.log(req.headers.cookie);
+    // console.log( '>>Session:' + req.session);
+    // console.log( '>>SessionID:' + req.sessionID);
     const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
 
     // Retrieve the session ID from the parsed cookies
