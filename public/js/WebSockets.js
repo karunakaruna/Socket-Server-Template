@@ -220,6 +220,30 @@ export class WebSocketConnection {
         this.ws.send(JSON.stringify(message));
     }
 
+// ...
+
+
+    getUsers() {
+        return this.users;
+    }
+
+    removeUser(userID) {
+        const index = this.users.findIndex(user => user.userID === userID);
+        if (index !== -1) {
+            this.users.splice(index, 1);
+            removeUserFromList(userID); // Assuming you have a function to remove the user from the list
+        }
+    }
+
+    addUser(userID) {
+        const userExists = this.users.some(user => user.userID === userID);
+        if (!userExists) {
+            this.users.push({ userID }); // Assuming you want to add the user to the list with the userID property
+            addUserToList(userID); // Assuming you have a function to add the user to the list
+        }
+    }
+
+
     createSphereAtPosition(position, userID, level) {
         const geometry = new THREE.SphereGeometry(0.1, 32, 32);
         const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
