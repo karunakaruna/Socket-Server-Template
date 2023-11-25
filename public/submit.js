@@ -26,6 +26,8 @@ async function submitForm() {
             console.log('form submitted');
             console.log(message.updateModal);
             updateModalContent(message.updateModal);
+
+            //Get the new PublicUserID and update the user list
             publicUserID = message.publicUserID;
             previousID = document.getElementById('username').textContent
             document.getElementById('username').textContent = publicUserID;
@@ -33,6 +35,8 @@ async function submitForm() {
             removeUserFromList(previousID);
             addUserToList(publicUserID, true);
             prioritizeGreenUser();
+
+            
         }
     } catch (error) {
         console.error('Error submitting form:', error);

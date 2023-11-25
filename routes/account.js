@@ -46,10 +46,14 @@ router.post('/login', limiter, function(req, res, next) {
                     updateModal: '/users/dashboard',
                     publicUserID: publicUserID // Send publicUserID to the client
                 });
-
+                //Get The Users + Websocket
                 const users = req.app.get('users');
+                const wss = req.app.get('wss');
+
+
                 console.log('users length:', Object.keys(users).length); // Log the length of users
                 console.log('users:', users);
+
 
                 const onlineTime = await getOnlineTime(publicUserID);
                 console.log('Stored onlineTime:', onlineTime);
@@ -57,6 +61,23 @@ router.post('/login', limiter, function(req, res, next) {
                     console.log('User already logged in');
                     users[publicUserID].count = onlineTime || 0;
                 }
+
+
+                wss.clients.forEach((client) => {
+                    // console.log('client:', client);
+                    const userID = client.userID; // Assuming each client has a userId property
+                    console.log('userID:', userID);
+
+                    const message = {
+                        type: 'overlay',
+                        value: 'testing'
+                    };
+
+                    client.send(JSON.stringify(message));
+                });
+
+
+
 
                 return res.send(jsonMsg);
             } catch (error) {
@@ -179,12 +200,7 @@ router.get("/logout", function(req, res, next){
 router.post('/forgot-password', limiter, (req, res) => {
     const { email } = req.body;
     console.log(email);
-    const wss = req.app.get('wss');
-    wss.clients.forEach((client) => {
-        // console.log('client:', client);
-        const userID = client.userID; // Assuming each client has a userId property
-        console.log('userID:', userID);
-    });
+
 
     pool.query(
         `SELECT * FROM users
