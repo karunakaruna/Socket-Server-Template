@@ -212,15 +212,37 @@ app.get('/map', (req, res) => {
 
 
 //Database
-
+app.set('wss', wss);
 let users = {};
-app.set('users', users);
+
 // let users = userlist;
 let objects = [];    
   
 getPostgresVersion();
 
 //Websockets
+
+// ...
+
+// Function to send a message to a specific user
+function sendToUser(userID, message) {
+    // Find the WebSocket connection for the user
+    const userConnection = wss.clients.find((client) => client.userID === userID);
+
+    // Check if the user is connected
+    if (userConnection) {
+        // Send the message to the user
+        userConnection.send(message);
+    } else {
+        console.log(`User ${userID} is not connected.`);
+    }
+}
+
+// ...
+
+// Usage example
+
+
 
 wss.on("connection", function (ws, req) {
     sessionParser(req, {}, () => {

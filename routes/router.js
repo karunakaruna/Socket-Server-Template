@@ -4,6 +4,8 @@ const router = express.Router();
 //const websocket = require('../util/websocket');
 const {broadcast} = require('../main.js');
 
+const {wss} = require('../main.js');
+
 //Unity endpoint
 router.post('/unity-endpoint', (req, res) => {
     console.log("Raw body:", req.body);

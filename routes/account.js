@@ -160,6 +160,7 @@ router.post('/register', limiter, async (req, res) => {
 //Logout
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
+        req.session.publicUserID = publicUserID;
         if (err) { return next(err); }
         const users = req.app.get('users');
         console.log('users:', users);
@@ -178,6 +179,11 @@ router.get("/logout", function(req, res, next){
 router.post('/forgot-password', limiter, (req, res) => {
     const { email } = req.body;
     console.log(email);
+    const wss = req.app.get('wss');
+    wss.clients.forEach((client) => {
+        console.log('client:', client);
+    });
+
 
     pool.query(
         `SELECT * FROM users
@@ -190,7 +196,7 @@ router.post('/forgot-password', limiter, (req, res) => {
             //console.log(results.rows);
 
             if (results.rows.length > 0) {
-                console.log('email exits in db to update');
+                console.log('email exists in db to update');
                 const tempsecret = jwtSecret + results.rows[0].password;
                 const payload = {
                     email: results.rows[0].email,
