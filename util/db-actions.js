@@ -97,23 +97,29 @@ async function addDummyProfileRow() {
     }
   }
 
-async function addToFavourites(userID, jsonData) {
-  const client = await pool.connect();
-  try {
-    const updateQuery = `
-      UPDATE users
-      SET favourites = favourites || $1
-      WHERE publicid = $2`;
-    const updateValues = [jsonData, userID];
-    console.log('Executing update query:', updateQuery);
-    console.log('Update values:', updateValues);
-    await client.query(updateQuery, updateValues);
-  } catch (error) {
-    console.error('Error adding to favourites:', error);
-  } finally {
-    client.release();
+  async function addToFavourites(userID, jsonData) {
+    const client = await pool.connect();
+    try {
+      const updateQuery = `
+        UPDATE users
+        SET favourites = COALESCE(favourites, '[]'::jsonb) || $1::jsonb
+        WHERE publicid = $2`;
+      const updateValues = [JSON.stringify(jsonData), userID];
+      console.log('Executing update query:', updateQuery);
+      console.log('Update values:', updateValues);
+      const result = await client.query(updateQuery, updateValues);
+      if (result.rowCount === 0) {
+        console.error('No rows updated, it could be because publicid did not match any records.');
+      } else {
+        console.log(`Updated ${result.rowCount} rows successfully.`);
+      }
+    } catch (error) {
+      console.error('Error adding to favourites:', error);
+    } finally {
+      client.release();
+    }
   }
-}
+  
 
 module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites };
 
