@@ -309,8 +309,10 @@ ws.on("message", (data) => {
         } else if (currData.type === 'reinit'){
             //User is logged in and needs their userID reinitialized
             console.log('reinit user recieved');
-            
-            
+        } else if (currData.type === 'remove'){   
+            const senderUserID = ws.userID;
+            ws.userID = currData.publicUserID;
+            console.log(`Changed userID from ${senderUserID} to ${currData.publicUserID}`);
 
         //Bookmark
         } else if (currData.type === 'bookmark') {
