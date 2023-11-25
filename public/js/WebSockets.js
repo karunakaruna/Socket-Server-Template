@@ -122,6 +122,7 @@ export class WebSocketConnection {
             }
 
             else if (message.type === 'updateUserID') {
+                console.log('updateUserID received')
                 const publicUserID = message.PublicUserID;
                 const onlineTime = message.onlineTime;
 
@@ -132,6 +133,8 @@ export class WebSocketConnection {
                     type: 'remove',
                     value: oldID
                     }));
+                
+                displayOverlayText(message.overlay , 2000, 24);
 
                 removeUserFromList(oldID);
                 addUserToList(publicUserID, publicUserID === this.myUserID);

@@ -28,15 +28,15 @@ async function submitForm() {
             updateModalContent(message.updateModal);
 
             //Get the new PublicUserID and update the user list
-            publicUserID = message.publicUserID;
-            previousID = document.getElementById('username').textContent
-            document.getElementById('username').textContent = publicUserID;
-            console.log('Assigned UserID:',publicUserID);
-            removeUserFromList(previousID);
-            addUserToList(publicUserID, true);
-            prioritizeGreenUser();
+            // publicUserID = message.publicUserID;
+            // previousID = document.getElementById('username').textContent
+            // document.getElementById('username').textContent = publicUserID;
+            // console.log('Assigned UserID:',publicUserID);
+            // removeUserFromList(previousID);
+            // addUserToList(publicUserID, true);
+            // prioritizeGreenUser();
 
-            
+
         }
     } catch (error) {
         console.error('Error submitting form:', error);
