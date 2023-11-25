@@ -70,20 +70,13 @@ router.post('/login', limiter, function(req, res, next) {
                     const userID = client.userID; // Assuming each client has a userId property
                     console.log('userID:', userID);
 
-                    const message = {
-                        type: 'overlay',
-                        value: 'Logged In'
-                    };
-
                     const reinit = {
                         type: 'updateUserID',
-                        value: 'testing',
+                        overlay: 'Logged In',
                         publicUserID: publicUserID,
                         onlineTime: onlineTime
                     };
                         
-
-                    client.send(JSON.stringify(message));
                     client.send(JSON.stringify(reinit));
 
 
