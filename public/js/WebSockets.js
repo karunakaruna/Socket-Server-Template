@@ -123,6 +123,7 @@ export class WebSocketConnection {
 
             else if (message.type === 'updateUserID') {
                 console.log('updateUserID received')
+                console.log(message);
                 const publicUserID = message.PublicUserID;
                 const onlineTime = message.onlineTime;
 
@@ -134,10 +135,10 @@ export class WebSocketConnection {
                 addUserToList(publicUserID, publicUserID === this.myUserID);
                 prioritizeGreenUser();
                 document.getElementById('onlineCount').textContent == onlineTime;
-                this.wssend(JSON.stringify({
-                     type: 'remove',
-                     value: oldID
-                     }));
+                // this.wssend(JSON.stringify({
+                //      type: 'remove',
+                //      value: oldID
+                //      }));
             }
 
 
