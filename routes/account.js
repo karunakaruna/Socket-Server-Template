@@ -41,11 +41,7 @@ router.post('/login', limiter, function(req, res, next) {
 
                 console.log('>>>>>>>>> User publicUserID:', publicUserID); // Add this line to log the publicUserID
 
-                const jsonMsg = JSON.stringify({ 
-                    message: 'thanks', 
-                    updateModal: '/users/dashboard',
-                    publicUserID: publicUserID // Send publicUserID to the client
-                });
+           
                 //Get The Users + Websocket
                 const users = req.app.get('users');
                 const wss = req.app.get('wss');
@@ -62,6 +58,12 @@ router.post('/login', limiter, function(req, res, next) {
                     users[publicUserID].count = onlineTime || 0;
                 }
 
+                const jsonMsg = JSON.stringify({ 
+                    message: 'thanks', 
+                    updateModal: '/users/dashboard',
+                    publicUserID: publicUserID // Send publicUserID to the client
+                });
+
 
                 wss.clients.forEach((client) => {
                     // console.log('client:', client);
@@ -70,10 +72,22 @@ router.post('/login', limiter, function(req, res, next) {
 
                     const message = {
                         type: 'overlay',
-                        value: 'testing'
+                        value: 'Logged In'
                     };
 
+                    const reinit = {
+                        type: 'updateUserID',
+                        value: 'testing',
+                        publicUserID: publicUserID,
+                        onlineTime: onlineTime
+                    };
+                        
+
                     client.send(JSON.stringify(message));
+                    client.send(JSON.stringify(reinit));
+
+
+
                 });
 
 
