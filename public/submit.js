@@ -95,6 +95,9 @@ async function logOut() {
         if (message.updateModal) {
             updateModalContent(message.updateModal);
         }
+        if (message.ok) {
+            location.reload();
+        }
     } catch (error) {
         console.error('Error submitting form:', error);
     }
