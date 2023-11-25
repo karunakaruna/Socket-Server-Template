@@ -311,8 +311,8 @@ ws.on("message", (data) => {
             console.log('reinit user recieved');
         } else if (currData.type === 'remove'){   
             const senderUserID = ws.userID;
-            ws.userID = currData.publicUserID;
-            console.log(`Changed userID from ${senderUserID} to ${currData.publicUserID}`);
+            ws.userID = currData.new;
+            console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
 
         //Bookmark
         } else if (currData.type === 'bookmark') {
