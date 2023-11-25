@@ -128,18 +128,16 @@ export class WebSocketConnection {
 
                 const oldID = this.myUserID;
                 this.myUserID = publicUserID;
-
-               wssend(JSON.stringify({
-                    type: 'remove',
-                    value: oldID
-                    }));
-                
                 displayOverlayText(message.overlay , 2000, 24);
 
                 removeUserFromList(oldID);
                 addUserToList(publicUserID, publicUserID === this.myUserID);
                 prioritizeGreenUser();
                 document.getElementById('onlineCount').textContent == onlineTime;
+                this.wssend(JSON.stringify({
+                     type: 'remove',
+                     value: oldID
+                     }));
             }
 
 
