@@ -212,13 +212,20 @@ app.get('/map', (req, res) => {
 
 
 //Database
-app.set('wss', wss);
+
+
+
 let users = {};
 
 // let users = userlist;
 let objects = [];    
   
 getPostgresVersion();
+
+
+
+app.set('wss', wss);
+app.set('users', users);   
 
 //Websockets
 
