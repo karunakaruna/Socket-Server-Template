@@ -121,6 +121,27 @@ export class WebSocketConnection {
                 userSphere.userData.userID = this.myUserID;
             }
 
+            else if (message.type === 'updateUserID') {
+                const publicUserID = message.PublicUserID;
+                const onlineTime = message.onlineTime;
+
+                const oldID = this.myUserID;
+                this.myUserID = publicUserID;
+
+                this.ws.send(JSON.stringify({
+                    type: 'remove',
+                    value: oldID
+                }));
+
+                removeUserFromList(oldID);
+                addUserToList(publicUserID, publicUserID === this.myUserID);
+                prioritizeGreenUser();
+                document.getElementById('onlineCount').textContent = message.value;
+            }
+
+
+
+
             else if (message.type === 'objects') {
                 // Handle userConnected message
                 console.log(message);
@@ -219,9 +240,6 @@ export class WebSocketConnection {
     wsSend(message) {
         this.ws.send(JSON.stringify(message));
     }
-
-// ...
-
 
     getUsers() {
         return this.users;
