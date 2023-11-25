@@ -76,22 +76,8 @@ app.options('/unity-endpoint', cors(corsOptions));
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 app.set('trust proxy', 1) // trust first proxy
-// app.use(session({
-//     secret: sessionsecret,
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: {
-//         httpOnly: true,
-//         secure: true, // Ensure this is set to true if you're using HTTPS
-//         sameSite: 'lax', // Or 'strict' if you want to enforce same-site policy strictly
-//         // If you have a custom domain like 'example.com', set the domain like this:
-//         // domain: 'herokuapp.com',
-//         // Set a specific expiration time for the cookie (optional)
-//         maxAge: 24 * 60 * 60 * 1000 // 24 hours
-//     }
-// }));
 
-
+//Session
 const sessionParser = session({
     secret: sessionsecret,
     store: store,
@@ -104,14 +90,8 @@ const sessionParser = session({
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   });
-  app.use(sessionParser);
+app.use(sessionParser);
 
-//Working
-// app.use(session({  
-//     secret: sessionsecret, //ENV FILE
-//     resave: false,
-//     saveUninitialized: false
-// }));
 
 app.use(flash());
 app.use(passport.initialize());
@@ -119,24 +99,12 @@ app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
 app.use(cookieParser());
 
-// SEssion Peeker
-// app.use((req, res, next) => {
-//     console.log("Session data:", req.session);
-//     next();
-// });
 
-
-// //session store
-// app.use(function (req, res, next) {
-//     sessionMiddleware(req, res, next);
-//   });
 
 //Routes
 const homerouter = require('./routes/router');
 const accountRouter = require('./routes/account');
 const modalsRouter = require('./routes/modals');
-
-
 //Use Routes
 app.use('/', homerouter);
 app.use('/account', accountRouter);
@@ -149,12 +117,6 @@ app.get('/', (req, res) => {
     console.log('appget Session ID:', req.sessionID);
     res.sendFile(__dirname + '/public/index2.html');
 });
-
-
-//Homepage
-// app.get('/', checkNotAuthenticated, (req, res) => {
-//     res.render('index.ejs');
-//     }); 
 
 //Redirects
 app.get('/users/register'  , checkAuthenticated, (req, res) => {
@@ -172,22 +134,6 @@ app.get('/users/dashboard' , checkNotAuthenticated, (req, res) => {
     }
     
 );
-
-
-
-//Spinning sphere home page
-app.get('/loading-home', (req, res) => {
-    try {
-        const data = {
-            title: 'Modal Title',
-            content: 'Content for the modal'
-        };
-        res.render('loading.ejs', data);
-    } catch (error) {
-        console.error("Error rendering EJS:", error);
-        res.status(500).send('Server Error');
-    }
-});
 
 app.get('/map', (req, res) => {
     // console.log('hi');
@@ -211,25 +157,18 @@ app.get('/map', (req, res) => {
 
 
 
-//Database
-
-
-
-let users = {};
-
-// let users = userlist;
-let objects = [];    
-  
+//Test DB Connection
 getPostgresVersion();
 
 
-
+//Memory Arrays
+let users = {};
+let objects = [];    
+  
+//App Variables
 app.set('wss', wss);
 app.set('users', users);   
 
-//Websockets
-
-// ...
 
 // Function to send a message to a specific user
 function sendToUser(userID, message) {
@@ -245,9 +184,6 @@ function sendToUser(userID, message) {
     }
 }
 
-// ...
-
-// Usage example
 
 
 

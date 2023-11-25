@@ -194,7 +194,7 @@ router.post('/register', limiter, async (req, res) => {
 //Logout
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
-        req.session.publicUserID = publicUserID;
+        const publicUserID = req.session.publicUserID;
         if (err) { return next(err); }
         const users = req.app.get('users');
         console.log('users:', users);
