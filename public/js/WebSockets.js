@@ -136,6 +136,7 @@ export class WebSocketConnection {
                 removeUserFromList(oldID);
                 addUserToList(publicUserID, publicUserID === this.myUserID);
                 prioritizeGreenUser();
+                document.getElementById('username').textContent = publicUserID;
                 document.getElementById('onlineCount').textContent == onlineTime;
                 // this.wssend(JSON.stringify({
                 //      type: 'remove',
