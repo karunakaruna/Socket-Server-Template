@@ -181,7 +181,7 @@ router.post('/forgot-password', limiter, (req, res) => {
     console.log(email);
     const wss = req.app.get('wss');
     wss.clients.forEach((client) => {
-        console.log('client:', client);
+        // console.log('client:', client);
         const userID = client.userID; // Assuming each client has a userId property
         console.log('userID:', userID);
     });
