@@ -70,23 +70,17 @@ router.post('/login', limiter, function(req, res, next) {
                     level: 1,
                 };
 
-
                 wss.clients.forEach((client) => {
                     // console.log('client:', client);
                     const userID = client.userID; // Assuming each client has a userId property
                     console.log('userID:', userID);
-
                     const reinit = {
                         type: 'updateUserID',
                         overlay: 'Logged In',
                         publicUserID: publicUserID,
                         onlineTime: onlineTime
                     };
-                        
                     client.send(JSON.stringify(reinit));
-
-
-
                 });
 
 
