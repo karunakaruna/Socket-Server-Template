@@ -194,13 +194,13 @@ router.post('/register', limiter, async (req, res) => {
 //Logout
 router.get("/logout", function(req, res, next){
     req.logout(function(err) {
-        const publicUserID = req.session.publicUserID;
+        const publicUserID = req.session.publicUserID; // Get the publicID from the session
         if (err) { return next(err); }
         const users = req.app.get('users');
         console.log('users:', users);
-        if (users[req.user.publicUserID]) {
-            updateOnlineTime(req.user.publicUserID, users[req.user.publicUserID].count);
-            delete users[req.user.publicUserID];
+        if (users[publicUserID]) {
+            updateOnlineTime(publicUserID, users[publicUserID].count);
+            delete users[publicUserID];
         } else {
             console.log('User not logged in');
         }
