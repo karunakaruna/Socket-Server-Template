@@ -185,7 +185,7 @@ router.post('/forgot-password', limiter, (req, res) => {
         const userID = client.userID; // Assuming each client has a userId property
         console.log('userID:', userID);
     });
-});
+
     pool.query(
         `SELECT * FROM users
         WHERE email = $1`,
