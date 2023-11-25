@@ -8,7 +8,6 @@ async function submitForm() {
     const data = new URLSearchParams();
     data.append('email', email);
     data.append('password', password);
-
     try {
         const response = await fetch('/account/login', {
             method: 'POST',

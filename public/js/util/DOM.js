@@ -101,6 +101,7 @@ export function DOM(){
     const listUsersButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
         console.log("List Users");
         const users = wsc.getUsers();
+        wsc.getUsersWithUserSpheres();
         console.log(users);
         closeContextMenu();
     });

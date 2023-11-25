@@ -227,6 +227,11 @@ export class WebSocketConnection {
         return this.users;
     }
 
+    getUsersWithUserSpheres() {
+        const usersWithSpheres = this.userSpheres.map(userSphere => userSphere.userID);
+        console.log(usersWithSpheres);
+        return usersWithSpheres;
+    }
     removeUser(userID) {
         const index = this.users.findIndex(user => user.userID === userID);
         if (index !== -1) {
