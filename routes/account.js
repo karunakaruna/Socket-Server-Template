@@ -182,9 +182,10 @@ router.post('/forgot-password', limiter, (req, res) => {
     const wss = req.app.get('wss');
     wss.clients.forEach((client) => {
         console.log('client:', client);
+        const userID = client.userID; // Assuming each client has a userId property
+        console.log('userID:', userID);
     });
-
-
+});
     pool.query(
         `SELECT * FROM users
         WHERE email = $1`,
