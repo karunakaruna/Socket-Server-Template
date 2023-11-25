@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime} = require('./util/db-actions');
+const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites} = require('./util/db-actions');
 
 //server.js (passport logic)
 
@@ -313,12 +313,16 @@ ws.on("message", (data) => {
             const senderUserID = ws.userID;
             ws.userID = currData.new;
             console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
+        
+
+
+
 
         //Bookmark
         } else if (currData.type === 'bookmark') {
             console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
-            addDummyProfileRow();  // call the bookmark function
-
+            const entry = { name: currData.name, URL: currData.URL };
+            addToFavourites(currData.userID, entry);
         //Entrance
         } else if (currData.type === 'entrance') {
             console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
