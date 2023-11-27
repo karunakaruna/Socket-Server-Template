@@ -106,13 +106,13 @@
         </div>
     </div>
 
-
+    <div class="modal-container">
     <div id="myModal" class="login-modal">
         <div class="modal-content" id="modal-content">
             <!-- Rendered EJS content will be inserted here -->
         </div>
     </div>
-
+    </div>
 
     <script>
 
@@ -158,7 +158,18 @@
 
 
                 $(document).ready(function() {
-                $("#myModal").draggable();
+                    $("#myModal").draggable({
+    start: function(event, ui) {
+        $(this).css({
+            transform: 'none', // Remove transform property
+            top: $(this).position().top,
+            left: $(this).position().left
+        });
+    },
+    stop: function(event, ui) {
+        // $(this).css('transform', 'translate(-50%, -50%)'); // Reapply transform
+    }
+});
                 $("#dragbutton").draggable();
 
                 $(document).mouseup(function(e) {

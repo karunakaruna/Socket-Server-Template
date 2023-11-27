@@ -1,5 +1,7 @@
 // submit-module.js
 
+import { wsc } from "./scene.js";
+
 export async function submitForm() {
     const form = document.getElementById('loginForm');
     const email = form.email.value;
@@ -8,7 +10,7 @@ export async function submitForm() {
     const data = new URLSearchParams();
     data.append('email', email);
     data.append('password', password);
-
+    console.log('my user id:', wsc.myUserID);
     try {
         const response = await fetch('/account/login', {
             method: 'POST',
@@ -21,7 +23,7 @@ export async function submitForm() {
         });
         const message = await response.json();
         if (message.error) {
-            const errorList = document.querySelector('ul');
+            const errorList = document.getElementById('errorMessages');
             errorList.innerHTML = `<li>${message.error}</li>`;
         } else if (message.updateModal) {
             console.log('form submitted');
@@ -92,11 +94,13 @@ export async function logOut() {
         if (message.updateModal) {
             updateModalContent(message.updateModal);
         }
+        if (message.ok) {
+            location.reload();
+        }
     } catch (error) {
         console.error('Error submitting form:', error);
     }
 };
-
 
 export async function submitEmail() {
     const form = document.getElementById('loginForm');
