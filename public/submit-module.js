@@ -29,7 +29,7 @@ export async function submitForm() {
             console.log('form submitted');
             console.log(message.updateModal);
             updateModalContent(message.updateModal);
-            publicUserID = message.publicUserID;
+            const publicUserID = message.publicUserID;
             previousID = document.getElementById('username').textContent
             document.getElementById('username').textContent = publicUserID;
             console.log('Assigned UserID:',publicUserID);

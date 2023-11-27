@@ -320,7 +320,7 @@ ws.on("message", (data) => {
 
         //Bookmark
         } else if (currData.type === 'bookmark') {
-            console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.url}`);
+            console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.URL}`);
             const entry = { name: currData.name, URL: currData.URL };
             addToFavourites(currData.userID, entry);
         //Entrance
