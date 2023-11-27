@@ -16,6 +16,10 @@ import { UserSphere } from './js/scene/userSphere';
 import { initGrid } from './js/scene/grid';
 import { Lights } from './js/scene/lights';
 import { Resizer } from './js/util/Resizer';
+
+import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from './submit-module.js';
+
+
 import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
 

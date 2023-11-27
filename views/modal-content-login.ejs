@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css" integrity="sha512-EZLkOqwILORob+p0BXZc+Vm3RgJBOe1Iq/0fiI7r/wJgzOFZMlsqTa29UEl6v6U6gsV4uIpsNZoV32YZqrCRCQ==" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
     <script src="modal.js"></script>
+
+    <!-- <script type="module">
+        import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from './submit-module.js';
+
+
+    </script> -->
+
     <title>Login 2</title>
     
 </head>
@@ -35,7 +42,7 @@
         </div>
         <div>
             <!-- Changed input type to button and added an onclick attribute -->
-            <input type="button" value="Login" onclick="submitForm()" id="loginbutton">
+            <input type="button" value="Login" id="loginButton">
         </div>
     </form>
         <a href="#" onclick="updateModalContent('/modals/register')">Register</a>

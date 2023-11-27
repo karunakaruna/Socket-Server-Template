@@ -12,13 +12,9 @@
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
     <!-- <script type="module" src="submit-module.js"></script> -->
-    <script src="submit.js"></script>
+    <!-- <script src="submit.js"></script> -->
 
-    <!-- <script type="module">
-        import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from 'submit-module.js';
-
-
-    </script> -->
+ 
 
     
     <script src="modal.js"></script>
@@ -31,28 +27,7 @@
         </style>
 
         <script>
-            $(document).ready(function() {
-                $("#myModal").draggable();
-                $("#dragbutton").draggable();
 
-                $(document).mouseup(function(e) {
-                    var container = $("#myModal");
-
-                    if (!container.is(e.target) && container.has(e.target).length === 0) {
-                        container.hide();
-                        $("#minimizeButton").show();
-                    }
-                });
-
-                $("#minimizeButton").click(function() {
-                    $("#myModal").show();
-                    $("#myModal").animate({
-                        opacity: 1,
-
-                    }, 500);
-                    $("#minimizeButton").hide();
-                });
-            });
 
         </script>
 
@@ -63,11 +38,7 @@
         
         <button id="minimizeButton" style="display: none;" position="absolute">👁</button>
 
-        <div id="myModal" class="login-modal">
-            <div class="modal-content" id="modal-content">
-                <!-- Rendered EJS content will be inserted here -->
-            </div>
-        </div>
+
 
         <div id="fullScreenDiv" class="full-screen">
             <!-- Content fetched from the server will be inserted here -->
@@ -75,16 +46,9 @@
  
         <script>
             // Your fetch code goes here:
-            fetch('/modals/home', {
-                    credentials: 'include'  // Include credentials with the request
-                })
-                .then(response => response.text())
-                .then(html => {
-                    $('#modal-content').html(html);
-                    $('#myModal').show();
-                })
-                .catch(error => console.error('Error:', error));
 
+
+            //This is the Map Div - This will be the main .ejs file
                 fetch('/map', {
                     credentials: 'include'  // Include credentials with the request
                 })
@@ -95,18 +59,7 @@
                 .catch(error => console.error('Error:', error));
 
 
-            $(document).ready(function() {
-            console.log('DOM loaded');
-            // Function to stop click event propagation
-            function stopClickPropagation(event) {
-                event.stopPropagation();
-            }
-
-            // Add event listeners to each menu div
-            var modalDivs = $('.login-modal');
-            modalDivs.on('click', stopClickPropagation);
-            console.log('stopping click propagation');
-        });
+            
 
 
         </script>

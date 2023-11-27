@@ -13,7 +13,7 @@
             overflow: hidden;
             cursor: url("https://raw.githubusercontent.com/karunakaruna/memory/main/white-eye2.ico"), auto;
         } */
-        #container {
+        /* #container {
             width: 100%;
             height: 100%;
             position: absolute;
@@ -21,7 +21,7 @@
             left: 0;
             z-index: 0;
 
-        }
+        } */
 
     </style>
     <script src ="../public/js/Menu.js"></script>
@@ -106,6 +106,14 @@
         </div>
     </div>
 
+
+    <div id="myModal" class="login-modal">
+        <div class="modal-content" id="modal-content">
+            <!-- Rendered EJS content will be inserted here -->
+        </div>
+    </div>
+
+
     <script>
 
     </script>
@@ -121,7 +129,9 @@
     <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://unpkg.com/three@0.126.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js" integrity="sha512-WoO4Ih0CDOSLYafy22wZD/mcJ7k0ESLqtQsFa6zFKnEUrbtuGU+GkLtVhgt93xa2qewG5gKEC6CWlN8OaCTSVg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 
     <script src="lib/CSS2DRenderer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
@@ -130,8 +140,51 @@
     <script type="module" src="scene.js"></script>
    <!-- <script src="https://cdn.jsdelivr.net/npm/three-css2drender-types@1.0.3/CSS2DRenderer.min.js"></script> -->
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script type='module' src='../public/submit-module.js' ></script>
+
     <script>
+
+
+            //This is the Modal Div - I need to bring this into the map.ejs
+            fetch('/modals/home', {
+                    credentials: 'include'  // Include credentials with the request
+                })
+                .then(response => response.text())
+                .then(html => {
+                    $('#modal-content').html(html);
+                    $('#myModal').show();
+                })
+                .catch(error => console.error('Error:', error));
+
+
+                $(document).ready(function() {
+                $("#myModal").draggable();
+                $("#dragbutton").draggable();
+
+                $(document).mouseup(function(e) {
+                    var container = $("#myModal");
+
+                    if (!container.is(e.target) && container.has(e.target).length === 0) {
+                        container.hide();
+                        $("#minimizeButton").show();
+                    }
+                });
+
+                $("#minimizeButton").click(function() {
+                    $("#myModal").show();
+                    $("#myModal").animate({
+                        opacity: 1,
+
+                    }, 500);
+                    $("#minimizeButton").hide();
+                });
+            });
+                
+
+
+
+
+
         $(document).ready(function() {
             console.log('DOM loaded');
             // Function to stop click event propagation
@@ -155,6 +208,20 @@
             // Add event listeners to each menu div
             var urlDivs = $('.map-modal');
             urlDivs.on('click', stopClickPropagation);
+            console.log('stopping click propagation');
+        });
+
+
+        $(document).ready(function() {
+            console.log('DOM loaded');
+            // Function to stop click event propagation
+            function stopClickPropagation(event) {
+                event.stopPropagation();
+            }
+
+            // Add event listeners to each menu div
+            var modalDivs = $('.login-modal');
+            modalDivs.on('click', stopClickPropagation);
             console.log('stopping click propagation');
         });
     </script>

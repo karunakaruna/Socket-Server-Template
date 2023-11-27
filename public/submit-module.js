@@ -1,4 +1,4 @@
-// submit.js
+// submit-module.js
 
 export async function submitForm() {
     const form = document.getElementById('loginForm');
@@ -159,3 +159,27 @@ export async function updatePassword() {
         console.error('Error submitting form:', error);
     }
 };
+
+
+const modalElement = document.getElementById('myModal');
+if (modalElement) {
+    modalElement.addEventListener('click', function(event) {
+        if (event.target.id === 'loginButton') {
+            submitForm();
+        } else if (event.target.id === 'registerButton') {
+            submitRegisterForm();
+        } else if (event.target.id === 'resetPasswordButton') {
+            updatePassword();
+        } else if (event.target.id === 'submitEmailButton') {
+            submitEmail();
+        } else if (event.target.id === 'logoutLink') {
+            logOut();
+            // Assuming updateModalContent is a function you have in scope
+            updateModalContent('/modals/home');
+        }
+        // No else clause needed here, as we're only handling specific IDs
+    });
+} else {
+    console.error('Modal element not found');
+}
+
