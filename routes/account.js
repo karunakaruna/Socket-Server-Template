@@ -74,17 +74,16 @@ router.post('/login', limiter, function(req, res, next) {
                     // console.log('client:', client);
                     const userID = client.userID; // Assuming each client has a userId property
                     console.log('userID:', userID);
-                    const reinit = {
-                        type: 'updateUserID',
-                        overlay: 'Logged In',
-                        publicUserID: publicUserID,
-                        onlineTime: onlineTime
-                    };
-                    client.send(JSON.stringify(reinit));
+                    if (userID === req.body.publicUserID) { // Check if the client's userID matches the request body's publicUserID
+                        const reinit = {
+                            type: 'updateUserID',
+                            overlay: 'Logged In',
+                            publicUserID: publicUserID,
+                            onlineTime: onlineTime
+                        };
+                        client.send(JSON.stringify(reinit));
+                    }
                 });
-
-
-
 
                 return res.send(jsonMsg);
             } catch (error) {

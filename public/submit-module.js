@@ -10,6 +10,7 @@ export async function submitForm() {
     const data = new URLSearchParams();
     data.append('email', email);
     data.append('password', password);
+    data.append('publicUserID', wsc.myUserID);
     console.log('my user id:', wsc.myUserID);
     try {
         const response = await fetch('/account/login', {
