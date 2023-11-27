@@ -40,3 +40,10 @@ v.06 - right click - > create
 v.07 
     Todo:
     -Login + User ID Sync
+
+v.08
+    UserID System + Login System Unified
+    Login retrieves usercount from backend
+
+v.09 
+    Attempt refactor of front end - so the submit buttons can access the websockets connection.
