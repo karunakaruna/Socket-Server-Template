@@ -101,7 +101,7 @@ export function DOM(){
     const listUsersButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
         console.log(wsc.myUserID);
         updateModalContent('/modals/list-users');
-        
+        $("#myModal").show()
         // console.log("List Users");
         // const users = wsc.getUsers();
         // wsc.getUsersWithUserSpheres();
