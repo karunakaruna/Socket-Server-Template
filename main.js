@@ -393,7 +393,7 @@ ws.on("close", (data) => {
         }, 50000);
     };
 
-    //Connect and Disconnect
+    //🔗 Connect and Disconnect
     function onUserConnect(userID) {
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
@@ -407,8 +407,8 @@ ws.on("close", (data) => {
             }),
             false
         );
+        console.log(users);
     }
-
 
     async function onUserDisconnect(userID) {
         if (users[userID]) {
@@ -425,7 +425,8 @@ ws.on("close", (data) => {
             type: 'userDisconnected',
             userID: userID
         }), true);
-        console.log(userID);
+        // console.log(userID);
+        console.log(users);
     }
         
 

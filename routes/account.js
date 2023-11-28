@@ -64,12 +64,14 @@ router.post('/login', limiter, function(req, res, next) {
                     publicUserID: publicUserID // Send publicUserID to the client
                 });
 
+                //Initialize the user
                 users[publicUserID] = {
                     position: { x: 0, y: 0, z: 0 }, // default position
                     count: onlineTime || 0, // Initialize count with the last online time from the database
                     level: 1,
                 };
-
+ 
+                // Send the publicUserID to the client
                 wss.clients.forEach((client) => {
                     // console.log('client:', client);
                     const userID = client.userID; // Assuming each client has a userId property
