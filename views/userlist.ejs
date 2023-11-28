@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User List</title>
+    <!-- Add any additional head content here -->
+</head>
+<body>
+    <h1>Users</h1>
+    <ul id="userList">
+        <% for(let userID in users) { %>
+            <% let user = users[userID]; %>
+            <li><%= userID %> - Position: <%= user.position.x %>, <%= user.position.y %>, <%= user.position.z %> | Level: <%= user.level %></li>
+        <% } %>
+    </ul>
+    <!-- Add any additional body content here -->
+</body>
+</html>

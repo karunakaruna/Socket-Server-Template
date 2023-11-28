@@ -188,3 +188,21 @@ if (modalElement) {
     console.error('Modal element not found');
 }
 
+
+
+export function fetchUsers() {
+    fetch('/api/users')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Users:', data.users);
+        })
+        .catch(error => {
+            console.error('Error fetching users:', error);
+        });
+}
+

@@ -154,7 +154,17 @@ app.get('/map', (req, res) => {
 });
 
 
+// //users backend
+// app.get('/api/users', (req, res) => {
+//     // Ensure that the requester is authenticated if necessary
+//     if (!req.isAuthenticated || !req.isAuthenticated()) {
+//         // If the user is not authenticated, you might want to send a 401 Unauthorized status
+//         return res.status(401).json({ error: 'Unauthorized' });
+//     }
 
+//     // Send the users array as a JSON response
+//     res.json({ users: app.get('users') });
+// });
 
 
 //Test DB Connection
@@ -384,7 +394,7 @@ ws.on("close", (data) => {
     const keepServerAlive = () => {
         keepAliveId = setInterval(() => {
             console.log('Sending heartbeat to keep server alive');
-            logIntervalIds();
+            // logIntervalIds();
             wss.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify({ type: 'ping'}));
