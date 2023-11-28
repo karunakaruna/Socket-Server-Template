@@ -232,3 +232,36 @@ body {
   pointer-events: none; /* Allows clicking through to the background if needed */
 }
 
+
+
+.dyn-modal-container {
+  /* Other styles */
+  z-index: 1000; /* Ensure it's on top */
+  pointer-events: auto; /* Enables clicking on the modal */
+  margin: auto; /* Helps with centering in some cases */
+  background-color: saddlebrown;
+}
+
+.custom-login-modal {
+  position: absolute; 
+  z-index: 1000;
+  background-color: #000; /* Black background */
+  color: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  /* Remove backdrop-filter if you don't want any blur effect */
+  /* backdrop-filter: blur(100px); */
+  /* -webkit-backdrop-filter: blur(50px); */
+  opacity: 1; /* Fully opaque */
+
+  /* Centering styles */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* Styles for your modal */
+}
+
+.custom-modal-content {
+  /* Styles for the content area */
+}

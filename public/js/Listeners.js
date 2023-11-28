@@ -159,6 +159,7 @@ export function addClickListener(map) {
 // Define a variable to store the intersection point coordinates
 let intersectionPoint = null;
 let selectedObject = null;
+let screenPoint = null;
 export function addRightClickListener(scene, yourUserSphere) {
     const menu = document.getElementById('yourMenuID'); // Replace 'yourMenuID' with the actual ID of your menu, if it has one
     function isObjectAnotherUserSphere(object) {
@@ -175,7 +176,9 @@ export function addRightClickListener(scene, yourUserSphere) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
+            screenPoint = { x: event.clientX, y: event.clientY };
             raycaster.setFromCamera(mouse, camera);
+        
             const objectsToTest = scene.children.filter(child => !(child instanceof THREE.Sprite));
             const intersects = raycaster.intersectObjects(objectsToTest, true); // Recursively check all children
 
@@ -201,7 +204,7 @@ export function addRightClickListener(scene, yourUserSphere) {
 }
 
 // Export the intersection point variable
-export { intersectionPoint, selectedObject };
+export { intersectionPoint, selectedObject, screenPoint };
 
 
 export { gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV};

@@ -1,10 +1,77 @@
 import { bookmark } from "./Bookmark.js";
 import { wsc, userSphere } from "../../scene.js";
-import { intersectionPoint } from "../Listeners.js";
+import { intersectionPoint, screenPoint } from "../Listeners.js";
 import { displayOverlayText } from "./ShowModal.js";
 import { attachLabelToObjectsAdv } from "../Sprite.js";
 
 
+export class Modal {
+    constructor(name, ejsPath, showInitially = true) {
+        this.name = name;
+        this.modalId = `${name}-modal`;
+        this.createModal();
+        this.updateModalContent(ejsPath);
+        if (showInitially) {
+            this.show();
+        }
+    }
+
+    createModal() {
+        // Create the modal structure
+        const modalHTML = `
+            <div class="dyn-modal-container" id="${this.modalId}" style="z-index: 1000; display: none;">
+                <div class="custom-login-modal">
+                    <div class="modal-header">
+                        <span class="close-button" id="${this.modalId}-close">&times;</span>
+                    </div>
+                    <div class="custom-modal-content" id="${this.modalId}-content">
+                        <!-- EJS content will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append the modal to the body with id=container
+        const mapElement = document.getElementById('container');
+        mapElement.appendChild(document.createRange().createContextualFragment(modalHTML));
+
+        // Add close event listener
+        document.getElementById(`${this.modalId}-close`).addEventListener('click', () => {
+            this.hide();
+        });
+
+        // Make the modal draggable
+        $(`#${this.modalId}`).draggable();
+    }
+
+    updateModalContent(url) {
+        // Fetch new modal content based on provided URL
+        fetch(url, {
+            credentials: 'include'
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById(`${this.modalId}-content`).innerHTML = html;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    show() {
+        const modalElement = document.getElementById(this.modalId);
+        modalElement.style.display = 'block';
+
+        // Ensure that the modal can be positioned using 'left' and 'top'
+        modalElement.style.position = 'fixed'; // or 'absolute', depending on your layout
+
+        // Use the global screenPoint variable for positioning
+        modalElement.style.left = `${screenPoint.x}px`;
+        modalElement.style.top = `${screenPoint.y}px`;
+    }
+
+    hide() {
+        document.getElementById(this.modalId).style.display = 'none';
+    }
+}
 
 
 
@@ -108,9 +175,14 @@ export function DOM(){
         // console.log(users);
         closeContextMenu();
     });
-
+    let userModal;
     const addButton = document.querySelector("#addButton").addEventListener("click", () => {
         console.log("Add");
+        if (!userModal) {
+            const userModal = new Modal('userlist', '/modals/list-users');
+        } else {
+            userModal.show();
+        }
         displayOverlayText('Hello, World!', 3000, 24);
         closeContextMenu();
     });
@@ -165,17 +237,7 @@ function attachSubmitButtonListener() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+// Usage example
 
 
 
