@@ -183,6 +183,13 @@ export function DOM(){
     });
     let userModal;
     const addButton = document.querySelector("#addButton").addEventListener("click", () => {
+        console.log("Add");
+        if (!userModal) {
+            const userModal = new Modal('userlist', '/modals/user-info');
+        } else {
+            userModal.show();
+        }
+
 
         displayOverlayText('Hello, World!', 3000, 24);
         closeContextMenu();

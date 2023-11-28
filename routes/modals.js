@@ -94,4 +94,41 @@ router.get('/list-users', (req, res) => {
 });
 
 
+
+// Endpoint to get information about the current user
+router.get('/user-info', (req, res) => {
+    try {
+        // Get the publicUserID from the session
+        let publicUserID = req.session.publicUserID;
+        const wss = req.app.get('wss');
+        // Check if publicUserID exists
+        if (!publicUserID) {
+            publicUserID = wss.myUserID;
+            return res.send('Please login to access user data');
+        }
+
+        // Retrieve the user information based on the publicUserID
+        const userInfo = getUserInfo(publicUserID); // Replace with your logic to retrieve user information
+
+        // Return the user information as a JSON response
+        res.json(userInfo);
+    } catch (error) {
+        console.error("Error retrieving user information:", error);
+        res.status(500).send('Server Error');
+    }
+});
+
+
+// Function to retrieve user information based on publicUserID
+function getUserInfo(publicUserID) {
+    // Replace with your logic to retrieve user information based on publicUserID
+    // Example implementation:
+    const users = req.app.get('users');
+    const userInfo = users.find(user => user.publicUserID === publicUserID);
+    return userInfo;
+}
+
+
+
+
 module.exports = router;
