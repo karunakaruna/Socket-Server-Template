@@ -193,7 +193,7 @@ if (modalElement) {
 
 
 export function fetchUsers() {
-    fetch('/api/users')
+    fetch('/modals/list-users')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to fetch users');
