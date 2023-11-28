@@ -6,11 +6,14 @@ export async function submitForm() {
     const form = document.getElementById('loginForm');
     const email = form.email.value;
     const password = form.password.value;
+    const previousID = document.getElementById('username').textContent;
+
 
     const data = new URLSearchParams();
     data.append('email', email);
     data.append('password', password);
     data.append('publicUserID', wsc.myUserID);
+    data.append('previousID', previousID);
     console.log('my user id:', wsc.myUserID);
     try {
         const response = await fetch('/account/login', {
@@ -31,7 +34,6 @@ export async function submitForm() {
             console.log(message.updateModal);
             updateModalContent(message.updateModal);
             const publicUserID = message.publicUserID;
-            previousID = document.getElementById('username').textContent
             document.getElementById('username').textContent = publicUserID;
             console.log('Assigned UserID:',publicUserID);
             removeUserFromList(previousID);

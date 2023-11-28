@@ -65,6 +65,10 @@ router.post('/login', limiter, function(req, res, next) {
                 });
 
                 //Initialize the user
+                const previousID = req.body.previousID;
+                
+                delete users[previousID];              
+
                 users[publicUserID] = {
                     position: { x: 0, y: 0, z: 0 }, // default position
                     count: onlineTime || 0, // Initialize count with the last online time from the database
