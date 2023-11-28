@@ -9,6 +9,7 @@ import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './util/Userlist.js';
 import { boundingBox, getLoadedGLTF  } from './Loaders';
 import { displayOverlayText } from './util/ShowModal.js';
+import { fetchUsers } from '../submit-module.js';
 
 // import {userSphere} from './userSphere';
 
@@ -75,6 +76,7 @@ export class WebSocketConnection {
 
             else if (message.type === 'initUsers') {
                 console.log('initUsers');
+                fetchUsers();
                 for (let incomingUserID in message.users) {
                     addUserToList(incomingUserID, incomingUserID === this.myUserID);
 
