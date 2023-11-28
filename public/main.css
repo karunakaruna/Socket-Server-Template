@@ -243,6 +243,7 @@ body {
 }
 
 .custom-login-modal {
+  width: 500px;
   position: absolute; 
   z-index: 1000;
   background-color: #000; /* Black background */
