@@ -243,7 +243,9 @@ body {
 }
 
 .custom-login-modal {
-  width: 500px;
+  min-width: 500px;
+  max-width: 50%;
+  box-sizing: border-box;
   position: absolute; 
   z-index: 1000;
   background-color: #000; /* Black background */
@@ -265,4 +267,19 @@ body {
 
 .custom-modal-content {
   /* Styles for the content area */
+}
+
+.custom-login-modal .modal-header {
+  position: relative; /* Needed for absolute positioning of children */
+  /* Other styles... */
+}
+
+.custom-login-modal .close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 24px; /* Adjust the size as needed */
+  cursor: pointer; /* Changes the cursor on hover */
+  padding: 5px; /* Makes it easier to click */
+  /* Other styles like color, etc. */
 }

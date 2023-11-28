@@ -166,9 +166,15 @@ export function DOM(){
     
 
     const listUsersButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
-        console.log(wsc.myUserID);
-        updateModalContent('/modals/list-users');
-        $("#myModal").show()
+        console.log("Add");
+        if (!userModal) {
+            const userModal = new Modal('userlist', '/modals/list-users');
+        } else {
+            userModal.show();
+        }
+        // console.log(wsc.myUserID);
+        // updateModalContent('/modals/list-users');
+        // $("#myModal").show()
         // console.log("List Users");
         // const users = wsc.getUsers();
         // wsc.getUsersWithUserSpheres();
@@ -177,12 +183,7 @@ export function DOM(){
     });
     let userModal;
     const addButton = document.querySelector("#addButton").addEventListener("click", () => {
-        console.log("Add");
-        if (!userModal) {
-            const userModal = new Modal('userlist', '/modals/list-users');
-        } else {
-            userModal.show();
-        }
+
         displayOverlayText('Hello, World!', 3000, 24);
         closeContextMenu();
     });
