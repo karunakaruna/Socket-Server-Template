@@ -121,6 +121,66 @@ async function addDummyProfileRow() {
   }
   
 
-module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites };
+
+
+
+  async function updateUserData(userID, onlineTime, level, mana, favourites) {
+    const client = await pool.connect();
+    try {
+      const updateQuery = `
+        UPDATE users
+        SET online_time = $1, level = $2, mana = $3, favourites = $4
+        WHERE publicid = $5`;
+      const updateValues = [onlineTime, level, mana, JSON.stringify(favourites), userID];
+      console.log('Executing update query:', updateQuery);
+      console.log('Update values:', updateValues);
+      await client.query(updateQuery, updateValues);
+    } catch (error) {
+      console.error('Error updating user data:', error);
+    } finally {
+      client.release();
+    }
+  }
+
+  async function getUserData(userID) {
+    const client = await pool.connect();
+    try {
+      const selectQuery = `
+        SELECT online_time, level, mana, favourites
+        FROM users
+        WHERE publicid = $1`;
+      const selectValues = [userID];
+      console.log('Executing select query:', selectQuery);
+      console.log('Select values:', selectValues);
+      const selectResult = await client.query(selectQuery, selectValues);
+      if (selectResult.rows.length > 0) {
+        const userData = selectResult.rows[0];
+        return {
+          online_time: userData.online_time || 0,
+          level: userData.level || 0,
+          mana: userData.mana || 0,
+          favourites: userData.favourites || [],
+        };
+      } else {
+        return {
+          online_time: 0,
+          level: 0,
+          mana: 0,
+          favourites: [],
+        }; // Default values if no record found
+      }
+    } catch (error) {
+      console.error('Error getting user data:', error);
+      return {
+        online_time: 0,
+        level: 0,
+        mana: 0,
+        favourites: [],
+      }; // Default values in case of error
+    } finally {
+      client.release();
+    }} 
+
+module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites, updateUserData, getUserData };
 
   

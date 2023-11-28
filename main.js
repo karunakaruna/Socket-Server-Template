@@ -337,7 +337,7 @@ ws.on("message", (data) => {
         } else if (currData.type === 'bookmark') {
             console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.URL}`);
             const entry = { name: currData.name, URL: currData.URL }; //Parse the data into an object
-            addToFavourites(currData.userID, entry); //Calls a database entry
+            addToFavourites(ws.userID, entry); //Calls a database entry
 
         //🚪 Entrance - fired when someone enters a location
         } else if (currData.type === 'entrance') {
