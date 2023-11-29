@@ -506,10 +506,11 @@ ws.on("close", (data) => {
         for (let level = 50; level > 0; level--) {
             if (onlineTime >= levelThresholds[level]) {
                 user.level = level;
+                sendToUser(userID, { type: "overlay", value: 'Level Up!' });
                 break;
             }
         }
-        sendToUser(userID, { type: "overlay", value: 'Level Up!' });
+        
         broadcast(
             null,
             JSON.stringify({
