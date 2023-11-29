@@ -498,7 +498,7 @@ ws.on("close", (data) => {
             }
         });
     };
-    
+
     function updateUserLevel(userID) {
         const user = users[userID];
         const onlineTime = user.count; // Assume onlineTime is in seconds
@@ -509,6 +509,7 @@ ws.on("close", (data) => {
                 break;
             }
         }
+        sendToUser(userID, { type: "overlay", value: 'Level Up!' });
         broadcast(
             null,
             JSON.stringify({
