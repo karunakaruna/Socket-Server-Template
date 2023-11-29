@@ -119,7 +119,7 @@ router.post('/user-info', (req, res) => {
             // Handle case where user info is not found
             return res.status(404).json({ error: 'User information not found' });
         }
-        print('userInfo:', user);
+        console.log('userInfo:', user);
         // Send the user information as JSON response
         res.render('user.ejs', user);
   
