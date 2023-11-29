@@ -101,17 +101,29 @@ router.get('/user-info', (req, res) => {
         // Get the publicUserID from the session
         let publicUserID = req.session.publicUserID;
         const wss = req.app.get('wss');
+        const users = req.app.get('users');
+        console.log('users:' + users);
         // Check if publicUserID exists
         if (!publicUserID) {
             publicUserID = wss.myUserID;
-            return res.send('Please login to access user data');
+            // return res.send('Please login to access user data')
+            return publicUserID;
+        }
+        console.log('publicUserID:' + publicUserID);
+
+        // Function to retrieve user information based on publicUserID
+        function getUserInfo(publicUserID) {
+            // Replace with your logic to retrieve user information based on publicUserID
+            // Example implementation:
+            const userInfo = users.find(user => user.publicUserID === publicUserID);
+            return userInfo;
         }
 
         // Retrieve the user information based on the publicUserID
-        const userInfo = getUserInfo(publicUserID); // Replace with your logic to retrieve user information
-
-        // Return the user information as a JSON response
+        const userInfo = getUserInfo(publicUserID);
         res.json(userInfo);
+        return userInfo;
+  
     } catch (error) {
         console.error("Error retrieving user information:", error);
         res.status(500).send('Server Error');
@@ -119,14 +131,7 @@ router.get('/user-info', (req, res) => {
 });
 
 
-// Function to retrieve user information based on publicUserID
-function getUserInfo(publicUserID) {
-    // Replace with your logic to retrieve user information based on publicUserID
-    // Example implementation:
-    const users = req.app.get('users');
-    const userInfo = users.find(user => user.publicUserID === publicUserID);
-    return userInfo;
-}
+
 
 
 
