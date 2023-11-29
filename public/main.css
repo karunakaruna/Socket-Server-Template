@@ -123,6 +123,16 @@ body {
 }
 
 
+.user-info {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  line-height: 1.6;
+
+}
+
+
 .contextMenu {
   display: none;
   position: absolute;
