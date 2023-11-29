@@ -12,7 +12,7 @@ require("dotenv").config();
 const jwtSecret =  process.env.JWT_SECRET; 
 const { v4: uuidv4 } = require('uuid');
 
-const { getOnlineTime,updateOnlineTime } = require('../util/db-actions.js');
+const { getOnlineTime,updateOnlineTime, getUserData } = require('../util/db-actions.js');
 
 
 // const { users, getUsers } = require('../users.js');
@@ -58,6 +58,22 @@ router.post('/login', limiter, function(req, res, next) {
                     users[publicUserID].count = onlineTime || 0;
                 }
 
+                const userData = await getUserData(publicUserID);
+                users[publicUserID] = {
+                    position: { x: 0, y: 0, z: 0 }, // default position
+                    name: userData.name || 'Guest', // Initialize name with the name from the database
+                    position: { x: 0, y: 0, z: 0 }, // default position
+                    count: userData.online_time || 0, // Initialize count with the online time from the database
+                    level: userData.level || '1',
+                    favourites: userData.favourites || [],
+                    mana: userData.mana || 0,
+
+                };
+                
+
+
+
+
                 const jsonMsg = JSON.stringify({ 
                     message: 'thanks', 
                     updateModal: '/users/dashboard',
@@ -69,11 +85,12 @@ router.post('/login', limiter, function(req, res, next) {
                 
                 delete users[previousID];              
 
-                users[publicUserID] = {
-                    position: { x: 0, y: 0, z: 0 }, // default position
-                    count: onlineTime || 0, // Initialize count with the last online time from the database
-                    level: 1,
-                };
+                //previous update users code
+                // users[publicUserID] = {
+                //     position: { x: 0, y: 0, z: 0 }, // default position
+                //     count: onlineTime || 0, // Initialize count with the last online time from the database
+                //     level: 1,
+                // };
  
                 // Send the publicUserID to the client
                 wss.clients.forEach((client) => {

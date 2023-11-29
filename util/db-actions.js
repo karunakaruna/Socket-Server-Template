@@ -146,7 +146,7 @@ async function addDummyProfileRow() {
     const client = await pool.connect();
     try {
       const selectQuery = `
-        SELECT online_time, level, mana, favourites
+        SELECT online_time, level, mana, favourites, name
         FROM users
         WHERE publicid = $1`;
       const selectValues = [userID];
@@ -156,31 +156,37 @@ async function addDummyProfileRow() {
       if (selectResult.rows.length > 0) {
         const userData = selectResult.rows[0];
         return {
+          publicUserID: userID,
           online_time: userData.online_time || 0,
-          level: userData.level || 0,
+          level: userData.level || '1',
           mana: userData.mana || 0,
           favourites: userData.favourites || [],
+          name: userData.name || '',
         };
       } else {
         return {
+          publicUserID: userID,
           online_time: 0,
-          level: 0,
+          level: '1',
           mana: 0,
           favourites: [],
+          name: '',
         }; // Default values if no record found
       }
     } catch (error) {
       console.error('Error getting user data:', error);
       return {
+        publicUserID: userID,
         online_time: 0,
-        level: 0,
+        level: '1',
         mana: 0,
         favourites: [],
+        name: '',
       }; // Default values in case of error
     } finally {
       client.release();
-    }} 
-
+    }
+  }
 module.exports = { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites, updateUserData, getUserData };
 
   
