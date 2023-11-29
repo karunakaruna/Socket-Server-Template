@@ -443,20 +443,25 @@ ws.on("close", (data) => {
         
 
     //Fires when a user 
-    function userLevelsUp(userID){
-        const level = parseInt(users[userID].level) += 1;
+    function userLevelsUp(userID) {
+        // Ensure that level is treated as an integer
+        users[userID].level = parseInt(users[userID].level);
+    
+        // Increment the level
+        users[userID].level += 1;
+    
+        // Use the updated level in your broadcast
         broadcast(
-                    null,
-                    JSON.stringify({
-                        type: "userUpdate",
-                        userID: userID,
-                        level: level,
-                        // users: users,
-                    }),
-                    false
+            null,
+            JSON.stringify({
+                type: "userUpdate",
+                userID: userID,
+                level: users[userID].level,
+            }),
+            false
         );
-
     }
+    
 
 
     //Fires when a 'loc' is recieved
