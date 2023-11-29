@@ -171,66 +171,57 @@ export function DOM(){
             wsc.wsSend(message);
         }
 
-    
-
-    const listUsersButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
-        console.log("Add");
-        if (!userModal) {
-            const userModal = new Modal('userlist', '/modals/list-users');
-        } else {
-            userModal.show();
-        }
-        // console.log(wsc.myUserID);
-        // updateModalContent('/modals/list-users');
-        // $("#myModal").show()
-        // console.log("List Users");
-        // const users = wsc.getUsers();
-        // wsc.getUsersWithUserSpheres();
-        // console.log(users);
-        closeContextMenu();
-    });
-
-
-    //User Info Modal
-    let userModal;
-    const addButton = document.querySelector("#addButton").addEventListener("click", () => {
-        console.log("Add");
-        const thisUser = wsc.myUserID; // Ensure thisUser is the correct user ID
-    
-        console.log(thisUser);
-        fetchUserInfo(thisUser, (data) => {
-            if (!userModal) {
-                userModal = new Modal('userinfo', '/modals/user-info');
-                userModal.updateModalContentWithData(data); // New method to update content
+        let listuserModal = null;
+        const listUserButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
+            console.log("Add");
+            if (!listuserModal) {
+                listuserModal = new Modal('userlist', '/modals/list-users');
             } else {
-                userModal.updateModalContentWithData(data); // Update content before showing
-                userModal.show();
+                listuserModal.show();
             }
+            closeContextMenu();
         });
-    
-        // Other actions...
-    });
-    
-    // fetchUserInfo function with callback to handle response data
-    function fetchUserInfo(thisUser, callback) {
-        const endpoint = '/modals/user-info';
-        const requestData = { user: thisUser };
-    
-        fetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(requestData),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            callback(data); // Invoke the callback with the fetched data
-        })
-        .catch(error => {
-            console.error(error);
+
+        //User Info Modal
+        const addButton = document.querySelector("#addButton").addEventListener("click", () => {
+            console.log("Add");
+            const thisUser = wsc.myUserID; // Ensure thisUser is the correct user ID
+
+            console.log(thisUser);
+            fetchUserInfo(thisUser, (data) => {
+                let userModal = null;
+                if (!userModal) {
+                    userModal = new Modal('userinfo', '/modals/user-info');
+                    userModal.updateModalContentWithData(data); // New method to update content
+                } else {
+                    userModal.updateModalContentWithData(data); // Update content before showing
+                    userModal.show();
+                }
+            });
+
+            // Other actions...
         });
-    }
+
+        // fetchUserInfo function with callback to handle response data
+        function fetchUserInfo(thisUser, callback) {
+            const endpoint = '/modals/user-info';
+            const requestData = { user: thisUser };
+
+            fetch(endpoint, {
+                method: 'POST',
+                body: JSON.stringify(requestData),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                callback(data); // Invoke the callback with the fetched data
+            })
+            .catch(error => {
+                console.error(error);
+            });
+        }
     
 
 

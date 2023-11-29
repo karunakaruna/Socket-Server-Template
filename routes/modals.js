@@ -107,8 +107,6 @@ router.post('/user-info', (req, res) => {
 
         console.log('publicUserID:', publicUserID);
 
-
-
         // Retrieve users from the application context
         const users = req.app.get('users');
         console.log('Users:', users);
@@ -119,7 +117,7 @@ router.post('/user-info', (req, res) => {
         const userInfo = users[publicUserID];
         if (!userInfo) {
             // Handle case where user info is not found
-            return res.status(404).send('User information not found');
+            return res.status(404).json({ error: 'User information not found' });
         }
 
         // Send the user information as JSON response
@@ -127,7 +125,7 @@ router.post('/user-info', (req, res) => {
   
     } catch (error) {
         console.error("Error retrieving user information:", error);
-        res.status(500).send('Server Error');
+        res.status(500).json({ error: 'Server Error' });
     }
 });
 
