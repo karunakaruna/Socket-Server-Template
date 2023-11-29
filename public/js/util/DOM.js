@@ -206,7 +206,7 @@ export function DOM(){
         function fetchUserInfo(thisUser, callback) {
             const endpoint = '/modals/user-info';
             const requestData = { user: thisUser };
-
+            console.log(requestData);
             fetch(endpoint, {
                 method: 'POST',
                 body: JSON.stringify(requestData),

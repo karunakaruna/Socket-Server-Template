@@ -104,7 +104,7 @@ router.post('/user-info', (req, res) => {
             // If no publicUserID is found in the session, use the user from the request body
             publicUserID = req.body.user;
         }
-
+        console.log('body user:', req.body.user);
         console.log('publicUserID:', publicUserID);
 
         // Retrieve users from the application context
