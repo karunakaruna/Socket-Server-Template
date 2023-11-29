@@ -26,26 +26,19 @@
                 y: <%= user.position.y ? user.position.y : 'Not provided' %>, 
                 z: <%= user.position.z ? user.position.z : 'Not provided' %>
             </p>
-            <!-- <p><strong>Favourites:</strong> <%= user.favourites ? user.favourites : 'Not provided' %></p> -->
             <p><strong>Mana:</strong> <%= user.mana ? user.mana : 'Not provided' %></p>
 
-
-
-            <% if (user.favourites && typeof user.favourites === 'object') { %>
+            <% if (user.favourites && user.favourites.length > 0) { %>
                 <p><strong>Favourites:</strong></p>
                 <ul>
-                    <% for (let key in user.favourites) { %>
-                        <% if (user.favourites.hasOwnProperty(key)) { %>
-                            <li><%= key %>: <%= user.favourites[key] %></li>
-                        <% } %>
-                    <% } %>
+                    <% user.favourites.forEach(function(favourite) { %>
+                        <li><%= favourite.name %>: <a href="<%= favourite.URL %>"><%= favourite.URL %></a></li>
+                    <% }); %>
                 </ul>
             <% } else { %>
                 <p><strong>Favourites:</strong> Not provided</p>
             <% } %>
-
-
             <!-- Add more user details as needed -->
-        </div>
+    </div>
 </body>
 </html>
