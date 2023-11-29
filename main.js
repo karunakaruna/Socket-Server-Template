@@ -171,10 +171,12 @@ app.get('/map', (req, res) => {
 getPostgresVersion();
 
 
-//Memory Arrays
+//Memory Objects
 let users = {};
 let objects = [];    
-  
+let keepAliveId;
+
+
 //App Variables
 app.set('wss', wss);
 app.set('users', users);   
