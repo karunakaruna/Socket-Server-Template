@@ -502,16 +502,17 @@ ws.on("close", (data) => {
 
 
 
-// Base value and growth factor
-const baseValue = 10; // 60 seconds
+// Base value and modified growth factor
+const baseValue = 10; // 10 seconds
 const growthFactor = 1.1;
 
-// Calculate thresholds for levels 1 to 50
-const levelThresholds = {};
-for (let level = 1; level <= 50; level++) {
-    levelThresholds[level] = Math.round(baseValue * Math.pow(growthFactor, level - 1));
-}
+// Initialize the first level threshold
+const levelThresholds = {1: baseValue};
 
+// Calculate thresholds for levels 2 to 50 using the new formula
+for (let level = 2; level <= 50; level++) {
+    levelThresholds[level] = levelThresholds[level - 1] + Math.round(baseValue * Math.pow(growthFactor, level - 1));
+}
 // Global game tick function
 const gameTickInterval = 1000; // 1 seconds
 setInterval(() => {
