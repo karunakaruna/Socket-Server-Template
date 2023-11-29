@@ -444,7 +444,7 @@ ws.on("close", (data) => {
 
     //Fires when a user 
     function userLevelsUp(userID){
-        const level = users[userID].level += 1;
+        const level = parseInt(users[userID].level) += 1;
         broadcast(
                     null,
                     JSON.stringify({
