@@ -197,11 +197,11 @@ export function DOM(){
     const addButton = document.querySelector("#addButton").addEventListener("click", () => {
         console.log("Add");
         if (!userInfoModal) {
-            const endpoint = '/modals/user-info'
-            userInfoModal = new Modal('userpage', endpoint);
+            
+            userInfoModal = new Modal('userpage', '/modals/user-info');
         } else {
             userInfoModal.show();
-            userInfoModal.updateModalContent(endpoint);
+            userInfoModal.updateModalContent('/modals/user-info');
         }
         closeContextMenu();
     });
