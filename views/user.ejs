@@ -5,12 +5,19 @@
     <title>User Profile</title>
     <style>
         /* Add any additional styling you need here */
+        .user-info {
+            margin: 20px;
+        }
+
+        .user-info p {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="user-info">
         <h2>User Information</h2>
-        <p><strong>ID:</strong> <%= user.publicUserID %></p>
+        <p><strong>ID:</strong> <%= user.userID %></p>
         <p><strong>Name:</strong> <%= user.name ? user.name : 'Not provided' %></p>
         <p><strong>Email:</strong> <%= user.email ? user.email : 'Not provided' %></p>
         <p><strong>Level:</strong> <%= user.level ? user.level : 'Not provided' %></p>
