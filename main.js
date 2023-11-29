@@ -498,7 +498,29 @@ ws.on("close", (data) => {
             }
         });
     };
-
+    
+    function updateUserLevel(userID) {
+        const user = users[userID];
+        const onlineTime = user.count; // Assume onlineTime is in seconds
+    
+        for (let level = 50; level > 0; level--) {
+            if (onlineTime >= levelThresholds[level]) {
+                user.level = level;
+                break;
+            }
+        }
+        broadcast(
+            null,
+            JSON.stringify({
+                type: "userUpdate",
+                userID: userID,
+                level: user.level,
+            }),
+            false
+        );
+        // Send updated level to user via WebSocket
+        // websocket.send(JSON.stringify({ level: user.level }));
+    }
 
 
 
@@ -529,28 +551,7 @@ setInterval(() => {
     }
 }, gameTickInterval);
 
-function updateUserLevel(userID) {
-    const user = users[userID];
-    const onlineTime = user.count; // Assume onlineTime is in seconds
 
-    for (let level = 50; level > 0; level--) {
-        if (onlineTime >= levelThresholds[level]) {
-            user.level = level;
-            break;
-        }
-    }
-    broadcast(
-        null,
-        JSON.stringify({
-            type: "userUpdate",
-            userID: userID,
-            level: user.level,
-        }),
-        false
-    );
-    // Send updated level to user via WebSocket
-    // websocket.send(JSON.stringify({ level: user.level }));
-}
 
 // Example of updating a user's level
 // Assuming 'user' is an object representing a user with an 'onlineTime' attribute

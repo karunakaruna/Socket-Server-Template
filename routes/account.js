@@ -59,17 +59,10 @@ router.post('/login', limiter, function(req, res, next) {
                 }
 
                 const userData = await getUserData(publicUserID);
-                // let parsedFavourites;
-                // try {
-                //     parsedFavourites = userData.favourites ? JSON.parse(userData.favourites) : [];
-                // } catch (e) {
-                //     console.error('Failed to parse favourites:', e);
-                //     parsedFavourites = []; // Fallback to an empty array in case of error
-                // }
 
 
 
-
+                
                 users[publicUserID] = {
                     ID: userData.publicUserID,
                     position: { x: 0, y: 0, z: 0 }, // default position
