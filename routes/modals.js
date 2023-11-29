@@ -120,8 +120,13 @@ router.post('/user-info', (req, res) => {
             return res.status(404).json({ error: 'User information not found' });
         }
         console.log('userInfo:', user);
+
+        const data = { 
+            user: user
+        };
+
         // Send the user information as JSON response
-        res.render('user.ejs', user);
+        res.render('user.ejs', data);
   
     } catch (error) {
         console.error("Error retrieving user information:", error);

@@ -24,10 +24,14 @@
     <div class="user-info">
         <h2>User Information</h2>
         <p><strong>ID:</strong> <%= user.publicUserID %></p>
-        <p><strong>Name:</strong> <%= user.name %></p>
-        <p><strong>Email:</strong> <%= user.email %></p>
-        <p><strong>Level:</strong> <%= user.level %></p>
-        <p><strong>Position:</strong> x: <%= user.position.x %>, y: <%= user.position.y %>, z: <%= user.position.z %></p>
+        <p><strong>Name:</strong> <%= user.name ? user.name : 'Not provided' %></p>
+        <p><strong>Email:</strong> <%= user.email ? user.email : 'Not provided' %></p>
+        <p><strong>Level:</strong> <%= user.level ? user.level : 'Not provided' %></p>
+        <p><strong>Position:</strong> 
+            x: <%= user.position?.x ? user.position.x : 'Not provided' %>, 
+            y: <%= user.position?.y ? user.position.y : 'Not provided' %>, 
+            z: <%= user.position?.z ? user.position.z : 'Not provided' %>
+        </p>
         <!-- Add more user details as needed -->
     </div>
 </body>
