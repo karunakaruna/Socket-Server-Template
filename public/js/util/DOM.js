@@ -196,6 +196,7 @@ export function DOM(){
         console.log("Add");
         const thisUser = wsc.myUserID; // Ensure thisUser is the correct user ID
     
+        console.log(thisUser);
         fetchUserInfo(thisUser, (data) => {
             if (!userModal) {
                 userModal = new Modal('userinfo', '/modals/user-info');

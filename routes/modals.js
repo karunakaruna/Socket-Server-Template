@@ -112,12 +112,9 @@ router.post('/user-info', (req, res) => {
         console.log('Users:', users);
 
         // Function to retrieve user information based on publicUserID
-        function getUserInfo(publicUserID) {
-            return users.find(user => user.publicUserID === publicUserID);
-        }
 
         // Retrieve the user information
-        const userInfo = getUserInfo(publicUserID);
+        const userInfo = users[publicUserID];
         if (!userInfo) {
             // Handle case where user info is not found
             return res.status(404).send('User information not found');
