@@ -121,7 +121,7 @@ router.post('/user-info', (req, res) => {
         }
 
         // Send the user information as JSON response
-        res.render('user.ejs', JSON.stringify(userInfo) );
+        res.render('user.ejs', userInfo);
   
     } catch (error) {
         console.error("Error retrieving user information:", error);
