@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        /* Add any additional styling you need here */
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .user-info {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .user-info h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="user-info">
+        <h2>User Information</h2>
+        <p><strong>ID:</strong> <%= user.publicUserID %></p>
+        <p><strong>Name:</strong> <%= user.name %></p>
+        <p><strong>Email:</strong> <%= user.email %></p>
+        <p><strong>Level:</strong> <%= user.level %></p>
+        <p><strong>Position:</strong> x: <%= user.position.x %>, y: <%= user.position.y %>, z: <%= user.position.z %></p>
+        <!-- Add more user details as needed -->
+    </div>
+</body>
+</html>
