@@ -17,16 +17,18 @@
 <body>
     <div class="user-info">
         <h2>User Information</h2>
-        <p><strong>ID:</strong> <%= user.userID %></p>
-        <p><strong>Name:</strong> <%= user.name ? user.name : 'Not provided' %></p>
-        <p><strong>Email:</strong> <%= user.email ? user.email : 'Not provided' %></p>
-        <p><strong>Level:</strong> <%= user.level ? user.level : 'Not provided' %></p>
-        <p><strong>Position:</strong> 
-            x: <%= user.position?.x ? user.position.x : 'Not provided' %>, 
-            y: <%= user.position?.y ? user.position.y : 'Not provided' %>, 
-            z: <%= user.position?.z ? user.position.z : 'Not provided' %>
-        </p>
-        <!-- Add more user details as needed -->
-    </div>
+            <p><strong>ID:</strong> <%= users[publicUserID].ID %></p>
+            <p><strong>Name:</strong> <%= users[publicUserID].name ? users[publicUserID].name : 'Not provided' %></p>
+            <p><strong>Level:</strong> <%= users[publicUserID].level ? users[publicUserID].level : 'Not provided' %></p>
+            <p><strong>Position:</strong> 
+                x: <%= users[publicUserID].position.x ? users[publicUserID].position.x : 'Not provided' %>, 
+                y: <%= users[publicUserID].position.y ? users[publicUserID].position.y : 'Not provided' %>, 
+                z: <%= users[publicUserID].position.z ? users[publicUserID].position.z : 'Not provided' %>
+            </p>
+            <p><strong>Count:</strong> <%= users[publicUserID].count ? users[publicUserID].count : 'Not provided' %></p>
+            <p><strong>Favourites:</strong> <%= users[publicUserID].favourites ? users[publicUserID].favourites : 'Not provided' %></p>
+            <p><strong>Mana:</strong> <%= users[publicUserID].mana ? users[publicUserID].mana : 'Not provided' %></p>
+            <!-- Add more user details as needed -->
+        </div>
 </body>
 </html>
