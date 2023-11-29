@@ -45,8 +45,9 @@ export class Modal {
     }
 
     updateModalContent(url) {
-        // Fetch new modal content based on provided URL
+        // Fetch new modal content based on provided URL using a POST request
         fetch(url, {
+            method: 'POST',
             credentials: 'include'
         })
         .then(response => response.text())

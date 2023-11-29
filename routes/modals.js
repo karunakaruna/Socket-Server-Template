@@ -77,7 +77,7 @@ router.get('/home', (req, res) => {
 // Add this route to your existing routes in main.js
 
 // Endpoint to get the current users array
-router.get('/list-users', (req, res) => {
+router.post('/list-users', (req, res) => {
     // Ensure that the requester is authenticated if necessary
     // if (!req.isAuthenticated || !req.isAuthenticated()) {
     //     // If the user is not authenticated, you might want to send a 401 Unauthorized status
@@ -106,6 +106,8 @@ router.post('/user-info', (req, res) => {
         }
 
         console.log('publicUserID:', publicUserID);
+
+
 
         // Retrieve users from the application context
         const users = req.app.get('users');
