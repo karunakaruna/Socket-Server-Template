@@ -65,7 +65,7 @@ router.post('/login', limiter, function(req, res, next) {
                     name: userData.name || 'Guest', // Initialize name with the name from the database
                     position: { x: 0, y: 0, z: 0 }, // default position
                     count: userData.online_time || 0, // Initialize count with the online time from the database
-                    level: userData.level || '1',
+                    level: parseInt(userData.level) || 1,
                     favourites: userData.favourites || [],
                     mana: userData.mana || 0,
 
