@@ -502,15 +502,17 @@ ws.on("close", (data) => {
     function updateUserLevel(userID) {
         const user = users[userID];
         const onlineTime = user.count; // Assume onlineTime is in seconds
-    
+
         for (let level = 50; level > 0; level--) {
             if (onlineTime >= levelThresholds[level]) {
-                user.level = level;
-                sendToUser(userID, { type: "overlay", value: 'Level Up!' });
+                if (user.level !== level) {
+                    user.level = level;
+                    sendToUser(userID, { type: "overlay", value: 'Level Up!' });
+                }
                 break;
             }
         }
-        
+
         broadcast(
             null,
             JSON.stringify({
@@ -523,8 +525,6 @@ ws.on("close", (data) => {
         // Send updated level to user via WebSocket
         // websocket.send(JSON.stringify({ level: user.level }));
     }
-
-
 
 // Base value and modified growth factor
 const baseValue = 10; // 10 seconds
