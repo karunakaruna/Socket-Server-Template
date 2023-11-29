@@ -60,7 +60,7 @@ export class Modal {
         // Method to update modal content with fetched data
         // You need to implement how you want to display this data in your modal
         const contentElement = document.getElementById(`${this.modalId}-content`);
-        contentElement.innerHTML = html;
+        contentElement.innerHTML = data;
     }
 
     show() {
