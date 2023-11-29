@@ -502,29 +502,57 @@ ws.on("close", (data) => {
 
 
 
+// Base value and growth factor
+const baseValue = 10; // 60 seconds
+const growthFactor = 1.1;
+
+// Calculate thresholds for levels 1 to 50
+const levelThresholds = {};
+for (let level = 1; level <= 50; level++) {
+    levelThresholds[level] = Math.round(baseValue * Math.pow(growthFactor, level - 1));
+}
+
 // Global game tick function
-    const gameTickInterval = 10000; // 10 seconds
-    setInterval(() => {
-        for (let userID in users) {
-            if (users.hasOwnProperty(userID)) {
-                users[userID].count += 1;
-                // Broadcast the updated count to all users
-                console.log(users[userID].count);
-                // Send the count to the user
-                sendToUser(userID, { type: "count", value: users[userID].count });
-
-                // Check all users counts, for every 10, level up
-                // && users[userID].level === 1
-                if (users[userID].count >= 3 ) {
-                    userLevelsUp(userID);
-                }
-            }
+const gameTickInterval = 1000; // 1 seconds
+setInterval(() => {
+    for (let userID in users) {
+        if (users.hasOwnProperty(userID)) {
+            users[userID].count += 1;
+            // Broadcast the updated count to all users
+            console.log(users[userID].count);
+            // Send the count to the user
+            sendToUser(userID, { type: "count", value: users[userID].count });
+            updateUserLevel(userID);
+            
         }
-    }, gameTickInterval);
+    }
+}, gameTickInterval);
 
+function updateUserLevel(userID) {
+    const user = users[userID];
+    const onlineTime = user.count; // Assume onlineTime is in seconds
 
+    for (let level = 50; level > 0; level--) {
+        if (onlineTime >= levelThresholds[level]) {
+            user.level = level;
+            break;
+        }
+    }
+    broadcast(
+        null,
+        JSON.stringify({
+            type: "userUpdate",
+            userID: userID,
+            level: user.level,
+        }),
+        false
+    );
+    // Send updated level to user via WebSocket
+    // websocket.send(JSON.stringify({ level: user.level }));
+}
 
-
+// Example of updating a user's level
+// Assuming 'user' is an object representing a user with an 'onlineTime' attribute
 
 
 
