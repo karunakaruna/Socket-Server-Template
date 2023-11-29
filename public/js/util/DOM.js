@@ -56,6 +56,13 @@ export class Modal {
         .catch(error => console.error('Error:', error));
     }
 
+    updateModalContentWithData(data) {
+        // Method to update modal content with fetched data
+        // You need to implement how you want to display this data in your modal
+        const contentElement = document.getElementById(`${this.modalId}-content`);
+        contentElement.innerHTML = html;
+    }
+
     show() {
         const modalElement = document.getElementById(this.modalId);
         modalElement.style.display = 'block';
@@ -181,19 +188,49 @@ export function DOM(){
         // console.log(users);
         closeContextMenu();
     });
+
+
+    //User Info Modal
     let userModal;
     const addButton = document.querySelector("#addButton").addEventListener("click", () => {
         console.log("Add");
-        if (!userModal) {
-            const userModal = new Modal('userlist', '/modals/user-info');
-        } else {
-            userModal.show();
-        }
-
-
-        displayOverlayText('Hello, World!', 3000, 24);
-        closeContextMenu();
+        const thisUser = wsc.myUserID; // Ensure thisUser is the correct user ID
+    
+        fetchUserInfo(thisUser, (data) => {
+            if (!userModal) {
+                userModal = new Modal('userinfo', '/modals/user-info');
+                userModal.updateModalContentWithData(data); // New method to update content
+            } else {
+                userModal.updateModalContentWithData(data); // Update content before showing
+                userModal.show();
+            }
+        });
+    
+        // Other actions...
     });
+    
+    // fetchUserInfo function with callback to handle response data
+    function fetchUserInfo(thisUser, callback) {
+        const endpoint = '/modals/user-info';
+        const requestData = { user: thisUser };
+    
+        fetch(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(requestData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            callback(data); // Invoke the callback with the fetched data
+        })
+        .catch(error => {
+            console.error(error);
+        });
+    }
+    
+
 
 
     const levelButton = document.querySelector("#levelUpButton").addEventListener("click", () => {
@@ -224,9 +261,6 @@ export function DOM(){
         sendIntersectionPoint(intersectionPoint, '♥');
         closeContextMenu();
     });
-
-
-
 
 
 

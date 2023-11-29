@@ -96,41 +96,41 @@ router.get('/list-users', (req, res) => {
 
 
 // Endpoint to get information about the current user
-router.get('/user-info', (req, res) => {
+router.post('/user-info', (req, res) => {
     try {
         // Get the publicUserID from the session
         let publicUserID = req.session.publicUserID;
-        const wss = req.app.get('wss');
-        const users = req.app.get('users');
-        console.log('users:' + users);
-        // Check if publicUserID exists
         if (!publicUserID) {
-            publicUserID = wss.myUserID;
-            // return res.send('Please login to access user data')
-            return publicUserID;
+            // If no publicUserID is found in the session, use the user from the request body
+            publicUserID = req.body.user;
         }
-        console.log('publicUserID:' + publicUserID);
+
+        console.log('publicUserID:', publicUserID);
+
+        // Retrieve users from the application context
+        const users = req.app.get('users');
+        console.log('Users:', users);
 
         // Function to retrieve user information based on publicUserID
         function getUserInfo(publicUserID) {
-            // Replace with your logic to retrieve user information based on publicUserID
-            // Example implementation:
-            const userInfo = users.find(user => user.publicUserID === publicUserID);
-            return userInfo;
+            return users.find(user => user.publicUserID === publicUserID);
         }
 
-        // Retrieve the user information based on the publicUserID
+        // Retrieve the user information
         const userInfo = getUserInfo(publicUserID);
+        if (!userInfo) {
+            // Handle case where user info is not found
+            return res.status(404).send('User information not found');
+        }
+
+        // Send the user information as JSON response
         res.json(userInfo);
-        return userInfo;
   
     } catch (error) {
         console.error("Error retrieving user information:", error);
         res.status(500).send('Server Error');
     }
 });
-
-
 
 
 
