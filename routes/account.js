@@ -59,13 +59,13 @@ router.post('/login', limiter, function(req, res, next) {
                 }
 
                 const userData = await getUserData(publicUserID);
-                let parsedFavourites;
-                try {
-                    parsedFavourites = userData.favourites ? JSON.parse(userData.favourites) : [];
-                } catch (e) {
-                    console.error('Failed to parse favourites:', e);
-                    parsedFavourites = []; // Fallback to an empty array in case of error
-                }
+                // let parsedFavourites;
+                // try {
+                //     parsedFavourites = userData.favourites ? JSON.parse(userData.favourites) : [];
+                // } catch (e) {
+                //     console.error('Failed to parse favourites:', e);
+                //     parsedFavourites = []; // Fallback to an empty array in case of error
+                // }
 
 
 
@@ -77,7 +77,7 @@ router.post('/login', limiter, function(req, res, next) {
                     position: { x: 0, y: 0, z: 0 }, // default position
                     count: userData.online_time || 0, // Initialize count with the online time from the database
                     level: parseInt(userData.level) || 1,
-                    favourites: userData.parsedFavourites || [],
+                    favourites: userData.favourites || [],
                     mana: userData.mana || 0,
 
                 };
