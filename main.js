@@ -509,19 +509,20 @@ ws.on("close", (data) => {
                     user.level = level;
                     sendToUser(userID, { type: "overlay", value: 'Level Up!' });
                 }
+                broadcast(
+                    null,
+                    JSON.stringify({
+                        type: "userUpdate",
+                        userID: userID,
+                        level: user.level,
+                    }),
+                    false
+                );
                 break;
             }
         }
 
-        broadcast(
-            null,
-            JSON.stringify({
-                type: "userUpdate",
-                userID: userID,
-                level: user.level,
-            }),
-            false
-        );
+
         // Send updated level to user via WebSocket
         // websocket.send(JSON.stringify({ level: user.level }));
     }
@@ -538,7 +539,7 @@ for (let level = 2; level <= 50; level++) {
     levelThresholds[level] = levelThresholds[level - 1] + Math.round(baseValue * Math.pow(growthFactor, level - 1));
 }
 // Global game tick function
-const gameTickInterval = 1000; // 1 seconds
+const gameTickInterval = 10000; // 10 seconds
 setInterval(() => {
     for (let userID in users) {
         if (users.hasOwnProperty(userID)) {
