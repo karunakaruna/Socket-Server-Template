@@ -165,31 +165,40 @@ export class WebSocketConnection {
                 console.log(message);
                 const oldID = this.myUserID;
                 const newID = message.publicUserID;
+                const user = message.user;
             
                 // Update the myUserID to the new ID
                 this.myUserID = newID;
             
-                // Update user information with the new ID
+                // Transfer old user data to the new user ID
                 if (this.users[oldID]) {
-                    // Transfer old user data to the new user ID
                     this.users[newID] = {
                         ...this.users[oldID], // Copy all existing user data
-                        ...message.user, // Overwrite with any new data sent with the message
+                        ...user, // Overwrite with any new data sent with the message
                         userID: newID // Ensure the userID is updated
                     };
-            
+                    
                     // Remove the old user data
                     delete this.users[oldID];
-            
-                    // Handle the userSpheres update
-                    if (this.userSpheres[oldID]) {
-                        this.userSpheres[newID] = this.userSpheres[oldID];
-                        delete this.userSpheres[oldID];
-                        // If the userSphere has an update method for userID, call it here
-                        this.userSpheres[newID].updateUserID(newID);
-                    }
                 } else {
                     console.warn(`Old user ID ${oldID} not found. Cannot update to ${newID}.`);
+                }
+            
+                // Update or recreate the sphere associated with the user
+                if (this.userSpheres[oldID]) {
+                    // Remove the old sphere from the scene
+                    this.scene.remove(this.userSpheres[oldID].sphere);
+            
+                    // Create a new sphere for the new userID
+                    let newPosition = new THREE.Vector3(
+                        user.position.x,
+                        user.position.y,
+                        user.position.z
+                    );
+                    this.userSpheres[newID] = this.createSphereAtPosition(newPosition, newID, user.level);
+            
+                    // Remove the old sphere reference
+                    delete this.userSpheres[oldID];
                 }
             
                 // Update UI elements
