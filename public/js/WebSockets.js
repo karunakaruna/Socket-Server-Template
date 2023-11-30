@@ -93,37 +93,39 @@ export class WebSocketConnection {
 
                 //iterate through the user list
                 for (let incomingUserID in message.users) {
-                    
-                        // Your code for iterating through users except the current user goes here
-                        // ...
-                    
 
                         // Check if the user already exists in this.users array
                         if (!this.users[incomingUserID]) {
-                            let userPos = new THREE.Vector3(
-                                message.users[incomingUserID].position.x,
-                                message.users[incomingUserID].position.y,
-                                message.users[incomingUserID].position.z
-                            );
+                                //Identify the users - this is all users including the current user
+                                console.log('incomingUserID:' + incomingUserID);
 
-                            this.users[incomingUserID] = {
-                                userID: incomingUserID,
-                                position: message.users[incomingUserID].position,
-                                name: message.users[incomingUserID].name,
-                                count: message.users[incomingUserID].online_time,
-                                level: message.users[incomingUserID].level,
-                                favourites: message.users[incomingUserID].favourites,
-                                mana: message.users[incomingUserID].mana,
-                            };
+                                //Make a vector3 from the incoming user's position
+                                let userPos = new THREE.Vector3(
+                                    message.users[incomingUserID].position.x,
+                                    message.users[incomingUserID].position.y,
+                                    message.users[incomingUserID].position.z
+                                );
 
-                            if (incomingUserID !== this.myUserID && !this.userSpheres[incomingUserID]) {
-                                addUserToList(incomingUserID, false);
-                                this.userSpheres[incomingUserID] = this.createSphereAtPosition(userPos, incomingUserID, message.users[incomingUserID].level);
+                                //Add the user to the users object
+                                this.users[incomingUserID] = {
+                                    userID: incomingUserID,
+                                    position: message.users[incomingUserID].position,
+                                    name: message.users[incomingUserID].name,
+                                    count: message.users[incomingUserID].online_time,
+                                    level: message.users[incomingUserID].level,
+                                    favourites: message.users[incomingUserID].favourites,
+                                    mana: message.users[incomingUserID].mana,
+                                };
+
+
+                                if (incomingUserID !== this.myUserID && !this.userSpheres[incomingUserID]) {
+                                    addUserToList(incomingUserID, false);
+                                    this.userSpheres[incomingUserID] = this.createSphereAtPosition(userPos, incomingUserID, message.users[incomingUserID].level);
+                                }
                             }
-                        }
-                            else {
+                        else {
                             console.warn(`User ${incomingUserID} has no position data.`);
-                        }
+                            }
 
                     
                 }
@@ -201,8 +203,9 @@ export class WebSocketConnection {
             }
             else if (message.type === 'userDisconnected') {
                 // Remove the sphere of the disconnected user
+                console.log('removing user:' + message.userID);
                 removeUserFromList(message.userID);
-                let userObject = this.users[message.userID];
+                let userObject = this.userSpheres[message.userID];
                 //console.log(message.userID);
                 if (userObject) {
                     this.scene.remove(userObject.sphere);
