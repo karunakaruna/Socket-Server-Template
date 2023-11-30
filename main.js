@@ -242,7 +242,7 @@ wss.on("connection", function (ws, req) {
 
         
         const sourcename = userID.split('-');
-        const uuidname = sourcename[parts.length-1];
+        const uuidname = sourcename[sourcename.length-1];
 
         //Create the user object
         users[userID] = {
@@ -445,7 +445,7 @@ wss.on("connection", function (ws, req) {
 
         // updateOnlineTime(count, '1'); // call the updateOnlineTime function
         clearInterval(users[userID].intervalID);
-        
+
         delete users[userID];
         };       
         broadcast(null, JSON.stringify({
