@@ -223,7 +223,7 @@ export class WebSocketConnection {
                 else if (message.type === 'notifyUserUpdate') {
                     console.log('notifyUserUpdate received');
                     const oldUserID = message.oldUserID;
-                    const newUserID = message.newUserID;
+                    const newUserID = message.updatedUserID;
                     const updatedUserData = message.userData;
 
                     // Remove the old user data
