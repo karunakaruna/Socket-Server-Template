@@ -124,14 +124,17 @@ async function addDummyProfileRow() {
 
 
 
-  async function updateUserData(userID, onlineTime, level, mana, favourites) {
+  async function updateUserData(user) {
     const client = await pool.connect();
     try {
+      // Destructure the user object to get necessary properties
+      const { publicUserID, online_time, level, mana, favourites, name } = user;
+
       const updateQuery = `
         UPDATE users
-        SET online_time = $1, level = $2, mana = $3, favourites = $4
-        WHERE publicid = $5`;
-      const updateValues = [onlineTime, level, mana, JSON.stringify(favourites), userID];
+        SET online_time = $1, level = $2, mana = $3, favourites = $4, name = $5
+        WHERE publicid = $6`;
+      const updateValues = [online_time, level, mana, JSON.stringify(favourites), name, publicUserID];
       console.log('Executing update query:', updateQuery);
       console.log('Update values:', updateValues);
       await client.query(updateQuery, updateValues);
@@ -140,7 +143,8 @@ async function addDummyProfileRow() {
     } finally {
       client.release();
     }
-  }
+}
+
 
   async function getUserData(userID) {
     const client = await pool.connect();

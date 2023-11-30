@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites} = require('./util/db-actions');
+const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites, updateUserData} = require('./util/db-actions');
 
 //server.js (passport logic)
 
@@ -427,7 +427,8 @@ ws.on("close", (data) => {
             let totalTimeOnline = users[userID].count; // Count is the total online time in ticks
             
             // Update online time in the database
-            await updateOnlineTime(userID, totalTimeOnline);
+            // await updateOnlineTime(userID, totalTimeOnline);
+            await updateUserData(users[userID]);
 
         // updateOnlineTime(count, '1'); // call the updateOnlineTime function
         clearInterval(users[userID].intervalID);
