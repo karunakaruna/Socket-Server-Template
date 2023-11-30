@@ -52,6 +52,17 @@ export function attachLabelToObjects(parent, text) {
    // return sprite;
 }
 
+export function updateLabelSpriteText(sprite, newText) {
+    const canvas = sprite.material.map.image;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.font = '30px Arial';
+    context.fillStyle = 'red';
+    context.fillText(newText, 5, 30);
+    sprite.material.map.needsUpdate = true;
+}
+
+
 // export function attachLabelToObjectsAdv(parent, text, offsetx = 0, offsety = 1, offsetz = 0) {
 //     const labelText = text;
 //     const canvas = document.createElement('canvas');

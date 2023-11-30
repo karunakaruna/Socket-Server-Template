@@ -99,6 +99,7 @@ export class WebSocketConnection {
                 console.log('userUpdate');
                 if (message.userID === this.myUserID) {
                     userSphere.setLevel(message.level);
+                    
                 } else {
                     const sphere = this.userSpheres.find(user => user.userID === message.userID);
 

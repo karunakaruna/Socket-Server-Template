@@ -14,7 +14,7 @@ export class UserSphere extends THREE.Object3D {
         this.addCircle();
         parent.add(this.userSphere);
         // this.userSphere.add(this.circle);
-        attachLabelToObjectsAdv(this.getSphere(), this.level, 0, 1, -0.25);
+        this.sprite = attachLabelToObjectsAdv(this.getSphere(), this.level, 0, 1, -0.25);
         this.layers.enable(1);
         this.userSphere.name = 'userSphere';
     }
@@ -67,7 +67,11 @@ export class UserSphere extends THREE.Object3D {
         }
     }
 
+    updateSprite(text){
+        console.log('updating sprite text to: ' + text);
+        updateLabelSpriteText(this.sprite, text)
 
+    };
 
     getLevel() {
         return this.level;
@@ -79,7 +83,7 @@ export class UserSphere extends THREE.Object3D {
 
     setLevel(setto) {
         this.level = setto;
-        console.log(this.level);
+        // console.log(this.level);
         attachLabelToObjectsAdv(this.getSphere(), this.getLevel(), 0, 1, -0.25);
         this.removeCircle();    
         this.addCircle();

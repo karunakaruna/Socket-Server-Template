@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites, updateUserData} = require('./util/db-actions');
+const { addDummyProfileRow, getPostgresVersion, updateOnlineTime, getOnlineTime, addToFavourites, updateUserData, getUserData} = require('./util/db-actions');
 
 //server.js (passport logic)
 
@@ -211,6 +211,8 @@ wss.on("connection", function (ws, req) {
     // Retrieve the session ID from the parsed cookies
     const rawSessionCookie = cookies['connect.sid'] || '';
     const sessionID = rawSessionCookie ? cookieParser.signedCookie(rawSessionCookie, sessionsecret) : null;
+
+    // If there is a session ID cookie
     if (sessionID) {
         // Retrieve the session from the store using the sessionID
         store.get(sessionID, (error, session) => {
@@ -228,16 +230,30 @@ wss.on("connection", function (ws, req) {
         assignUnauthenticatedUserID(ws);
     }
 
+    //🔑 New Function to Generate a UUID for an Authenticated User:
+    function assignUnauthenticatedUserID(ws) {
+        const userID = uuidv4(); // Generate a new UUID for unauthenticated user
+        initializeUser(userID, ws);
+    }
+
     // 👤 Initialize USER
     async function initializeUser(userID, ws) {
-        const currentOnlineTime = await getOnlineTime(userID); // Get the current online time from the database (from db-actions.js)
+        const {publicUserID,online_time,level,mana,favourites,name} = await getUserData(userID); // Get the user data from the database
+
+        
+        const sourcename = userID.split('-');
+        const uuidname = sourcename[parts.length-1];
 
         //Create the user object
         users[userID] = {
             position: { x: 0, y: 0, z: 0 }, // default position
-            count: currentOnlineTime || 0, // Initialize count with the last online time from the database
-            level: 1,
+            count: online_time || 0, // Initialize count with the last online time from the database
+            level: level || 1,
+            mana: mana || 0,
+            favourites: favourites || [],
+            name: name || uuidname,
         };
+        
         // Assign the user ID to the WebSocket object
         ws.userID = userID;
         // Send the assigned user ID to the connected client
@@ -253,11 +269,7 @@ wss.on("connection", function (ws, req) {
 
 
 
-    //🔑 New Function to Generate a UUID for an Authenticated User:
-    function assignUnauthenticatedUserID(ws) {
-        const userID = uuidv4(); // Generate a new UUID for unauthenticated user
-        initializeUser(userID, ws);
-    }
+
 
     //📦 Add object entry to objects array 
     function addObject(point, id, text) {
@@ -302,83 +314,83 @@ wss.on("connection", function (ws, req) {
     }
 
 
-ws.on("message", (data) => {
-    let userID = ws.userID;
-    if (isJSON(data)) {
-        const currData = JSON.parse(data);
+    ws.on("message", (data) => {
+        let userID = ws.userID;
+        if (isJSON(data)) {
+            const currData = JSON.parse(data);
 
-        //Ping
-        if(currData.type === 'ping') {
-            console.log('Received a server heartbeat ping');
+            //Ping
+            if(currData.type === 'ping') {
+                console.log('Received a server heartbeat ping');
 
-        //🎯 Location update
-        } else if(currData.type === 'loc') {
-            onUserPositionUpdate(userID, currData.position);
-            //grab user's level and combine it with the rest of the currData
-            currData.level = users[userID].level;
-            broadcast(ws, currData, false);
+            //🎯 Location update
+            } else if(currData.type === 'loc') {
+                onUserPositionUpdate(userID, currData.position);
+                //grab user's level and combine it with the rest of the currData
+                currData.level = users[userID].level;
+                broadcast(ws, currData, false);
 
-        // 👤 User Sends a init message to the server on the first connect ❌-not used currently
-        } else if (currData.type === 'init') {
-            console.log('welcome new user!')
-            console.log('init user recieved from' + currData.userID);
-            sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
+            // 👤 User Sends a init message to the server on the first connect ❌-not used currently
+            } else if (currData.type === 'init') {
+                console.log('welcome new user!')
+                console.log('init user recieved from' + currData.userID);
+                sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
 
-        //❌-not used currently
-        } else if (currData.type === 'reinit'){
-            //User is logged in and needs their userID reinitialized
-            console.log('reinit user recieved');
+            //❌-not used currently
+            } else if (currData.type === 'reinit'){
+                //User is logged in and needs their userID reinitialized
+                console.log('reinit user recieved');
 
-        //👤 Update the user's ws.userID
-        } else if (currData.type === 'remove'){   
-            const senderUserID = ws.userID;
-            ws.userID = currData.new;
-            console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
-    
-        //📚 Bookmark
-        } else if (currData.type === 'bookmark') {
-            console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.URL}`);
-            const entry = { name: currData.name, URL: currData.URL }; //Parse the data into an object
-            addToFavourites(ws.userID, entry); //Calls a database entry
+            //👤 Update the user's ws.userID
+            } else if (currData.type === 'remove'){   
+                const senderUserID = ws.userID;
+                ws.userID = currData.new;
+                console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
+        
+            //📚 Bookmark
+            } else if (currData.type === 'bookmark') {
+                console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.URL}`);
+                const entry = { name: currData.name, URL: currData.URL }; //Parse the data into an object
+                addToFavourites(ws.userID, entry); //Calls a database entry
 
-        //🚪 Entrance - fired when someone enters a location
-        } else if (currData.type === 'entrance') {
-            console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
-            broadcast(ws, currData, false);
+            //🚪 Entrance - fired when someone enters a location
+            } else if (currData.type === 'entrance') {
+                console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
+                broadcast(ws, currData, false);
 
-        //🌷 Creation - fired when someone rightclick<creates object    
-        }  else if (currData.type === 'create') {
-            console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
-            console.log("Intersection Point:", currData.point);
-            getUserCount(currData.userID, currData);
+            //🌷 Creation - fired when someone rightclick<creates object    
+            }  else if (currData.type === 'create') {
+                console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
+                console.log("Intersection Point:", currData.point);
+                getUserCount(currData.userID, currData);
+            }
+
+            //String
+        } else if(typeof data === 'string') {
+            if(data === 'pong') {
+                console.log('keepAlive');
+                return;
+            }
+        } else {
+            console.error('malformed message', data);
         }
+    });
 
-        //String
-    } else if(typeof data === 'string') {
-        if(data === 'pong') {
-            console.log('keepAlive');
-            return;
+
+    // Disconnect
+    ws.on("close", (data) => {
+        // Retrieve userID from the WebSocket object
+        let userID = ws.userID;
+        console.log("closing connection");
+        console.log('userID:', userID);
+        onUserDisconnect(userID);
+        broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
+
+        if (wss.clients.size === 0) {
+            console.log("last client disconnected, stopping keepAlive interval");
+            clearInterval(keepAliveId);
         }
-    } else {
-        console.error('malformed message', data);
-    }
-});
-
-
-// Disconnect
-ws.on("close", (data) => {
-    // Retrieve userID from the WebSocket object
-    let userID = ws.userID;
-    console.log("closing connection");
-    console.log('userID:', userID);
-    onUserDisconnect(userID);
-    broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
-
-    if (wss.clients.size === 0) {
-        console.log("last client disconnected, stopping keepAlive interval");
-        clearInterval(keepAliveId);
-    }
-});
+    });
 
 });
 
@@ -425,14 +437,15 @@ ws.on("close", (data) => {
 
     async function onUserDisconnect(userID) {
         if (users[userID]) {
-            let totalTimeOnline = users[userID].count; // Count is the total online time in ticks
+            // let totalTimeOnline = users[userID].count; // Count is the total online time in ticks
             
-            // Update online time in the database
+            // // Update online time in the database
             // await updateOnlineTime(userID, totalTimeOnline);
             await updateUserData(users[userID]);
 
         // updateOnlineTime(count, '1'); // call the updateOnlineTime function
         clearInterval(users[userID].intervalID);
+        
         delete users[userID];
         };       
         broadcast(null, JSON.stringify({

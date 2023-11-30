@@ -12,7 +12,7 @@ require("dotenv").config();
 const jwtSecret =  process.env.JWT_SECRET; 
 const { v4: uuidv4 } = require('uuid');
 
-const { getOnlineTime,updateOnlineTime, getUserData } = require('../util/db-actions.js');
+const { getOnlineTime,updateOnlineTime, getUserData, updateUserData } = require('../util/db-actions.js');
 
 
 // const { users, getUsers } = require('../users.js');
@@ -220,7 +220,7 @@ router.get("/logout", function(req, res, next){
         const users = req.app.get('users');
         console.log('users:', users);
         if (users[publicUserID]) {
-            updateOnlineTime(publicUserID, users[publicUserID].count);
+            updateUserData(users[publicUserID]);
             delete users[publicUserID];
         } else {
             console.log('User not logged in');
