@@ -62,8 +62,10 @@ const animate = () => {
 
     // Move Spheres for each user
     for (const userID in wsc.users) {
-        const user = wsc.users[userID];
+        if (userID !== wsc.myUserID) {
+        const user = wsc.userSpheres[userID];
         user.sphere.position.lerp(user.targetPosition, 0.05);
+        }
     }
     renderer.render(scene, camera);
     setBoundingBox();

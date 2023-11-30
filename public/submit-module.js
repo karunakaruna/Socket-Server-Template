@@ -191,20 +191,26 @@ if (modalElement) {
 }
 
 
-
 export function fetchUsers() {
-    fetch('/modals/list-users')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch users');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Users:', data.users);
-        })
-        .catch(error => {
-            console.error('Error fetching users:', error);
-        });
+    fetch('/modals/list-users', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json', // Indicates that the client expects JSON
+            'Content-Type': 'application/json', // Indicates the type of content being sent
+            'X-Requested-With': 'fetch' // Custom header to indicate the fetch request
+        },
+        body: JSON.stringify({ /* your POST body data if needed */ })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to fetch users');
+        }
+        return response.json(); // Assuming the response will be JSON since we set the custom header
+    })
+    .then(data => {
+        console.log('Users:', data.users);
+    })
+    .catch(error => {
+        console.error('Error fetching users:', error);
+    });
 }
-

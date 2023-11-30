@@ -429,6 +429,7 @@ wss.on("connection", function (ws, req) {
             JSON.stringify({
                 type: "initUsers",
                 userID: userID,
+                user: users[userID],
                 users: users,
             }),
             false

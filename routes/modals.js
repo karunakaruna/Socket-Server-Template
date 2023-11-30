@@ -78,19 +78,19 @@ router.get('/home', (req, res) => {
 
 // Endpoint to get the current users array
 router.post('/list-users', (req, res) => {
-    // Ensure that the requester is authenticated if necessary
-    // if (!req.isAuthenticated || !req.isAuthenticated()) {
-    //     // If the user is not authenticated, you might want to send a 401 Unauthorized status
-    //     return res.status(401).json({ error: 'Unauthorized' });
-    // }
-
-    // Send the users array as a JSON response
-    // res.json({ users: req.app.get('users') });
-    // Render the EJS template and pass the users object
     const data = { 
+        ok: true,
         users: req.app.get('users') 
     };
-    res.render('userlist.ejs', data );
+
+    // Check for a custom header or a query parameter to determine the response type
+    if (req.headers['x-requested-with'] === 'fetch') {
+        // Client expects JSON
+        res.json(data);
+    } else {
+        // Default to rendering HTML
+        res.render('userlist.ejs', data);
+    }
 });
 
 

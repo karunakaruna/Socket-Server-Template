@@ -208,59 +208,40 @@ export function DOM(){
 
 
 
-    // //User Info Modal
-    // const addButton = document.querySelector("#addButton").addEventListener("click", () => {
-    //     console.log("Add");
-    //     const thisUser = wsc.myUserID; // Ensure thisUser is the correct user ID
-
-    //     console.log(thisUser);
-    //     fetchUserInfo(thisUser, (data) => {
-    //         let userModal = null;
-    //         if (!userModal) {
-    //             userModal = new Modal('userinfo', '/modals/user-info');
-    //             userModal.updateModalContentWithData(data); // New method to update content
-    //         } else {
-    //             userModal.updateModalContentWithData(data); // Update content before showing
-    //             userModal.show();
-    //         }
-    //     });
-
-    //     // Other actions...
-    // });
-
-    // // fetchUserInfo function with callback to handle response data
-    // function fetchUserInfo(thisUser, callback) {
-    //     const endpoint = '/modals/user-info';
-    //     const requestData = { user: thisUser };
-    //     console.log(requestData);
-    //     fetch(endpoint, {
-    //         method: 'POST',
-    //         body: JSON.stringify(requestData),
-    //         headers: {
-    //             'Content-Type': 'application/json'
-    //         }
-    //     })
-    //     .then(response => response.json())
-    //     .then(data => {
-    //         callback(data); // Invoke the callback with the fetched data
-    //     })
-    //     .catch(error => {
-    //         console.error(error);
-    //     });
-    // }
-
-
-
-
-
-
-
 
     const levelButton = document.querySelector("#levelUpButton").addEventListener("click", () => {
         console.log("Level");
         userSphere.setLevel(userSphere.getLevel()+1);
         
         displayOverlayText('Level Up!', 3000, 24);
+        closeContextMenu();
+    });
+
+
+
+    const wsclist = document.querySelector("#wsclist").addEventListener("click", () => {
+        console.log('wsc.users list:' );
+        console.log(wsc.getUsers());
+        // if (!userInfoModal) {
+            
+        //     userInfoModal = new Modal('wsclist', '/modals/user-info');
+        // } else {
+        //     userInfoModal.show();
+        //     userInfoModal.updateModalContent('/modals/user-info');
+        // }
+        closeContextMenu();
+    });
+
+    const wscspherelist = document.querySelector("#wscspherelist").addEventListener("click", () => {
+        console.log('wsc.userSpheres list:' );
+        console.log(wsc.userSpheres);
+        // if (!userInfoModal) {
+            
+        //     userInfoModal = new Modal('wsclist', '/modals/user-info');
+        // } else {
+        //     userInfoModal.show();
+        //     userInfoModal.updateModalContent('/modals/user-info');
+        // }
         closeContextMenu();
     });
 

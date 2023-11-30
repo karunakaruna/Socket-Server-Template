@@ -43,22 +43,27 @@ export class WebSocketConnection {
             const message = JSON.parse(event.data);
 
             if (message.type === 'loc' && message.position) {
+                // Handle location message
                 const receivedPosition = new THREE.Vector3(
                     message.position.x,
                     message.position.y,
                     message.position.z
                 );
+                //Who's the location from?
                 console.log(message.userID);
                 console.log('Message Level:' + message.level)
                 spawnPingAtPosition(receivedPosition);
 
+                //Does the user already exist?
                 if (!this.users[message.userID]) {
                     // New user, create a sphere for them
-                    console.log(message.userID);
-                    this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID, message.level);
+                    console.log('checking the user list for the userID:'+ message.userID);
+                    console.log('user does not exist');
+                    // this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID, message.level);
                 } else {
+                    console.log('user exists');
                     // Existing user, update their position and level
-                    this.users[message.userID].targetPosition.copy(receivedPosition);
+                    this.userSpheres[message.userID].targetPosition.copy(receivedPosition);
 
                     const sphere = this.userSpheres.find(user => user.userID === message.userID);
                     if (sphere) {
@@ -77,23 +82,50 @@ export class WebSocketConnection {
             else if (message.type === 'initUsers') {
                 console.log('initUsers');
                 fetchUsers();
+
+                //initUsers sends a bunch of useful information:
+                // JSON.stringify({
+                //     type: "initUsers",
+                //     userID: userID,
+                //     user: users[userID],
+                //     users: users,
+                // }),
+
+                //iterate through the user list
                 for (let incomingUserID in message.users) {
-                    addUserToList(incomingUserID, incomingUserID === this.myUserID);
+                    
+                        // Your code for iterating through users except the current user goes here
+                        // ...
+                    
 
-                    if (message.users[incomingUserID].position) {
-                        let userPos = new THREE.Vector3(
-                            message.users[incomingUserID].position.x,
-                            message.users[incomingUserID].position.y,
-                            message.users[incomingUserID].position.z
-                        );
-
-                        // Check if we've already created a sphere for this user
+                        // Check if the user already exists in this.users array
                         if (!this.users[incomingUserID]) {
-                            //this.users[incomingUserID] = this.createSphereAtPosition(userPos, incomingUserID);
+                            let userPos = new THREE.Vector3(
+                                message.users[incomingUserID].position.x,
+                                message.users[incomingUserID].position.y,
+                                message.users[incomingUserID].position.z
+                            );
+
+                            this.users[incomingUserID] = {
+                                userID: incomingUserID,
+                                position: message.users[incomingUserID].position,
+                                name: message.users[incomingUserID].name,
+                                count: message.users[incomingUserID].online_time,
+                                level: message.users[incomingUserID].level,
+                                favourites: message.users[incomingUserID].favourites,
+                                mana: message.users[incomingUserID].mana,
+                            };
+
+                            if (incomingUserID !== this.myUserID && !this.userSpheres[incomingUserID]) {
+                                addUserToList(incomingUserID, false);
+                                this.userSpheres[incomingUserID] = this.createSphereAtPosition(userPos, incomingUserID, message.users[incomingUserID].level);
+                            }
                         }
-                    } else {
-                        console.warn(`User ${incomingUserID} has no position data.`);
-                    }
+                            else {
+                            console.warn(`User ${incomingUserID} has no position data.`);
+                        }
+
+                    
                 }
             } else if (message.type === 'userUpdate') {
                 console.log('userUpdate');
@@ -301,45 +333,7 @@ export class WebSocketConnection {
         };
     };
 
-    createSphereAtPositionbackup(position, userID) {
-        const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-        const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
-        const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
-        const outerSphere = new THREE.Mesh(geometry, trans);
-        const innerSphere = new THREE.Mesh(geometry, material);
-        outerSphere.layers.enable(1); // Add to the raycaster layer
-        outerSphere.position.copy(position);
-        this.scene.add(outerSphere);
-        outerSphere.add(innerSphere);
-        outerSphere.userData.userID = userID;
-        const sprite = attachLabelToObjects(outerSphere, userID);
-        console.log('sphere created');
-        return {
-            sphere: outerSphere,
-            sprite: sprite,
-            targetPosition: position
-        };
-    };
 
-    createSphereAtPosition2(position, userID) {
-        // const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-        // const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
-        // const outerSphere = new THREE.Mesh(geometry, trans);
-
-
-        const outerSphere = new UserSphere(scene, 1);
-        // this.scene.add(outerSphere);
-        outerSphere.layers.enable(1); // Add to the raycaster layer
-        outerSphere.position.copy(position);
-        outerSphere.userData.userID = userID;
-        const sprite = attachLabelToObjects(outerSphere, userID);
-        console.log('sphere created');
-        return {
-            sphere: outerSphere,
-            sprite: sprite,
-            targetPosition: position
-        };
-    };
 
 
     
