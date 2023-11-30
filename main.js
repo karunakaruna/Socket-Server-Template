@@ -370,6 +370,7 @@ ws.on("close", (data) => {
     // Retrieve userID from the WebSocket object
     let userID = ws.userID;
     console.log("closing connection");
+    console.log('userID:', userID);
     onUserDisconnect(userID);
     broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true);
 
