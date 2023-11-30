@@ -161,60 +161,53 @@ export class WebSocketConnection {
             }
 
             else if (message.type === 'updateUserID') {
-                console.log('updateUserID received')
+                console.log('updateUserID received');
                 console.log(message);
-                const publicUserID = message.publicUserID;
-                const onlineTime = message.onlineTime;
-                const user = message.user;
-
                 const oldID = this.myUserID;
-                this.myUserID = publicUserID;
-
-                console.log('oldID:' + oldID);
-                delete this.users[oldID];
-                this.users[publicUserID] = {
-                    userID: publicUserID,
-                    position: user.position,
-                    name: user.name,
-                    count: user.onlineTime,
-                    level: user.level,
-                    favourites: user.favourites,
-                    mana: user.mana,
-                };
-
-                const sphere = this.userSpheres.find(user => user.userID === oldID);
-                if (sphere) {
-                    sphere.userID = publicUserID;
-                    sphere.userData.userID = publicUserID;
-                };
-
-
+                const newID = message.publicUserID;
             
-
-
-
-                this.myUserID = publicUserID;
-                console.log('newID:' + this.myUserID);
-                displayOverlayText(message.overlay , 2000, 24);
-
+                // Update the myUserID to the new ID
+                this.myUserID = newID;
+            
+                // Update user information with the new ID
+                if (this.users[oldID]) {
+                    // Transfer old user data to the new user ID
+                    this.users[newID] = {
+                        ...this.users[oldID], // Copy all existing user data
+                        ...message.user, // Overwrite with any new data sent with the message
+                        userID: newID // Ensure the userID is updated
+                    };
+            
+                    // Remove the old user data
+                    delete this.users[oldID];
+            
+                    // Handle the userSpheres update
+                    if (this.userSpheres[oldID]) {
+                        this.userSpheres[newID] = this.userSpheres[oldID];
+                        delete this.userSpheres[oldID];
+                        // If the userSphere has an update method for userID, call it here
+                        this.userSpheres[newID].updateUserID(newID);
+                    }
+                } else {
+                    console.warn(`Old user ID ${oldID} not found. Cannot update to ${newID}.`);
+                }
+            
+                // Update UI elements
+                document.getElementById('username').textContent = newID;
+                document.getElementById('onlineCount').textContent = message.onlineTime;
+                displayOverlayText(message.overlay, 2000, 24);
+            
+                // Update the user list
                 removeUserFromList(oldID);
-                addUserToList(publicUserID, publicUserID === this.myUserID);
-
-                
-
-
-
-                prioritizeGreenUser();
-                document.getElementById('username').textContent = publicUserID;
-                document.getElementById('onlineCount').textContent = onlineTime;
-                
+                addUserToList(newID, true);
+            
+                // Send a message to the server if necessary to confirm the update
                 this.wsSend({
-                     type: 'remove',
-                     value: oldID,
-                     new: publicUserID
-                     });
+                    type: 'confirmUpdateUserID',
+                    oldID: oldID,
+                    newID: newID
+                });
             }
-
 
 
 

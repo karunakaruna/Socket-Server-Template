@@ -343,9 +343,9 @@ wss.on("connection", function (ws, req) {
                 console.log('reinit user recieved');
 
             //👤 Update the user's ws.userID
-            } else if (currData.type === 'remove'){   
+            } else if (currData.type === 'confirmUpdateUserID'){   
                 const senderUserID = ws.userID;
-                ws.userID = currData.new;
+                ws.userID = currData.newID;
                 console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
         
             //📚 Bookmark
