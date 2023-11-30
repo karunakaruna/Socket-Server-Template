@@ -218,6 +218,39 @@ export class WebSocketConnection {
                 });
             }
 
+            // ... inside the ws.onmessage handler ...
+
+                else if (message.type === 'notifyUserUpdate') {
+                    console.log('notifyUserUpdate received');
+                    const oldUserID = message.oldUserID;
+                    const newUserID = message.newUserID;
+                    const updatedUserData = message.userData;
+
+                    // Remove the old user data
+                    if (this.users[oldUserID]) {
+                        delete this.users[oldUserID];
+                        removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
+                        // Optionally, handle any UI updates or cleanup related to the old user
+                    }
+
+                    // Update or add the new user data
+                    this.users[newUserID] = updatedUserData;
+                    addUserToList(newUserID); // Assuming you have a function to add the user to the list
+
+                    // Update the user's visual representation if it exists
+                    if (this.userSpheres[oldUserID]) {
+                        delete this.userSpheres[oldUserID];
+                        this.userSpheres[newUserID] = this.createSphereAtPosition(updatedUserData.position, newUserID, updatedUserData.level);
+                        // If you need to handle the sphere update differently, you can do it here.
+                        // For instance, you might want to move the sphere to a new position or update its level.
+                    }
+
+                    // Update the user list UI
+                    // updateUIWithUserList(this.users); // Assuming this is your method to update the user list on the UI
+                }
+
+
+
 
 
             else if (message.type === 'objects') {

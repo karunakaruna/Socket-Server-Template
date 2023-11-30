@@ -98,12 +98,9 @@ router.post('/login', limiter, function(req, res, next) {
  
                 // Send the publicUserID to the client
                 wss.clients.forEach((client) => {
-                    // console.log('client:', client);
-                    const userID = client.userID; // Assuming each client has a userId property
-                    console.log('userID:', userID);
-                    if (userID === req.body.publicUserID) {
-                        const users = req.app.get('users');
-                        const thisuser = users[userID];
+                    if (client.userID === req.body.publicUserID) {
+                        // The user who is logging in
+                        const thisuser = users[publicUserID];
                         const reinit = {
                             type: 'updateUserID',
                             overlay: 'Logged In',
@@ -112,6 +109,15 @@ router.post('/login', limiter, function(req, res, next) {
                             user: thisuser,
                         };
                         client.send(JSON.stringify(reinit));
+                    } else {
+                        // Other connected clients
+                        const notifyUpdate = {
+                            type: 'notifyUserUpdate',
+                            oldUserID: previousID,
+                            updatedUserID: publicUserID,
+                            userData: users[publicUserID],
+                        };
+                        client.send(JSON.stringify(notifyUpdate));
                     }
                 });
 
