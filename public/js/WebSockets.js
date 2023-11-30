@@ -165,15 +165,45 @@ export class WebSocketConnection {
                 console.log(message);
                 const publicUserID = message.publicUserID;
                 const onlineTime = message.onlineTime;
+                const user = message.user;
 
                 const oldID = this.myUserID;
+                this.myUserID = publicUserID;
+
                 console.log('oldID:' + oldID);
+                delete this.users[oldID];
+                this.users[publicUserID] = {
+                    userID: publicUserID,
+                    position: user.position,
+                    name: user.name,
+                    count: user.onlineTime,
+                    level: user.level,
+                    favourites: user.favourites,
+                    mana: user.mana,
+                };
+
+                const sphere = this.userSpheres.find(user => user.userID === oldID);
+                if (sphere) {
+                    sphere.userID = publicUserID;
+                    sphere.userData.userID = publicUserID;
+                };
+
+
+            
+
+
+
                 this.myUserID = publicUserID;
                 console.log('newID:' + this.myUserID);
                 displayOverlayText(message.overlay , 2000, 24);
 
                 removeUserFromList(oldID);
                 addUserToList(publicUserID, publicUserID === this.myUserID);
+
+                
+
+
+
                 prioritizeGreenUser();
                 document.getElementById('username').textContent = publicUserID;
                 document.getElementById('onlineCount').textContent = onlineTime;
