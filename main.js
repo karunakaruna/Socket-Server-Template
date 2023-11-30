@@ -246,12 +246,13 @@ wss.on("connection", function (ws, req) {
 
         //Create the user object
         users[userID] = {
+            ID: userID,
             position: { x: 0, y: 0, z: 0 }, // default position
+            name: name || uuidname,
             count: online_time || 0, // Initialize count with the last online time from the database
             level: level || 1,
-            mana: mana || 0,
             favourites: favourites || [],
-            name: name || uuidname,
+            mana: mana || 1,
         };
         
         // Assign the user ID to the WebSocket object
