@@ -539,7 +539,7 @@ for (let level = 2; level <= 50; level++) {
     levelThresholds[level] = levelThresholds[level - 1] + Math.round(baseValue * Math.pow(growthFactor, level - 1));
 }
 // Global game tick function
-const gameTickInterval = 10000; // 10 seconds
+const gameTickInterval = 2000; // 10 seconds
 setInterval(() => {
     for (let userID in users) {
         if (users.hasOwnProperty(userID)) {
