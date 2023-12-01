@@ -37,7 +37,7 @@ export class UserSphere extends THREE.Object3D {
     }
     
     addCircle() {
-        console.log('level: ' + this.level);
+        // console.log('level: ' + this.level);
     
         // If a circle already exists, remove it first
     
@@ -83,7 +83,7 @@ export class UserSphere extends THREE.Object3D {
 
     setUserID(userID){
         this.userID = userID;
-        
+
     }
 
     setLevel(setto) {

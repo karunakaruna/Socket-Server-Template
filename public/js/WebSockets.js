@@ -130,7 +130,7 @@ export class WebSocketConnection {
                     
                 }
             } else if (message.type === 'userUpdate') {
-                console.log('userUpdate');
+                //console.log('userUpdate');
                 if (message.userID === this.myUserID) {
                     userSphere.setLevel(message.level);
                     
@@ -139,7 +139,7 @@ export class WebSocketConnection {
 
                     if (sphere) {
                         sphere.setLevel(message.level);
-                        console.log('sphere found');
+                        //console.log('sphere found');
                     }
                 }
                 // for users in user, use the setLevel method to update the user's level
@@ -225,7 +225,8 @@ export class WebSocketConnection {
                     const oldUserID = message.oldUserID;
                     const newUserID = message.updatedUserID;
                     const updatedUserData = message.userData;
-
+                    console.log('wsc.users:' + this.users);
+                    console.log('wsc.userSpheres:' + this.userSpheres);
                     // Remove the old user data
                     if (this.users[oldUserID]) {
                         delete this.users[oldUserID];
