@@ -81,6 +81,11 @@ export class UserSphere extends THREE.Object3D {
         return this.userSphere;
     }   
 
+    setUserID(userID){
+        this.userID = userID;
+        
+    }
+
     setLevel(setto) {
         this.level = setto;
         // console.log(this.level);

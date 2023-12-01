@@ -239,8 +239,10 @@ export class WebSocketConnection {
 
                     // Update the user's visual representation if it exists
                     if (this.userSpheres[oldUserID]) {
-                        delete this.userSpheres[oldUserID];
-                        this.userSpheres[newUserID] = this.createSphereAtPosition(updatedUserData.position, newUserID, updatedUserData.level);
+                        sphere = this.userSpheres[oldUserID];
+                        sphere.setUserID(newUserID);
+                        // delete this.userSpheres[oldUserID];
+                        // this.userSpheres[newUserID] = this.createSphereAtPosition(updatedUserData.position, newUserID, updatedUserData.level);
                         // If you need to handle the sphere update differently, you can do it here.
                         // For instance, you might want to move the sphere to a new position or update its level.
                     }
