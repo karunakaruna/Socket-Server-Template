@@ -229,6 +229,10 @@ export class WebSocketConnection {
                     console.log(this.users);
                     console.log('wsc.userSpheres:');
                     console.log(this.userSpheres);
+                    console.log('oldeUserID:');
+                    console.log(oldUserID);
+                    console.log('newUserID:');
+                    console.log(newUserID);
                     // Remove the old user data
                     if (this.users[oldUserID]) {
                         delete this.users[oldUserID];
