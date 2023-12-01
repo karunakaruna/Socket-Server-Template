@@ -225,8 +225,10 @@ export class WebSocketConnection {
                     const oldUserID = message.oldUserID;
                     const newUserID = message.updatedUserID;
                     const updatedUserData = message.userData;
-                    console.log('wsc.users:' + this.users);
-                    console.log('wsc.userSpheres:' + this.userSpheres);
+                    console.log('wsc.users:')
+                    console.log(this.users);
+                    console.log('wsc.userSpheres:');
+                    console.log(this.userSpheres);
                     // Remove the old user data
                     if (this.users[oldUserID]) {
                         delete this.users[oldUserID];
