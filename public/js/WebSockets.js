@@ -143,6 +143,7 @@ export class WebSocketConnection {
 
 
                     if (sphere) {
+                        console.log(sphere);
                         sphere.setLevel(message.level);
                         //console.log('sphere found');
                     }
