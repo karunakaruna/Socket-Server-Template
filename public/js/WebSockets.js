@@ -246,7 +246,8 @@ export class WebSocketConnection {
 
                     // Update the user's visual representation if it exists
                     if (this.userSpheres[oldUserID]) {
-                        const sphere = this.userSpheres[oldUserID];
+                        const sphere = this.userSpheres.find(user => user.userID === oldUserID);
+                        console.log('sphere found');
                         sphere.setUserID(newUserID);
                         // delete this.userSpheres[oldUserID];
                         // this.userSpheres[newUserID] = this.createSphereAtPosition(updatedUserData.position, newUserID, updatedUserData.level);
