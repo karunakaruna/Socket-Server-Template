@@ -2,7 +2,7 @@
 
 
 import { addLog } from './util/log.js';
-import { scene, loadedGLTF,  beaconLightModel, userSphere } from '../scene.js';
+import { scene, loadedGLTF,  beaconLightModel, player } from '../scene.js';
 import { UserSphere } from './scene/userSphere.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
@@ -122,6 +122,7 @@ export class WebSocketConnection {
 
 
                                 if (incomingUserID !== this.myUserID && !this.userSpheres[incomingUserID]) {
+                                    console.log('adding user to list');
                                     addUserToList(incomingUserID, false);
                                     this.userSpheres[incomingUserID] = this.createSphereAtPosition(userPos, incomingUserID, message.users[incomingUserID].level);
                                 }
@@ -135,7 +136,7 @@ export class WebSocketConnection {
             } else if (message.type === 'userUpdate') {
                 //console.log('userUpdate');
                 if (message.userID === this.myUserID) {
-                    userSphere.setLevel(message.level);
+                    player.setLevel(message.level);
                     
                 } else {
                     // const sphere = this.userSpheres.find(user => user.userID === message.userID);
@@ -163,7 +164,7 @@ export class WebSocketConnection {
                 document.getElementById('onlineCount').textContent = message.count;
 
                 addUserToList(this.myUserID, true);
-                userSphere.userData.userID = this.myUserID;
+                player.userData.userID = this.myUserID;
             }
 
             else if (message.type === 'updateUserID') {
@@ -396,32 +397,42 @@ export class WebSocketConnection {
 
 
     createSphereAtPosition(position, userID, level) {
-        const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-        const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
-        const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
-        const outerSphere = new THREE.Mesh(geometry, trans);
-        const innerSphere = new UserSphere(outerSphere, level, userID);
-        outerSphere.layers.enable(1); // Add to the raycaster layer
-        innerSphere.layers.enable(1); // Add to the raycaster layer
-        outerSphere.position.copy(position);
-        this.scene.add(outerSphere);
-        outerSphere.add(innerSphere);
-        outerSphere.userData.userID = userID;
-        const sprite = attachLabelToObjects(outerSphere, userID);
+        // const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+        // const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
+        // const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+        // const outerSphere = new THREE.Mesh(geometry, trans);
+        const userSphere = new UserSphere(position, level, userID);
+        // outerSphere.layers.enable(1); // Add to the raycaster layer
+        userSphere.layers.enable(1); // Add to the raycaster layer
+        this.scene.add(userSphere);
+        // outerSphere.add(innerSphere);
+        // outerSphere.userData.userID = userID;
+        // const sprite = attachLabelToObjects(outerSphere, userID);
         console.log('sphere created');
-        this.userSpheres[userID] = {
-            sphere: outerSphere,
-            sprite: sprite,
-            targetPosition: position
-        };
-        return {
-            sphere: outerSphere,
-            sprite: sprite,
-            targetPosition: position
-        };
+        this.userSpheres[userID] = userSphere;
     };
 
 
+
+    
+    // createSphereAtPosition(position, userID, level) {
+    //     const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+    //     const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
+    //     const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+    //     const outerSphere = new THREE.Mesh(geometry, trans);
+    //     const innerSphere = new UserSphere(outerSphere, level, userID);
+    //     outerSphere.layers.enable(1); // Add to the raycaster layer
+    //     innerSphere.layers.enable(1); // Add to the raycaster layer
+    //     outerSphere.position.copy(position);
+    //     this.scene.add(outerSphere);
+    //     outerSphere.add(innerSphere);
+    //     outerSphere.userData.userID = userID;
+    //     const sprite = attachLabelToObjects(outerSphere, userID);
+    //     console.log('sphere created');
+    //     this.userSpheres[userID] = innerSphere;
+        
+
+    // };
 
 
     

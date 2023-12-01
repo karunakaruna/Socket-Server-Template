@@ -25,10 +25,14 @@ import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
 DOM();
 const { camera, renderer, cube } = initCamera(scene);
-const userSphere = new UserSphere(cube, 2);
-const userSphereLevel = userSphere.getLevel();
-userSphere.layers.enable(1); // Add userSphere to specified level
-console.log('userSphereLevel: ' + userSphereLevel);
+console.log('my user ID', wsc.myUserID);
+console.log('my user object', wsc.users[wsc.myUserID]);
+const vec = new THREE.Vector3(0,0,0);
+const player = new UserSphere(vec,2, 'aa', cube);
+scene.add(player);
+const playerlevel = player.getLevel();
+player.layers.enable(1); // Add userSphere to specified level
+console.log('userSphereLevel: ' + playerlevel);
 
 
 const grid = initGrid();
@@ -46,9 +50,9 @@ loadBeaconLightModel(scene);
 addMouseMovementListener(scene);
 addScrollWheelListener();
 addClickListener(scene);
-addRightClickListener(scene,userSphere.getSphere());
+addRightClickListener(scene,player.getSphere());
 
-export {loadedGLTF, pingModel, beaconLightModel, scene, cube, camera, userID, renderer, userSphere};
+export {loadedGLTF, pingModel, beaconLightModel, scene, cube, camera, userID, renderer, player};
 
 //Animation Update Loop
 const animate = () => {
@@ -61,10 +65,11 @@ const animate = () => {
     TWEEN.update();
 
     // Move Spheres for each user
-    for (const userID in wsc.users) {
-        if (userID !== wsc.myUserID) {
-        const user = wsc.userSpheres[userID];
-        user.sphere.position.lerp(user.targetPosition, 0.05);
+    for (const userID in wsc.userSpheres) {
+        const userSphere = wsc.userSpheres[userID];
+        if (userSphere && userSphere.getSphere()) {
+            const targetPosition = userSphere.targetPosition;  // Assuming you have a targetPosition property
+            userSphere.getSphere().position.lerp(targetPosition, 0.05);
         }
     }
     renderer.render(scene, camera);
