@@ -16,7 +16,7 @@ import { fetchUsers } from '../submit-module.js';
 export class WebSocketConnection {
     constructor() {
         this.users = {};
-        this.userSpheres = [];
+        this.userSpheres = {};
         this.myUserID = null;
         this.loadedGLTF = null;
         this.scene = scene;
@@ -240,33 +240,14 @@ export class WebSocketConnection {
             
                 // Update or add the new user data
                 this.users[newUserID] = updatedUserData;
-                if (!this.users[newUserID]) {
-                    addUserToList(newUserID); // Add the user to the list if not already present
-                }
-            
-                // Update or recreate the sphere associated with the user
-                if (this.userSpheres[oldUserID]) {
-                    // Retrieve the existing sphere
-                    const existingSphere = this.userSpheres[oldUserID];
-            
-                    // Update internal userID of the sphere
-                    existingSphere.setUserID(newUserID);
-            
-                    // Remove the old sphere entry
-                    delete this.userSpheres[oldUserID];
-            
-                    // Assign the sphere to the new userID key
-                    this.userSpheres[newUserID] = existingSphere;
-                }
-            
+                addUserToList(newUserID); // Add or update the user in the user list
+
+                // Use the new updateUserID method to handle the userSphere update
+                this.updateUserID(oldUserID, newUserID);
                 // Update the user list UI
                 // updateUIWithUserList(this.users); // Assuming this is your method to update the user list on the UI
             }
             
-
-
-
-
 
             else if (message.type === 'objects') {
                 // Handle userConnected message
@@ -393,6 +374,20 @@ export class WebSocketConnection {
         }
     }
 
+    updateUserID(oldUserID, newUserID) {
+        if (this.userSpheres[oldUserID]) {
+            const userSphereData = this.userSpheres[oldUserID];
+
+            // Update the userID within the userSphere's data if needed
+            // This assumes you have a method in UserSphere to handle the userID change
+            userSphereData.sphere.setUserID(newUserID);
+
+            // Reassign the userSphere data to the new userID
+            this.userSpheres[newUserID] = userSphereData;
+            delete this.userSpheres[oldUserID]; // Remove the old entry
+        }
+    }
+
 
     createSphereAtPosition(position, userID, level) {
         const geometry = new THREE.SphereGeometry(0.1, 32, 32);
@@ -408,7 +403,11 @@ export class WebSocketConnection {
         outerSphere.userData.userID = userID;
         const sprite = attachLabelToObjects(outerSphere, userID);
         console.log('sphere created');
-        this.userSpheres.push(innerSphere);
+        this.userSpheres[userID] = {
+            sphere: outerSphere,
+            sprite: sprite,
+            targetPosition: position
+        };
         return {
             sphere: outerSphere,
             sprite: sprite,
