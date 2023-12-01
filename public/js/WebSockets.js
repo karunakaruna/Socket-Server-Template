@@ -217,6 +217,7 @@ export class WebSocketConnection {
                 document.getElementById('username').textContent = newID;
                 document.getElementById('onlineCount').textContent = message.onlineTime;
                 displayOverlayText(message.overlay, 2000, 24);
+                player.updateUserData(user);
             
                 // Update the user list
                 removeUserFromList(oldID);
@@ -237,25 +238,30 @@ export class WebSocketConnection {
                 const oldUserID = message.oldUserID;
                 const newUserID = message.updatedUserID;
                 const updatedUserData = message.userData;
-            
+
                 // Debugging logs
                 console.log('wsc.users:', this.users);
                 console.log('wsc.userSpheres:', this.userSpheres);
                 console.log('oldUserID:', oldUserID);
                 console.log('newUserID:', newUserID);
-            
+
                 // Remove the old user data
                 if (this.users[oldUserID]) {
                     delete this.users[oldUserID];
                     removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
                 }
-            
+
                 // Update or add the new user data
                 this.users[newUserID] = updatedUserData;
                 addUserToList(newUserID); // Add or update the user in the user list
 
-                // Use the new updateUserID method to handle the userSphere update
-                this.updateUserID(oldUserID, newUserID);
+                // Update the corresponding userSphere
+                if (this.userSpheres[oldUserID]) {
+                    this.userSpheres[newUserID] = this.userSpheres[oldUserID];
+                    delete this.userSpheres[oldUserID];
+                    this.userSpheres[newUserID].updateUserData(updatedUserData);
+                }
+
                 // Update the user list UI
                 // updateUIWithUserList(this.users); // Assuming this is your method to update the user list on the UI
             }

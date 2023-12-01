@@ -26,7 +26,6 @@ export class UserSphere extends THREE.Object3D {
         this.userID = this.user.userID;
         this.userSphere = null;
         this.name = this.user.name;
-
         this.targetPosition = new THREE.Vector3();
         if (user && user.position) {
             this.targetPosition.copy(user.position);
@@ -51,7 +50,7 @@ export class UserSphere extends THREE.Object3D {
     updateUserData(newUser) {
         this.user = newUser || this.createDefaultUser();
         this.userID = this.user.userID;
-        this.position = this.user.position;
+        // this.position = this.user.position;
         this.name = this.user.name;
         this.count = this.user.count;
         this.level = this.user.level;
