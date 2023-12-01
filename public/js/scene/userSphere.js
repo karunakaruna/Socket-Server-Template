@@ -8,7 +8,7 @@ export class UserSphere extends THREE.Object3D {
         this.level = level || 1; // set the level parameter or use the default value of 1
         this.userID = userID;
         this.userSphere = null;
-        this.targetPosition = THREE.Vector3();
+        this.targetPosition = position;
         //this.circle = null;
         this.color = 0xFFFFFF; // default color
         this.initUserSphere(position);

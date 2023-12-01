@@ -410,6 +410,10 @@ export class WebSocketConnection {
         // const sprite = attachLabelToObjects(outerSphere, userID);
         console.log('sphere created');
         this.userSpheres[userID] = userSphere;
+        console.log(this.userSpheres);
+        return userSphere;
+
+        // return this.userSphere;
     };
 
 
