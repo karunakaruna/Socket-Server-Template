@@ -284,15 +284,18 @@ export class WebSocketConnection {
             }
             else if (message.type === 'userDisconnected') {
                 // Remove the sphere of the disconnected user
-                console.log('removing user:' + message.userID);
-                removeUserFromList(message.userID);
-                let userObject = this.userSpheres[message.userID];
-                console.log('user object to delete:', userObject);
+                // console.log('removing user:' + message.userID);
+                removeUserFromList(message.userID); // Remove from list
+                let userObject = this.userSpheres[message.userID]; //Get the userSphere object
+                // console.log('user object to delete:', userObject);
                 //console.log(message.userID);
+                delete this.users[message.userID]; // Remove from the users's object
+
+                // if a usersphere exists remove the sphere and its pointer 
                 if (userObject) {
-                    this.scene.remove(userObject);
-                    delete this.users[message.userID];
-                }
+                    this.scene.remove(userObject.getSphere());
+                    delete this.userSpheres[message.userID];          
+                      }
             }
 
             else if (message.type === 'userCount') {
