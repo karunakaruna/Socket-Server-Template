@@ -133,7 +133,7 @@ async function addDummyProfileRow() {
         UPDATE users
         SET online_time = $1, level = $2, mana = $3, favourites = $4, name = $5
         WHERE publicid = $6`;
-      const updateValues = [user.count, user.level, user.mana, JSON.stringify(user.favourites), user.name, user.ID];
+      const updateValues = [user.count, user.level, user.mana, JSON.stringify(user.favourites), user.name, user.userID];
       console.log('Executing update query:', updateQuery);
       console.log('Update values:', updateValues);
       await client.query(updateQuery, updateValues);

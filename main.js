@@ -248,7 +248,7 @@ wss.on("connection", function (ws, req) {
 
         //Create the user object
         users[userID] = {
-            ID: userID,
+            userID: userID,
             position: { x: 0, y: 0, z: 0 }, // default position
             name: name || uuidname,
             count: online_time || 0, // Initialize count with the last online time from the database

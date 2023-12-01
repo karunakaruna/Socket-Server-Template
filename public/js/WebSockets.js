@@ -96,6 +96,8 @@ export class WebSocketConnection {
                 // }),
 
                 //iterate through the user list
+                console.log('init user data:', message.user);
+
                 for (let incomingUserID in message.users) {
 
                         // Check if the user already exists in this.users array
@@ -285,9 +287,10 @@ export class WebSocketConnection {
                 console.log('removing user:' + message.userID);
                 removeUserFromList(message.userID);
                 let userObject = this.userSpheres[message.userID];
+                console.log(userObject);
                 //console.log(message.userID);
                 if (userObject) {
-                    this.scene.remove(userObject.sphere);
+                    this.scene.remove(userObject);
                     delete this.users[message.userID];
                 }
             }

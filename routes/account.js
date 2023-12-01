@@ -64,7 +64,7 @@ router.post('/login', limiter, function(req, res, next) {
 
                 
                 users[publicUserID] = {
-                    ID: userData.publicUserID,
+                    userID: userData.publicUserID,
                     position: { x: 0, y: 0, z: 0 }, // default position
                     name: userData.name || 'Guest', // Initialize name with the name from the database
                     count: userData.online_time || 0, // Initialize count with the online time from the database

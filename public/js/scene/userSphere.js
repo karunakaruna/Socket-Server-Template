@@ -19,8 +19,9 @@ export class UserSphere extends THREE.Object3D {
                 mana: 1, // Default mana
             };
         };
-
         this.user = user ||  this.createDefaultUser();
+        console.log('creating a user for:',this.user);
+
         this.level = this.user.level || 1; // set the level parameter or use the default value of 1
         this.mana = this.user.mana || 0;
         this.userID = this.user.userID;
@@ -50,6 +51,7 @@ export class UserSphere extends THREE.Object3D {
     updateUserData(newUser) {
         this.user = newUser || this.createDefaultUser();
         this.userID = this.user.userID;
+        console.log(this.userID);
         // this.position = this.user.position;
         this.name = this.user.name;
         this.count = this.user.count;
