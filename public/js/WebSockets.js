@@ -63,7 +63,8 @@ export class WebSocketConnection {
                 } else {
                     console.log('user exists');
                     // Existing user, update their position and level
-                    this.userSpheres[message.userID].targetPosition.copy(receivedPosition);
+                    console.log('updating user position', message.userID, receivedPosition);
+                    this.userSpheres[message.userID].setTargetPosition(receivedPosition);
 
                     // const sphere = this.userSpheres.find(user => user.userID === message.userID);
                     const sphere = this.userSpheres[message.userID];
@@ -124,7 +125,7 @@ export class WebSocketConnection {
                                 if (incomingUserID !== this.myUserID && !this.userSpheres[incomingUserID]) {
                                     console.log('adding user to list');
                                     addUserToList(incomingUserID, false);
-                                    this.userSpheres[incomingUserID] = this.createSphereAtPosition(userPos, incomingUserID, message.users[incomingUserID].level);
+                                    this.userSpheres[incomingUserID] = this.createSphereAtPosition(message.users[incomingUserID]);
                                 }
                             }
                         else {
@@ -144,7 +145,7 @@ export class WebSocketConnection {
 
 
                     if (sphere) {
-                        console.log(sphere);
+                        // console.log(sphere);
                         sphere.setLevel(message.level);
                         //console.log('sphere found');
                     }

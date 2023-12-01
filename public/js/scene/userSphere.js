@@ -1,3 +1,5 @@
+//userSphere.js
+
 import { wsc, scene } from "../../scene.js";
 import { attachLabelToObjectsAdv } from "../Sprite.js";
 
@@ -25,7 +27,12 @@ export class UserSphere extends THREE.Object3D {
         this.userSphere = null;
         this.name = this.user.name;
 
-        this.targetPosition = this.user.position;
+        this.targetPosition = new THREE.Vector3();
+        if (user && user.position) {
+            this.targetPosition.copy(user.position);
+        }
+
+
         this.afk = false;
 
         //this.circle = null;
@@ -43,8 +50,14 @@ export class UserSphere extends THREE.Object3D {
 
     updateUserData(newUser) {
         this.user = newUser || this.createDefaultUser();
+        this.userID = this.user.userID;
+        this.position = this.user.position;
+        this.name = this.user.name;
+        this.count = this.user.count;
         this.level = this.user.level;
+
         this.mana = this.user.mana;
+        
         // ... update other properties as needed
     
         // Update position if it's different
@@ -63,7 +76,11 @@ export class UserSphere extends THREE.Object3D {
     }
 
 
-
+    setTargetPosition(position) {
+        console.log(`setting target position in userSphere ${this.userID} to: `, position);
+        this.targetPosition.copy(position);
+    }
+    
 
 
 
@@ -138,7 +155,7 @@ export class UserSphere extends THREE.Object3D {
     setLevel(setto) {
         this.level = setto;
         // console.log(this.level);
-        attachLabelToObjectsAdv(this.getSphere(), this.getLevel(), 0, 1, -0.25);
+        attachLabelToObjectsAdv(this.getSphere(), this.name, 0, 1, -0.25);
         this.removeCircle();    
         this.addCircle();
         return this.level;
