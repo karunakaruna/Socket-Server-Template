@@ -220,44 +220,49 @@ export class WebSocketConnection {
 
             // ... inside the ws.onmessage handler ...
 
-                else if (message.type === 'notifyUserUpdate') {
-                    console.log('notifyUserUpdate received');
-                    const oldUserID = message.oldUserID;
-                    const newUserID = message.updatedUserID;
-                    const updatedUserData = message.userData;
-                    console.log('wsc.users:')
-                    console.log(this.users);
-                    console.log('wsc.userSpheres:');
-                    console.log(this.userSpheres);
-                    console.log('oldeUserID:');
-                    console.log(oldUserID);
-                    console.log('newUserID:');
-                    console.log(newUserID);
-                    // Remove the old user data
-                    if (this.users[oldUserID]) {
-                        delete this.users[oldUserID];
-                        removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
-                        // Optionally, handle any UI updates or cleanup related to the old user
-                    }
-
-                    // Update or add the new user data
-                    this.users[newUserID] = updatedUserData;
-                    addUserToList(newUserID); // Assuming you have a function to add the user to the list
-
-                    // Update the user's visual representation if it exists
-                    if (this.userSpheres[oldUserID]) {
-                        const sphere = this.userSpheres.find(user => user.userID === oldUserID);
-                        console.log('sphere found');
-                        sphere.setUserID(newUserID);
-                        // delete this.userSpheres[oldUserID];
-                        // this.userSpheres[newUserID] = this.createSphereAtPosition(updatedUserData.position, newUserID, updatedUserData.level);
-                        // If you need to handle the sphere update differently, you can do it here.
-                        // For instance, you might want to move the sphere to a new position or update its level.
-                    }
-
-                    // Update the user list UI
-                    // updateUIWithUserList(this.users); // Assuming this is your method to update the user list on the UI
+            else if (message.type === 'notifyUserUpdate') {
+                console.log('notifyUserUpdate received');
+                const oldUserID = message.oldUserID;
+                const newUserID = message.updatedUserID;
+                const updatedUserData = message.userData;
+            
+                // Debugging logs
+                console.log('wsc.users:', this.users);
+                console.log('wsc.userSpheres:', this.userSpheres);
+                console.log('oldUserID:', oldUserID);
+                console.log('newUserID:', newUserID);
+            
+                // Remove the old user data
+                if (this.users[oldUserID]) {
+                    delete this.users[oldUserID];
+                    removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
                 }
+            
+                // Update or add the new user data
+                this.users[newUserID] = updatedUserData;
+                if (!this.users[newUserID]) {
+                    addUserToList(newUserID); // Add the user to the list if not already present
+                }
+            
+                // Update or recreate the sphere associated with the user
+                if (this.userSpheres[oldUserID]) {
+                    // Retrieve the existing sphere
+                    const existingSphere = this.userSpheres[oldUserID];
+            
+                    // Update internal userID of the sphere
+                    existingSphere.setUserID(newUserID);
+            
+                    // Remove the old sphere entry
+                    delete this.userSpheres[oldUserID];
+            
+                    // Assign the sphere to the new userID key
+                    this.userSpheres[newUserID] = existingSphere;
+                }
+            
+                // Update the user list UI
+                // updateUIWithUserList(this.users); // Assuming this is your method to update the user list on the UI
+            }
+            
 
 
 
