@@ -207,6 +207,8 @@ wss.on("connection", function (ws, req) {
           // Now you can access req.session
           console.log('Parsed Session:', req.session);}
         });
+
+        console.log('honey im home');
     const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
     // Retrieve the session ID from the parsed cookies
     const rawSessionCookie = cookies['connect.sid'] || '';
@@ -257,8 +259,10 @@ wss.on("connection", function (ws, req) {
         
         // Assign the user ID to the WebSocket object
         ws.userID = userID;
+
+        console.log('init user:', users[userID]);
         // Send the assigned user ID to the connected client
-        ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count }));
+        ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }));
         onUserConnect(userID); //Broadcasts the user's ID to all users using 'init users'
         updateObjects(userID); //Sends the objects from the object array to the user
         broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true); //Broadcasts the user count to all users

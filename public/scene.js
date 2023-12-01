@@ -2,6 +2,18 @@
 
 let userID = null;
 const scene = new THREE.Scene();
+// const users = {};
+// const user = users[userID] = {
+//     ID: '010101010',
+//     position: { x: 0, y: 0, z: 0 }, // default position
+//     name: 'uuidname',
+//     count:  0, // Initialize count with the last online time from the database
+//     level: 1,
+//     favourites: [],
+//     mana: 1,
+// };
+
+
 
 import {WebSocketConnection} from './js/WebSockets.js';
 export const wsc= new WebSocketConnection();
@@ -28,7 +40,7 @@ const { camera, renderer, cube } = initCamera(scene);
 console.log('my user ID', wsc.myUserID);
 console.log('my user object', wsc.users[wsc.myUserID]);
 const vec = new THREE.Vector3(0,0,0);
-const player = new UserSphere(vec,2, 'aa', cube);
+const player = new UserSphere(null, cube);
 scene.add(player);
 const playerlevel = player.getLevel();
 player.layers.enable(1); // Add userSphere to specified level

@@ -157,6 +157,8 @@ export class WebSocketConnection {
 
 
             } else if (message.type === 'assignUserID') {
+
+                //Initialize the Player
                 this.myUserID = message.userID;
                 console.log(`Assigned userID: ${this.myUserID}`);
                 document.getElementById('username').textContent = this.myUserID;
@@ -164,7 +166,9 @@ export class WebSocketConnection {
                 document.getElementById('onlineCount').textContent = message.count;
 
                 addUserToList(this.myUserID, true);
-                player.userData.userID = this.myUserID;
+                console.log('received user data:', message.user)
+                player.updateUserData(message.user);
+                // player.userData.userID = this.myUserID;
             }
 
             else if (message.type === 'updateUserID') {
@@ -413,30 +417,11 @@ export class WebSocketConnection {
         console.log(this.userSpheres);
         return userSphere;
 
-        // return this.userSphere;
     };
 
 
 
     
-    // createSphereAtPosition(position, userID, level) {
-    //     const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-    //     const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
-    //     const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
-    //     const outerSphere = new THREE.Mesh(geometry, trans);
-    //     const innerSphere = new UserSphere(outerSphere, level, userID);
-    //     outerSphere.layers.enable(1); // Add to the raycaster layer
-    //     innerSphere.layers.enable(1); // Add to the raycaster layer
-    //     outerSphere.position.copy(position);
-    //     this.scene.add(outerSphere);
-    //     outerSphere.add(innerSphere);
-    //     outerSphere.userData.userID = userID;
-    //     const sprite = attachLabelToObjects(outerSphere, userID);
-    //     console.log('sphere created');
-    //     this.userSpheres[userID] = innerSphere;
-        
-
-    // };
 
 
     
