@@ -283,15 +283,13 @@ export class WebSocketConnection {
 
             }
             else if (message.type === 'userDisconnected') {
-                // Remove the sphere of the disconnected user
                 console.log('removing user:' + message.userID);
                 removeUserFromList(message.userID);
-                let userObject = this.userSpheres[message.userID];
-                console.log(userObject);
-                //console.log(message.userID);
-                if (userObject) {
-                    this.scene.remove(userObject);
-                    delete this.users[message.userID];
+                let userSphere = this.userSpheres[message.userID];
+                console.log(userSphere);
+                if (userSphere) {
+                    this.scene.remove(userSphere.getSphere()); // Assuming getSphere() returns the Three.js object
+                    delete this.userSpheres[message.userID];
                 }
             }
 
