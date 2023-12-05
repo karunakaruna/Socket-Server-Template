@@ -219,7 +219,7 @@ export class WebSocketConnection {
                 if (this.users[oldID]) {
                     this.users[newID] = this.createSphereAtPosition(user);
                     this.users[newID].setTargetPosition(position);
-                    this.users[newID].add(cube);
+                    this.users[newID].getSphere().add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
                     delete this.users[oldID];
@@ -267,9 +267,9 @@ export class WebSocketConnection {
                 const updatedUserData = message.userData;
 
                 const temppos = new THREE.Vector3(
-                    users[oldUserID].position.x,
-                    users[oldUserID].position.y,
-                    users[oldUserID].position.z
+                    this.users[oldUserID].position.x,
+                    this.users[oldUserID].position.y,
+                    this.users[oldUserID].position.z
                 );
 
 
@@ -283,8 +283,9 @@ export class WebSocketConnection {
                 if (this.users[oldUserID]) {
                     delete this.users[oldUserID];
                     removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
-                    this.users[newUserID] = this.users[oldUserID]
-                    this.users[newUserID].updateUserData(updatedUserData);
+                    this.users[newUserID] = this.createSphereAtPosition(updatedUserData);
+                    this.users[newUserID].setTargetPosition(temppos);
+                    
                 }
 
                 // Update or add the new user data
