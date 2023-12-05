@@ -204,21 +204,16 @@ export class WebSocketConnection {
                 // Update the myUserID to the new ID
                 this.myUserID = newID;
 
-                const oldUser = this.users[oldID];
+                const oldposition = this.users[oldID].position;
                 // oldUser.updateUserData(user);
                         
-                const position = new THREE.Vector3(
-                    oldUser.position.x,
-                    oldUser.position.y,
-                    oldUser.position.z
-                );
-
-
+  
+                console.log('oldID:', oldposition);
 
                 // Transfer old user data to the new user ID
                 if (this.users[oldID]) {
                     this.users[newID] = this.createSphereAtPosition(user);
-                    this.users[newID].setTargetPosition(position);
+                    this.users[newID].setTargetPosition(oldposition);
                     this.users[newID].getSphere().add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
@@ -262,6 +257,9 @@ export class WebSocketConnection {
     //Notify of other user
             else if (message.type === 'notifyUserUpdate') {
                 console.log('notifyUserUpdate received');
+
+                console.log('message, ', message);
+
                 const oldUserID = message.oldUserID;
                 const newUserID = message.updatedUserID;
                 const updatedUserData = message.userData;
@@ -272,7 +270,7 @@ export class WebSocketConnection {
                     this.users[oldUserID].position.z
                 );
 
-
+                console.log('temppos:', temppos)
 
                 // Debugging logs
                 console.log('wsc.users:', this.users);
@@ -293,7 +291,6 @@ export class WebSocketConnection {
                 }
 
                 // Update or add the new user data
-                this.users[newUserID] = updatedUserData;
                 addUserToList(newUserID); // Add or update the user in the user list
 
 
