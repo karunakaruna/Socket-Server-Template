@@ -180,7 +180,7 @@ export class WebSocketConnection {
                 this.myUserID = newID;
 
                 const oldUser = this.users[oldID];
-                oldUser.updateUserData(user);
+                // oldUser.updateUserData(user);
                         
                 const position = new THREE.Vector3(
                     oldUser.position.x,
@@ -196,7 +196,7 @@ export class WebSocketConnection {
                     this.users[newID].setTargetPosition(position);
                     
                     // Remove the old user data
-                    this.scene.remove(this.user[oldID].getSphere());
+                    this.scene.remove(this.users[oldID].getSphere());
                     delete this.users[oldID];
                 } else {
                     console.warn(`Old user ID ${oldID} not found. Cannot update to ${newID}.`);
