@@ -219,10 +219,12 @@ export class WebSocketConnection {
                 if (this.users[oldID]) {
                     this.users[newID] = this.createSphereAtPosition(user);
                     this.users[newID].setTargetPosition(position);
-                    
+                    this.users[newID] .add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
                     delete this.users[oldID];
+                   
+
                 } else {
                     console.warn(`Old user ID ${oldID} not found. Cannot update to ${newID}.`);
                 }
@@ -281,10 +283,10 @@ export class WebSocketConnection {
                 addUserToList(newUserID); // Add or update the user in the user list
 
                 // Update the corresponding userSphere
-                if (this.userSpheres[oldUserID]) {
-                    this.userSpheres[newUserID] = this.userSpheres[oldUserID];
-                    delete this.userSpheres[oldUserID];
-                    this.userSpheres[newUserID].updateUserData(updatedUserData);
+                if (this.users[oldUserID]) {
+                    this.users[newUserID] = this.users[oldUserID];
+                    delete this.users[oldUserID];
+                    this.users[newUserID].updateUserData(updatedUserData);
                 }
 
 
