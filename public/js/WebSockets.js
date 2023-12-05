@@ -219,7 +219,7 @@ export class WebSocketConnection {
                 if (this.users[oldID]) {
                     this.users[newID] = this.createSphereAtPosition(user);
                     this.users[newID].setTargetPosition(position);
-                    this.users[newID] .add(cube);
+                    this.users[newID].add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
                     delete this.users[oldID];
@@ -229,7 +229,7 @@ export class WebSocketConnection {
                     console.warn(`Old user ID ${oldID} not found. Cannot update to ${newID}.`);
                 }
             
-
+                
 
 
         
@@ -240,7 +240,7 @@ export class WebSocketConnection {
                 document.getElementById('username').textContent = newID;
                 document.getElementById('onlineCount').textContent = message.onlineTime;
                 displayOverlayText(message.overlay, 2000, 24);
-                player.updateUserData(user);
+                // player.updateUserData(user);
             
 
 
@@ -266,9 +266,16 @@ export class WebSocketConnection {
                 const newUserID = message.updatedUserID;
                 const updatedUserData = message.userData;
 
+                const temppos = new THREE.Vector3(
+                    users[oldUserID].position.x,
+                    users[oldUserID].position.y,
+                    users[oldUserID].position.z
+                );
+
+
+
                 // Debugging logs
                 console.log('wsc.users:', this.users);
-                console.log('wsc.userSpheres:', this.userSpheres);
                 console.log('oldUserID:', oldUserID);
                 console.log('newUserID:', newUserID);
 
@@ -276,18 +283,13 @@ export class WebSocketConnection {
                 if (this.users[oldUserID]) {
                     delete this.users[oldUserID];
                     removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
+                    this.users[newUserID] = this.users[oldUserID]
+                    this.users[newUserID].updateUserData(updatedUserData);
                 }
 
                 // Update or add the new user data
                 this.users[newUserID] = updatedUserData;
                 addUserToList(newUserID); // Add or update the user in the user list
-
-                // Update the corresponding userSphere
-                if (this.users[oldUserID]) {
-                    this.users[newUserID] = this.users[oldUserID];
-                    delete this.users[oldUserID];
-                    this.users[newUserID].updateUserData(updatedUserData);
-                }
 
 
     //🌷 Objects
