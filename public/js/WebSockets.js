@@ -281,10 +281,14 @@ export class WebSocketConnection {
 
                 // Remove the old user data
                 if (this.users[oldUserID]) {
-                    delete this.users[oldUserID];
-                    removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
+
                     this.users[newUserID] = this.createSphereAtPosition(updatedUserData);
-                    this.users[newUserID].setTargetPosition(temppos);
+                    this.users[newUserID].updatePosition(temppos);
+
+                    this.scene.remove(this.users[oldUserID].getSphere());
+                    delete this.users[oldUserID];
+                
+                    removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
                     
                 }
 
