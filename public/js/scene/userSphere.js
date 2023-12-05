@@ -5,6 +5,9 @@ import { attachLabelToObjectsAdv } from "../Sprite.js";
 
 
 export class UserSphere extends THREE.Object3D {
+
+    static LOCALPLAYER = null;
+
     constructor(user, parent = scene) {
         super();
 
@@ -21,6 +24,9 @@ export class UserSphere extends THREE.Object3D {
         };
         this.user = user ||  this.createDefaultUser();
         console.log('creating a user for:',this.user);
+
+
+        this.isLocalPlayer = false;
 
         this.level = this.user.level || 1; // set the level parameter or use the default value of 1
         this.mana = this.user.mana || 0;

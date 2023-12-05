@@ -90,8 +90,13 @@ export class WebSocketConnection {
                             console.log(message.userID);
                             if (incomingUserID === message.userID) {
                                 console.log('adding user camera');
+                                this.users[incomingUserID].isLocalPlayer = true;
                                 this.users[incomingUserID].getSphere().add(cube);
+                                console.log('is it the local player?', this.users[incomingUserID].isLocalPlayer);
+                                UserSphere.LOCALPLAYER = this.users[incomingUserID];
+                                console.log('local player:', UserSphere.LOCALPLAYER);   
                             }
+
                             // addUserToList(incomingUserID, false);
 
                             }
