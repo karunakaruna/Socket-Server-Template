@@ -26,11 +26,13 @@ const { camera, renderer, cube } = initCamera(scene);
 console.log('my user ID', wsc.myUserID);
 console.log('my user object', wsc.users[wsc.myUserID]);
 const vec = new THREE.Vector3(0,0,0);
-const player = new UserSphere(null, cube);
-scene.add(player);
-const playerlevel = player.getLevel();
-player.layers.enable(1); // Add userSphere to specified level
-console.log('userSphereLevel: ' + playerlevel);
+
+
+// const player = new UserSphere(null, cube);
+// scene.add(player);
+// const playerlevel = player.getLevel();
+// player.layers.enable(1); // Add userSphere to specified level
+// console.log('userSphereLevel: ' + playerlevel);
 
 
 const grid = initGrid();
@@ -48,9 +50,9 @@ loadBeaconLightModel(scene);
 addMouseMovementListener(scene);
 addScrollWheelListener();
 addClickListener(scene);
-addRightClickListener(scene,player.getSphere());
+addRightClickListener(scene);
 
-export {loadedGLTF, pingModel, beaconLightModel, scene, cube, camera, userID, renderer, player};
+export {loadedGLTF, pingModel, beaconLightModel, scene, cube, camera, userID, renderer};
 
 //Animation Update Loop
 const animate = () => {
@@ -59,7 +61,7 @@ const animate = () => {
     activeMixers.forEach(mixer => mixer.update(0.01));
 
     // Use lerp to smoothly change FOV
-    updateCamera(camera, cube);
+    updateCamera(camera,cube);
     TWEEN.update();
 
     // Move Spheres for each user

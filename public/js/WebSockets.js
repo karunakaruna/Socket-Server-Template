@@ -2,7 +2,7 @@
 
 
 import { addLog } from './util/log.js';
-import { scene, loadedGLTF,  beaconLightModel, player } from '../scene.js';
+import { scene, cube, loadedGLTF,  beaconLightModel } from '../scene.js';
 import { UserSphere } from './scene/userSphere.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
@@ -10,6 +10,7 @@ import { addUserToList, removeUserFromList } from './util/Userlist.js';
 import { boundingBox, getLoadedGLTF  } from './Loaders';
 import { displayOverlayText } from './util/ShowModal.js';
 import { fetchUsers } from '../submit-module.js';
+import { parentCamera } from './Camera.js';
 
 // import {userSphere} from './userSphere';
 
@@ -86,9 +87,15 @@ export class WebSocketConnection {
                         if (!this.users[incomingUserID]) {
                             console.log('adding user ', incomingUserID);
                             this.users[incomingUserID] = this.createSphereAtPosition(user);
+                            console.log(message.userID);
+                            if (incomingUserID === message.userID) {
+                                console.log('adding user camera');
+                                this.users[incomingUserID].getSphere().add(cube);
+                            }
                             // addUserToList(incomingUserID, false);
 
                             }
+                            
             //User exists but there is not position data?
                 } else {
                         console.warm('User exists in users already')
@@ -107,7 +114,12 @@ export class WebSocketConnection {
 
                 addUserToList(this.myUserID, true);
                 console.log('received user data:', message.user)
-                player.updateUserData(message.user);
+
+                const me = this.users[this.myUserID];
+                console.log('me:', me); 
+                me
+
+                // player.updateUserData(message.user);
                 // player.userData.userID = this.myUserID;
             
 
@@ -154,7 +166,7 @@ export class WebSocketConnection {
             else if (message.type === 'userUpdate') {
                 //If player
                 if (message.userID === this.myUserID) {
-                    player.setLevel(message.level);
+                    // player.setLevel(message.level);
                 //If not player
                 } else {
                     const sphere = this.users[message.userID];

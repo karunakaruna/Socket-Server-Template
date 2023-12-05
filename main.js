@@ -252,8 +252,9 @@ wss.on("connection", function (ws, req) {
 
                 console.log('init user:', users[userID]);
                 // Send the assigned user ID to the connected client
-                ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }));
                 onUserConnect(userID); //Broadcasts the user's ID to all users using 'init users'
+                ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }));
+
                 updateObjects(userID); //Sends the objects from the object array to the user
                 broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true); //Broadcasts the user count to all users
                 if (wss.clients.size === 1) {

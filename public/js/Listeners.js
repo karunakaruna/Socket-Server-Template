@@ -105,48 +105,61 @@ export function addScrollWheelListener() {
 }
 export function addClickListener(map) {   
         window.addEventListener('click', (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        document.querySelectorAll('.contextMenu').forEach(menu => {
-            menu.style.display = 'none';
-        });
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(map.children, true);
-        const coordinatesDiv = document.getElementById('coordinatesText');
-
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            // console.log('clicked')
-            // Set the intersection point as the target position
-            targetPosition.copy(intersection.point);
-    
-            // Optional: offset in the Y direction to ensure the cube rests above the grid.
-            targetPosition.y += cube.scale.y / 2;
-    
-            // Always spawn the regular ping on intersection
-            spawnPingAtPosition(intersection.point);
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            document.querySelectorAll('.contextMenu').forEach(menu => {
+                menu.style.display = 'none';
+            });
             
-            const userData = intersection.object.userData;
-            if (userData && userData.URL) {
-                // Show the modal and spawn an entrance ping when the URL is confirmed.
-                showModal(userData.Name || 'Unknown', userData.URL, intersection.point, event);
-                return; // Exit to avoid further processing since the URL takes precedence
-            }
-            // ... inside your if (intersects.length > 0) block after getting the intersection.point
-            coordinatesDiv.innerText = `X: ${intersection.point.x.toFixed(2)}, Y: ${intersection.point.y.toFixed(2)}, Z: ${intersection.point.z.toFixed(2)}`;
-            // Send the position data to WebSocket server
-            const payload = {
-                type: 'loc',
-                userID: wsc.myUserID,
-                position: {
-                    x: intersection.point.x,
-                    y: intersection.point.y,
-                    z: intersection.point.z
+            //Raycast
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(map.children, true);
+
+            //If it hits something
+            if (intersects.length > 0) {
+                const intersection = intersects[0];
+                // targetPosition.copy(intersection.point);
+
+                const target = new THREE.Vector3(
+                    intersection.point.x,
+                    intersection.point.y + 1,
+                    intersection.point.z
+                );
+
+            
+                const thisuser = wsc.users[wsc.myUserID];
+                thisuser.setTargetPosition(target);
+        
+                // Optional: offset in the Y direction to ensure the cube rests above the grid.
+                // targetPosition.y += cube.scale.y / 2;
+        
+                // Always spawn the regular ping on intersection
+                spawnPingAtPosition(intersection.point);
+                
+                // Check if the object is a PORTAL
+                const userData = intersection.object.userData;
+                if (userData && userData.URL) {
+                    // Show the modal and spawn an entrance ping when the URL is confirmed.
+                    showModal(userData.Name || 'Unknown', userData.URL, intersection.point, event);
+                    return; // Exit to avoid further processing since the URL takes precedence
                 }
-            };
-            // console.log(payload);
-            wsc.wsSend(payload);
-        }
+
+                //Update coords div
+                const coordinatesDiv = document.getElementById('coordinatesText');
+                coordinatesDiv.innerText = `X: ${intersection.point.x.toFixed(2)}, Y: ${intersection.point.y.toFixed(2)}, Z: ${intersection.point.z.toFixed(2)}`;
+                
+                // Send loc -> wss
+                const payload = {
+                    type: 'loc',
+                    userID: wsc.myUserID,
+                    position: {
+                        x: intersection.point.x,
+                        y: intersection.point.y,
+                        z: intersection.point.z
+                    }
+                };
+                wsc.wsSend(payload);
+            }
     });
 
     return targetPosition
@@ -160,7 +173,7 @@ export function addClickListener(map) {
 let intersectionPoint = null;
 let selectedObject = null;
 let screenPoint = null;
-export function addRightClickListener(scene, yourUserSphere) {
+export function addRightClickListener(scene) {
     const menu = document.getElementById('yourMenuID'); // Replace 'yourMenuID' with the actual ID of your menu, if it has one
     function isObjectAnotherUserSphere(object) {
         return object.userData && object.userData.userID;
@@ -191,8 +204,8 @@ export function addRightClickListener(scene, yourUserSphere) {
                 // Now decide what menu to show based on the object
                 if (object.userData.URL) {
                     showMenu('url', event.clientX, event.clientY);
-                } else if (object === yourUserSphere) {
-                    showMenu('user', event.clientX, event.clientY);
+                // } else if (object === yourUserSphere) {
+                //     showMenu('user', event.clientX, event.clientY);
                 } else if (isObjectAnotherUserSphere(object)) {
                     showMenu('otherUser', event.clientX, event.clientY);
                 } else {

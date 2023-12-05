@@ -24,8 +24,9 @@
             camera.up.copy(customUpVector);
             camera.position.set(0, 25, 0);
             camera.rotation.set(-1.5708, 0, 0);
-            camera.add(listener);
+            camera.add(listener); //👂
 
+            //Renderer
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
@@ -48,7 +49,9 @@
             scene.add(cube);
             return { camera, renderer, cube }
             };
-
+    export function parentCamera(camera, user){
+        user.add(camera);
+    };
 
 
     export function updateCamera(camera, cube){

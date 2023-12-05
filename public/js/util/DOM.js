@@ -1,5 +1,5 @@
 import { bookmark } from "./Bookmark.js";
-import { wsc, player } from "../../scene.js";
+import { wsc } from "../../scene.js";
 import { intersectionPoint, screenPoint } from "../Listeners.js";
 import { displayOverlayText } from "./ShowModal.js";
 import { attachLabelToObjectsAdv } from "../Sprite.js";
@@ -211,7 +211,7 @@ export function DOM(){
 
     const levelButton = document.querySelector("#levelUpButton").addEventListener("click", () => {
         console.log("Level");
-        player.setLevel(player.getLevel()+1);
+        // player.setLevel(player.getLevel()+1);
         
         displayOverlayText('Level Up!', 3000, 24);
         closeContextMenu();
