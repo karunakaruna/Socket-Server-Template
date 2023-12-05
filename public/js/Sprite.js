@@ -106,7 +106,7 @@ export function attachLabelToObjectsAdv(parent, text, offsetx = 0, offsety = 1, 
     canvas.width = textMetrics.width + 10;
     canvas.height = 40;
     context.font = '30px Arial';
-    context.fillStyle = 'red';
+    context.fillStyle = 'white';
     context.fillText(text, 5, 30);
 
     // Create texture from canvas

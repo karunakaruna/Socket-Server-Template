@@ -154,18 +154,6 @@ app.get('/map', (req, res) => {
 });
 
 
-// //users backend
-// app.get('/api/users', (req, res) => {
-//     // Ensure that the requester is authenticated if necessary
-//     if (!req.isAuthenticated || !req.isAuthenticated()) {
-//         // If the user is not authenticated, you might want to send a 401 Unauthorized status
-//         return res.status(401).json({ error: 'Unauthorized' });
-//     }
-
-//     // Send the users array as a JSON response
-//     res.json({ users: app.get('users') });
-// });
-
 
 //Test DB Connection
 getPostgresVersion();
@@ -198,191 +186,189 @@ function sendToUser(userID, message) {
 
 
 
-
+//Websocket Connection
 wss.on("connection", function (ws, req) {
 
-    //SESSION
-    sessionParser(req, {}, () => {
-        if (req.session) {
-          // Now you can access req.session
-          console.log('Parsed Session:', req.session);}
-        });
+            //SESSION
+            sessionParser(req, {}, () => {
+                if (req.session) {
+                // Now you can access req.session
+                console.log('Parsed Session:', req.session);}
+                });
 
-        console.log('honey im home');
-    const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
-    // Retrieve the session ID from the parsed cookies
-    const rawSessionCookie = cookies['connect.sid'] || '';
-    const sessionID = rawSessionCookie ? cookieParser.signedCookie(rawSessionCookie, sessionsecret) : null;
+                console.log('honey im home');
+            const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
+            // Retrieve the session ID from the parsed cookies
+            const rawSessionCookie = cookies['connect.sid'] || '';
+            const sessionID = rawSessionCookie ? cookieParser.signedCookie(rawSessionCookie, sessionsecret) : null;
 
-    // If there is a session ID cookie
-    if (sessionID) {
-        // Retrieve the session from the store using the sessionID
-        store.get(sessionID, (error, session) => {
-            if (error || !session) {
-                console.error('Error retrieving session:', error);
-                assignUnauthenticatedUserID(ws);
+            // If there is a session ID cookie
+            if (sessionID) {
+                // Retrieve the session from the store using the sessionID
+                store.get(sessionID, (error, session) => {
+                    if (error || !session) {
+                        console.error('Error retrieving session:', error);
+                        assignUnauthenticatedUserID(ws);
+                    } else {
+                        // Use the publicUserID if it exists in the session
+                        const userID = session.publicUserID || uuidv4();
+                        initializeUser(userID, ws);
+                    }
+                });
             } else {
-                // Use the publicUserID if it exists in the session
-                const userID = session.publicUserID || uuidv4();
+                // If there's no sessionID cookie, assign a new UUID
+                assignUnauthenticatedUserID(ws);
+            }
+
+
+    //🔑Auth Functions
+        // New Function to Generate a UUID for an Authenticated User:
+            function assignUnauthenticatedUserID(ws) {
+                const userID = uuidv4(); // Generate a new UUID for unauthenticated user
                 initializeUser(userID, ws);
             }
-        });
-    } else {
-        // If there's no sessionID cookie, assign a new UUID
-        assignUnauthenticatedUserID(ws);
-    }
 
-    //🔑 New Function to Generate a UUID for an Authenticated User:
-    function assignUnauthenticatedUserID(ws) {
-        const userID = uuidv4(); // Generate a new UUID for unauthenticated user
-        initializeUser(userID, ws);
-    }
+        // 👤 Initialize USER
+            async function initializeUser(userID, ws) {
+                const {publicUserID,online_time,level,mana,favourites,name} = await getUserData(userID); // Get the user data from the database
 
-    // 👤 Initialize USER
-    async function initializeUser(userID, ws) {
-        const {publicUserID,online_time,level,mana,favourites,name} = await getUserData(userID); // Get the user data from the database
-
-        
-        const sourcename = userID.split('-');
-        const uuidname = sourcename[sourcename.length-1];
-
-        //Create the user object
-        users[userID] = {
-            userID: userID,
-            position: { x: 0, y: 0, z: 0 }, // default position
-            name: name || uuidname,
-            count: online_time || 0, // Initialize count with the last online time from the database
-            level: level || 1,
-            favourites: favourites || [],
-            mana: mana || 1,
-        };
-        
-        // Assign the user ID to the WebSocket object
-        ws.userID = userID;
-
-        console.log('init user:', users[userID]);
-        // Send the assigned user ID to the connected client
-        ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }));
-        onUserConnect(userID); //Broadcasts the user's ID to all users using 'init users'
-        updateObjects(userID); //Sends the objects from the object array to the user
-        broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true); //Broadcasts the user count to all users
-        if (wss.clients.size === 1) {
-            console.log("first connection. starting keepalive");
-            keepServerAlive();
-        }
-    }
-
-
-
-
-
-    //📦 Add object entry to objects array 
-    function addObject(point, id, text) {
-        objects.push({ point, id, text });
-        console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
-        broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
-    }
-
-    //📦 Send objects array to user
-    function updateObjects(userID){
-        sendToUser(userID, { type: 'objects', value: objects});
-    }
-
-
-    //🔮 Check if user has enough mana to cast spell
-    function getUserCount(userID, currData) {
-        //Select the user from the array
-        if (users.hasOwnProperty(userID)) {
-            const user = users[userID];
-            console.log(`User ${userID} count: ${user.count}`);
-            
-            //Check if user has enough mana
-            if (user.count >= 2) {
-                user.count -= 2;
-                console.log(`Subtracted 2 from User ${userID} count. New count: ${user.count}`);
-                //Update the user's count
-                sendToUser(userID, { type: "count", value: users[userID].count });
-                //Add the object to the objects array
-                addObject(currData.point, currData.userID, currData.text);
-                //Send some feedback to the user
-                sendToUser(userID, { type: "overlay", value: 'Spell Cast :)' });
-                return 1;
                 
-            } else {
-                sendToUser(userID, { type: "overlay", value: 'Not enough mana' });
-                console.log("Not enough mana");
-                return 0;
+                const sourcename = userID.split('-');
+                const uuidname = sourcename[sourcename.length-1];
+
+                //Create the user object
+                users[userID] = {
+                    userID: userID,
+                    position: { x: 0, y: 0, z: 0 }, // default position
+                    name: name || uuidname,
+                    count: online_time || 0, // Initialize count with the last online time from the database
+                    level: level || 1,
+                    favourites: favourites || [],
+                    mana: mana || 1,
+                };
+                
+                // Assign the user ID to the WebSocket object
+                ws.userID = userID;
+
+                console.log('init user:', users[userID]);
+                // Send the assigned user ID to the connected client
+                ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }));
+                onUserConnect(userID); //Broadcasts the user's ID to all users using 'init users'
+                updateObjects(userID); //Sends the objects from the object array to the user
+                broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true); //Broadcasts the user count to all users
+                if (wss.clients.size === 1) {
+                    console.log("first connection. starting keepalive");
+                    keepServerAlive();
+                }
             }
-        } else {
-            console.log(`User ${userID} not found.`);
-        }
-    }
 
+        //📦 Add object
+                function addObject(point, id, text) {
+                    objects.push({ point, id, text });
+                    console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
+                    broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+                }
 
-    ws.on("message", (data) => {
-        let userID = ws.userID;
-        if (isJSON(data)) {
-            const currData = JSON.parse(data);
+        //📦 Send objects to user
+                function updateObjects(userID){
+                    sendToUser(userID, { type: 'objects', value: objects});
+                }
 
-            //Ping
-            if(currData.type === 'ping') {
-                console.log('Received a server heartbeat ping');
+        //🔮 Check if user has enough mana to cast spell
+                function getUserCount(userID, currData) {
+                    //Select the user from the array
+                    if (users.hasOwnProperty(userID)) {
+                        const user = users[userID];
+                        console.log(`User ${userID} count: ${user.count}`);
+                        
+                        //Check if user has enough mana
+                        if (user.count >= 2) {
+                            user.count -= 2;
+                            console.log(`Subtracted 2 from User ${userID} count. New count: ${user.count}`);
+                            //Update the user's count
+                            sendToUser(userID, { type: "count", value: users[userID].count });
+                            //Add the object to the objects array
+                            addObject(currData.point, currData.userID, currData.text);
+                            //Send some feedback to the user
+                            sendToUser(userID, { type: "overlay", value: 'Spell Cast :)' });
+                            return 1;
+                            
+                        } else {
+                            sendToUser(userID, { type: "overlay", value: 'Not enough mana' });
+                            console.log("Not enough mana");
+                            return 0;
+                        }
+                    } else {
+                        console.log(`User ${userID} not found.`);
+                    }
+                }
+
+//📧 Messages
+        ws.on("message", (data) => {
+            let userID = ws.userID;
+            if (isJSON(data)) {
+                const currData = JSON.parse(data);
+                
+                if (currData.type === 'init') {
+                    console.log('welcome new user!')
+                    console.log('init user recieved from' + currData.userID);
+                    sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
+
 
             //🎯 Location update
-            } else if(currData.type === 'loc') {
-                onUserPositionUpdate(userID, currData.position);
-                //grab user's level and combine it with the rest of the currData
-                currData.level = users[userID].level;
-                broadcast(ws, currData, false);
+                } else if(currData.type === 'loc') {
+                    onUserPositionUpdate(userID, currData.position);
+                    //grab user's level and combine it with the rest of the currData
+                    currData.level = users[userID].level;
+                    broadcast(ws, currData, false);
 
-            // 👤 User Sends a init message to the server on the first connect ❌-not used currently
-            } else if (currData.type === 'init') {
-                console.log('welcome new user!')
-                console.log('init user recieved from' + currData.userID);
-                sendToUser(userID, { type: 'hello' }); // send 'hello' to the user
-
+                } 
+                
+            //📶 Ping
+                else if(currData.type === 'ping') {
+                    console.log('Received a server heartbeat ping');
             //❌-not used currently
-            } else if (currData.type === 'reinit'){
-                //User is logged in and needs their userID reinitialized
-                console.log('reinit user recieved');
+                } else if (currData.type === 'reinit'){
+                    //User is logged in and needs their userID reinitialized
+                    console.log('reinit user recieved');
 
             //👤 Update the user's ws.userID
-            } else if (currData.type === 'confirmUpdateUserID'){   
-                const senderUserID = ws.userID;
-                ws.userID = currData.newID;
-                console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
-        
+                } else if (currData.type === 'confirmUpdateUserID'){   
+                    const senderUserID = ws.userID;
+                    ws.userID = currData.newID;
+                    console.log(`Changed userID from ${senderUserID} to ${currData.new}`);
+            
             //📚 Bookmark
-            } else if (currData.type === 'bookmark') {
-                console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.URL}`);
-                const entry = { name: currData.name, URL: currData.URL }; //Parse the data into an object
-                addToFavourites(ws.userID, entry); //Calls a database entry
+                } else if (currData.type === 'bookmark') {
+                    console.log(`Received a bookmark from user: ${currData.userID} for URL: ${currData.URL}`);
+                    const entry = { name: currData.name, URL: currData.URL }; //Parse the data into an object
+                    addToFavourites(ws.userID, entry); //Calls a database entry
 
             //🚪 Entrance - fired when someone enters a location
-            } else if (currData.type === 'entrance') {
-                console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
-                broadcast(ws, currData, false);
+                } else if (currData.type === 'entrance') {
+                    console.log(`Received an entrance ping for object: ${currData.objectName} at x:${currData.position.x} y:${currData.position.y} z:${currData.position.z}`);
+                    broadcast(ws, currData, false);
 
             //🌷 Creation - fired when someone rightclick<creates object    
-            }  else if (currData.type === 'create') {
-                console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
-                console.log("Intersection Point:", currData.point);
-                getUserCount(currData.userID, currData);
+                }  else if (currData.type === 'create') {
+                    console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
+                    console.log("Intersection Point:", currData.point);
+                    getUserCount(currData.userID, currData);
+                }
+
+                //String
+            } else if(typeof data === 'string') {
+                if(data === 'pong') {
+                    console.log('keepAlive');
+                    return;
+                }
+            } else {
+                console.error('malformed message', data);
             }
-
-            //String
-        } else if(typeof data === 'string') {
-            if(data === 'pong') {
-                console.log('keepAlive');
-                return;
-            }
-        } else {
-            console.error('malformed message', data);
-        }
-    });
+        });
 
 
-    // Disconnect
+// Disconnect
     ws.on("close", (data) => {
         // Retrieve userID from the WebSocket object
         let userID = ws.userID;
@@ -403,13 +389,13 @@ wss.on("connection", function (ws, req) {
 
 //Utility Functions
     const isJSON = (message) => {
-        try {
-            const obj = JSON.parse(message);
-            return obj && typeof obj === "object";
-        } catch (err) {
-            return false;
-        }
-    };
+            try {
+                const obj = JSON.parse(message);
+                return obj && typeof obj === "object";
+            } catch (err) {
+                return false;
+            }
+        };
 
     const keepServerAlive = () => {
         keepAliveId = setInterval(() => {
@@ -423,7 +409,7 @@ wss.on("connection", function (ws, req) {
         }, 50000);
     };
 
-    //🔗 Connect and Disconnect
+//🔗 Connect
     function onUserConnect(userID) {
         if (!users[userID].position) {
             users[userID].position = { x: 0, y: 0, z: 0 };
@@ -441,6 +427,7 @@ wss.on("connection", function (ws, req) {
         console.log(users);
     }
 
+//🔗 Disconnect
     async function onUserDisconnect(userID) {
         if (users[userID]) {
             // let totalTimeOnline = users[userID].count; // Count is the total online time in ticks
@@ -463,29 +450,7 @@ wss.on("connection", function (ws, req) {
     }
         
 
-    //Fires when a user 
-    function userLevelsUp(userID) {
-        // Ensure that level is treated as an integer
-        users[userID].level = parseInt(users[userID].level);
-    
-        // Increment the level
-        users[userID].level += 1;
-    
-        // Use the updated level in your broadcast
-        broadcast(
-            null,
-            JSON.stringify({
-                type: "userUpdate",
-                userID: userID,
-                level: users[userID].level,
-            }),
-            false
-        );
-    }
-    
-
-
-    //Fires when a 'loc' is recieved
+//Fires when a 'loc' is recieved
     function onUserPositionUpdate(userID, position) {
         users[userID].position = position;
         broadcast(null, {
@@ -494,13 +459,8 @@ wss.on("connection", function (ws, req) {
             position: position
         }, false);
     }
-
-
-
-
-
  
-    // ▶ Send a message to a specific user
+// ▶ Send a message to a specific user
     function sendToUser(userID, message) {
         wss.clients.forEach(client => {
             if (client.userID === userID) {
@@ -510,7 +470,7 @@ wss.on("connection", function (ws, req) {
     }
 
 
-    //📢 Send a message to all users
+//📢 Send a message to all users
     const broadcast = (ws, message, includeSelf) => {
         const stringifiedMessage = typeof message === 'string' ? message : JSON.stringify(message);
         wss.clients.forEach((client) => {
@@ -520,6 +480,7 @@ wss.on("connection", function (ws, req) {
         });
     };
 
+//📈 Update User Level
     function updateUserLevel(userID) {
         const user = users[userID];
         const onlineTime = user.count; // Assume onlineTime is in seconds
@@ -542,38 +503,35 @@ wss.on("connection", function (ws, req) {
                 break;
             }
         }
-
-
-        // Send updated level to user via WebSocket
-        // websocket.send(JSON.stringify({ level: user.level }));
     }
 
-// Base value and modified growth factor
-const baseValue = 10; // 10 seconds
-const growthFactor = 1.1;
 
-// Initialize the first level threshold
-const levelThresholds = {1: baseValue};
+// 🌳 Level growth    
+    const baseValue = 10; // 10 seconds
+    const growthFactor = 1.1;
 
-// Calculate thresholds for levels 2 to 50 using the new formula
-for (let level = 2; level <= 50; level++) {
-    levelThresholds[level] = levelThresholds[level - 1] + Math.round(baseValue * Math.pow(growthFactor, level - 1));
-}
-// Global game tick function
-const gameTickInterval = 2000; // 10 seconds
-setInterval(() => {
-    for (let userID in users) {
-        if (users.hasOwnProperty(userID)) {
-            users[userID].count += 1;
-            // Broadcast the updated count to all users
-            console.log(users[userID].count);
-            // Send the count to the user
-            sendToUser(userID, { type: "count", value: users[userID].count });
-            updateUserLevel(userID);
-            
+    // Initialize the first level threshold
+    const levelThresholds = {1: baseValue};
+
+    // Calculate thresholds for levels 2 to 50 using the new formula
+    for (let level = 2; level <= 50; level++) {
+        levelThresholds[level] = levelThresholds[level - 1] + Math.round(baseValue * Math.pow(growthFactor, level - 1));
+    }
+    // Global game tick function
+    const gameTickInterval = 2000; // 10 seconds
+    setInterval(() => {
+        for (let userID in users) {
+            if (users.hasOwnProperty(userID)) {
+                users[userID].count += 1;
+                // Broadcast the updated count to all users
+                console.log(users[userID].count);
+                // Send the count to the user
+                sendToUser(userID, { type: "count", value: users[userID].count });
+                updateUserLevel(userID);
+                
+            }
         }
-    }
-}, gameTickInterval);
+    }, gameTickInterval);
 
 
 

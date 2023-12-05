@@ -15,153 +15,90 @@ import { fetchUsers } from '../submit-module.js';
 
 export class WebSocketConnection {
     constructor() {
+
+        //User sphere arrays
         this.users = {};
-        this.userSpheres = {};
+
+        // The user's ID
         this.myUserID = null;
+
+        // Model stuff
         this.loadedGLTF = null;
         this.scene = scene;
         this.beaconLightModel = null;
+        
+        //The user's websocket connection
         this.ws = null;
     }
 
 
     
     initializeWebSocketConnection() {
-        // const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // const wsURL = `${wsProtocol}//${location.host}/ws`;
         const wsURL = 'wss://metacarta-b8f465580dc6.herokuapp.com/';
         this.ws = new WebSocket(wsURL);
-
         this.ws.withCredentials = true; // Set withCredentials to true
-
         this.ws.onopen = () => {
             console.log('WebSocket connection established');
             console.log('Cookies sent: ' + this.ws.withCredentials); // Check if cookies are sent
             this.wsSend({ type: 'init', userID: this.myUserID });
         };
+
+
+
+
+
+//MSGS
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
 
-            if (message.type === 'loc' && message.position) {
-                // Handle location message
-                const receivedPosition = new THREE.Vector3(
-                    message.position.x,
-                    message.position.y,
-                    message.position.z
-                );
-                //Who's the location from?
-                console.log(message.userID);
-                console.log('Message Level:' + message.level)
-                spawnPingAtPosition(receivedPosition);
-
-                //Does the user already exist?
-                if (!this.users[message.userID]) {
-                    // New user, create a sphere for them
-                    console.log('checking the user list for the userID:'+ message.userID);
-                    console.log('user does not exist');
-                    // this.users[message.userID] = this.createSphereAtPosition(receivedPosition, message.userID, message.level);
-                } else {
-                    console.log('user exists');
-                    // Existing user, update their position and level
-                    console.log('updating user position', message.userID, receivedPosition);
-                    this.userSpheres[message.userID].setTargetPosition(receivedPosition);
-
-                    // const sphere = this.userSpheres.find(user => user.userID === message.userID);
-                    const sphere = this.userSpheres[message.userID];
 
 
-                    if (sphere) {
-                        sphere.setLevel(message.level);
-                    }
-                }
-            }
+    //🥇 Init
+        if (message.type === 'initUsers') {
+        console.log('init user data:', message.user);
 
-            else if (message.type === 'ping') {
-                addLog('Received heartbeat!');
-                console.log('this ping!');
-                this.ws.send('pong'); // reply to keep connection alive
-                return;
-            }
+        for (let incomingUserID in message.users) {
 
-            else if (message.type === 'initUsers') {
-                console.log('initUsers');
-                fetchUsers();
+            // If the User doesn't exist:
+                if (!this.users[incomingUserID]) 
+                    {
+                    console.log('incomingUserID:' + incomingUserID);
 
-                //initUsers sends a bunch of useful information:
-                // JSON.stringify({
-                //     type: "initUsers",
-                //     userID: userID,
-                //     user: users[userID],
-                //     users: users,
-                // }),
+                        //Make a vector3 from the incoming user's position
+                            let userPos = new THREE.Vector3(
+                                message.users[incomingUserID].position.x,
+                                message.users[incomingUserID].position.y,
+                                message.users[incomingUserID].position.z
+                            );
 
-                //iterate through the user list
-                console.log('init user data:', message.user);
+                        //Initialize the user object
+                            const user = {
+                                userID: incomingUserID,
+                                position: userPos,
+                                name: message.users[incomingUserID].name,
+                                count: message.users[incomingUserID].online_time,
+                                level: message.users[incomingUserID].level,
+                                favourites: message.users[incomingUserID].favourites,
+                                mana: message.users[incomingUserID].mana,
+                            };
 
-                for (let incomingUserID in message.users) {
-
-                        // Check if the user already exists in this.users array
+                    //Add the user to the user list
                         if (!this.users[incomingUserID]) {
-                                //Identify the users - this is all users including the current user
-                                console.log('incomingUserID:' + incomingUserID);
+                            console.log('adding user ', incomingUserID);
+                            this.users[incomingUserID] = this.createSphereAtPosition(user);
+                            // addUserToList(incomingUserID, false);
 
-                                //Make a vector3 from the incoming user's position
-                                let userPos = new THREE.Vector3(
-                                    message.users[incomingUserID].position.x,
-                                    message.users[incomingUserID].position.y,
-                                    message.users[incomingUserID].position.z
-                                );
-
-                                //Add the user to the users object
-                                this.users[incomingUserID] = {
-                                    userID: incomingUserID,
-                                    position: message.users[incomingUserID].position,
-                                    name: message.users[incomingUserID].name,
-                                    count: message.users[incomingUserID].online_time,
-                                    level: message.users[incomingUserID].level,
-                                    favourites: message.users[incomingUserID].favourites,
-                                    mana: message.users[incomingUserID].mana,
-                                };
-
-
-                                if (incomingUserID !== this.myUserID && !this.userSpheres[incomingUserID]) {
-                                    console.log('adding user to list');
-                                    addUserToList(incomingUserID, false);
-                                    this.userSpheres[incomingUserID] = this.createSphereAtPosition(message.users[incomingUserID]);
-                                }
                             }
-                        else {
-                            console.warn(`User ${incomingUserID} has no position data.`);
-                            }
-
-                    
-                }
-            } else if (message.type === 'userUpdate') {
-                //console.log('userUpdate');
-                if (message.userID === this.myUserID) {
-                    player.setLevel(message.level);
-                    
+            //User exists but there is not position data?
                 } else {
-                    // const sphere = this.userSpheres.find(user => user.userID === message.userID);
-                    const sphere = this.userSpheres[message.userID];
+                        console.warm('User exists in users already')
+                        console.warn(`User ${incomingUserID} has no position data.`);
+                }   
+        }
+    }
 
-
-                    if (sphere) {
-                        // console.log(sphere);
-                        sphere.setLevel(message.level);
-                        //console.log('sphere found');
-                    }
-                }
-                // for users in user, use the setLevel method to update the user's level
-                // for users in user, use the setLevel method to update the user's level
-
-
-
-
-
-            } else if (message.type === 'assignUserID') {
-
-                //Initialize the Player
+        //Init UserID 🆔
+            else if (message.type === 'assignUserID') {
                 this.myUserID = message.userID;
                 console.log(`Assigned userID: ${this.myUserID}`);
                 document.getElementById('username').textContent = this.myUserID;
@@ -172,59 +109,121 @@ export class WebSocketConnection {
                 console.log('received user data:', message.user)
                 player.updateUserData(message.user);
                 // player.userData.userID = this.myUserID;
+            
+
+
+    //User Disconnects
+            } else if (message.type === 'userDisconnected') {
+                removeUserFromList(message.userID); // Remove from list
+                let userObject = this.users[message.userID]; //Get the user
+
+                delete this.users[message.userID]; // Remove from the users's object
+
+                // if a sphere exists remove the sphere and its pointer 
+                if (userObject) {
+                    this.scene.remove(userObject.getSphere());
+                    delete this.users[message.userID];          
+                      }
+
+
+    //🎯 Loc 
+            } else if (message.type === 'loc' && message.position) {
+            // Handle location message
+                const receivedPosition = new THREE.Vector3(
+                    message.position.x,
+                    message.position.y,
+                    message.position.z
+                );
+            //Ping
+                spawnPingAtPosition(receivedPosition);
+                const sphere = this.users[message.userID];
+                this.users[message.userID].setTargetPosition(receivedPosition);
+                sphere.setLevel(message.level);
             }
 
+    //📶 Ping
+            else if (message.type === 'ping') {
+                addLog('Received heartbeat!');
+                this.ws.send('pong'); // reply to keep connection alive
+                return;
+            }
+
+
+
+    //🔼💹 Update This User's level 
+            else if (message.type === 'userUpdate') {
+                //If player
+                if (message.userID === this.myUserID) {
+                    player.setLevel(message.level);
+                //If not player
+                } else {
+                    const sphere = this.users[message.userID];
+                    if (sphere) 
+                        {
+                        sphere.setLevel(message.level);
+                        }
+                }
+            }
+    //Update UserID - Received from /account - 
+
+    //Updates the localplayers ID and updates the userlist
             else if (message.type === 'updateUserID') {
                 console.log('updateUserID received');
-                console.log(message);
+
                 const oldID = this.myUserID;
                 const newID = message.publicUserID;
                 const user = message.user;
+
+                console.log('Updating UserID from ' + oldID + ' to ' + newID)
             
                 // Update the myUserID to the new ID
                 this.myUserID = newID;
-            
+
+                const oldUser = this.users[oldID];
+                oldUser.updateUserData(user);
+                        
+                const position = new THREE.Vector3(
+                    oldUser.position.x,
+                    oldUser.position.y,
+                    oldUser.position.z
+                );
+
+
+
                 // Transfer old user data to the new user ID
                 if (this.users[oldID]) {
-                    this.users[newID] = {
-                        ...this.users[oldID], // Copy all existing user data
-                        ...user, // Overwrite with any new data sent with the message
-                        userID: newID // Ensure the userID is updated
-                    };
+                    this.users[newID] = this.createSphereAtPosition(user);
+                    this.users[newID].setTargetPosition(position);
                     
                     // Remove the old user data
+                    this.scene.remove(this.user[oldID].getSphere());
                     delete this.users[oldID];
                 } else {
                     console.warn(`Old user ID ${oldID} not found. Cannot update to ${newID}.`);
                 }
             
-                // Update or recreate the sphere associated with the user
-                if (this.userSpheres[oldID]) {
-                    // Remove the old sphere from the scene
-                    this.scene.remove(this.userSpheres[oldID].sphere);
-            
-                    // Create a new sphere for the new userID
-                    let newPosition = new THREE.Vector3(
-                        user.position.x,
-                        user.position.y,
-                        user.position.z
-                    );
-                    this.userSpheres[newID] = this.createSphereAtPosition(newPosition, newID, user.level);
-            
-                    // Remove the old sphere reference
-                    delete this.userSpheres[oldID];
-                }
-            
-                // Update UI elements
+
+
+
+        
+
+
+
+            // Update UI elements
                 document.getElementById('username').textContent = newID;
                 document.getElementById('onlineCount').textContent = message.onlineTime;
                 displayOverlayText(message.overlay, 2000, 24);
                 player.updateUserData(user);
             
+
+
                 // Update the user list
                 removeUserFromList(oldID);
                 addUserToList(newID, true);
             
+
+
+
                 // Send a message to the server if necessary to confirm the update
                 this.wsSend({
                     type: 'confirmUpdateUserID',
@@ -233,8 +232,7 @@ export class WebSocketConnection {
                 });
             }
 
-            // ... inside the ws.onmessage handler ...
-
+    //Notify of other user
             else if (message.type === 'notifyUserUpdate') {
                 console.log('notifyUserUpdate received');
                 const oldUserID = message.oldUserID;
@@ -264,193 +262,180 @@ export class WebSocketConnection {
                     this.userSpheres[newUserID].updateUserData(updatedUserData);
                 }
 
-                // Update the user list UI
-                // updateUIWithUserList(this.users); // Assuming this is your method to update the user list on the UI
-            }
-            
 
-            else if (message.type === 'objects') {
+    //🌷 Objects
+            } else if (message.type === 'objects') {
                 // Handle userConnected message
                 console.log(message);
                 console.log('objects');
                 updateUserObjects(scene, message.value);
             
-            
-            }
-            else if (message.type === 'overlay') {
+    //Overlay Message   
+            } else if (message.type === 'overlay') {
                 console.log('overlay');
                 displayOverlayText(message.value , 2000, 24);
 
-            }
-            else if (message.type === 'userDisconnected') {
-                // Remove the sphere of the disconnected user
-                // console.log('removing user:' + message.userID);
-                removeUserFromList(message.userID); // Remove from list
-                let userObject = this.userSpheres[message.userID]; //Get the userSphere object
-                // console.log('user object to delete:', userObject);
-                //console.log(message.userID);
-                delete this.users[message.userID]; // Remove from the users's object
 
-                // if a usersphere exists remove the sphere and its pointer 
-                if (userObject) {
-                    this.scene.remove(userObject.getSphere());
-                    delete this.userSpheres[message.userID];          
-                      }
-            }
 
-            else if (message.type === 'userCount') {
-                document.getElementById('userCount').textContent = message.value;
-                //console.log(users);
-                addLog(`Users online: ${message.value}`);
-            }
 
-            else if (message.type === 'beacon') {
-                console.log('beacon received');
-                let object = this.getObjectByProperty('URL', message.url);
-                if (object) {
-                    spawnBeaconLightAtPosition(object.position, this.beaconLightModel);
-                    addLog(`Beacon activated at <a href="${object.userData.URL}" target="_blank">${object.userData.Name}</a>`);
+
+
+// 🔄 Counts      
+        // 👥 User Count Updated
+                } else if (message.type === 'userCount') {
+                    document.getElementById('userCount').textContent = message.value;
+                    //console.log(users);
+                    addLog(`Users online: ${message.value}`);
                 }
-            }
 
-            else if (message.type === 'count') {
-                // console.log('count received');
-                document.getElementById('onlineCount').textContent = message.value;
-            }
-
-
-            else if (message.type === 'entrance') {
-                console.log('received entrance ping');
-
-                let entranceURL = "";
-                let foundObjectName = "";
-                const tempGLTF = getLoadedGLTF();
-                // Traverse the scene to find the object with the matching name to fetch its URL
-                console.log("Accessing GLTF in WebSockets.js:", tempGLTF);
-
-                tempGLTF.scene.traverse((object) => {
-                    if (object.userData && object.userData.Name === message.objectName) {
-                        entranceURL = object.userData.URL;
-                        foundObjectName = object.userData.Name;
+        // ⌚ Online Time Count Update
+                    else if (message.type === 'count') {
+                        // console.log('count received');
+                        document.getElementById('onlineCount').textContent = message.value;
                     }
-                });
 
-                if (entranceURL) {
-                    addLog(`User entered <a href="${entranceURL}" target="_blank">${foundObjectName}</a>`);
-                } else {
-                    addLog(`User entered ${message.objectName}`);
+
+// ⚡ Activities 
+        // 🚨 Beacon Received
+                else if (message.type === 'beacon') {
+                    console.log('beacon received');
+                    let object = this.getObjectByProperty('URL', message.url);
+                    if (object) {
+                        spawnBeaconLightAtPosition(object.position, this.beaconLightModel);
+                        addLog(`Beacon activated at <a href="${object.userData.URL}" target="_blank">${object.userData.Name}</a>`);
+                    }
+                }
+        // 🏛 Entrance to Location
+                else if (message.type === 'entrance') {
+                    console.log('received entrance ping');
+
+                    let entranceURL = "";
+                    let foundObjectName = "";
+                    const tempGLTF = getLoadedGLTF();
+                    // Traverse the scene to find the object with the matching name to fetch its URL
+                    console.log("Accessing GLTF in WebSockets.js:", tempGLTF);
+
+                    tempGLTF.scene.traverse((object) => {
+                        if (object.userData && object.userData.Name === message.objectName) {
+                            entranceURL = object.userData.URL;
+                            foundObjectName = object.userData.Name;
+                        }
+                    });
+
+                    if (entranceURL) {
+                        addLog(`User entered <a href="${entranceURL}" target="_blank">${foundObjectName}</a>`);
+                    } else {
+                        addLog(`User entered ${message.objectName}`);
+                    }
+
+                    const receivedPosition = new THREE.Vector3(
+                        message.position.x,
+                        message.position.y,
+                        message.position.z
+                    );
+                    spawnEntrancePingAtPosition(receivedPosition);
                 }
 
-                const receivedPosition = new THREE.Vector3(
-                    message.position.x,
-                    message.position.y,
-                    message.position.z
-                );
-                spawnEntrancePingAtPosition(receivedPosition);
-            }
-            //console.log( 'ws uid:' + myUserID);
-            //myUserID = primaryUserID;
-        };
+            };
 
-        this.ws.onerror = (error) => {
-            console.error("WebSocket Error: ", error);
-        };
 
-        this.ws.onclose = (event) => {
-            if (event.wasClean) {
-                console.log(`Connection closed cleanly, code=${event.code}, reason=${event.reason}`);
-            } else {
-                console.error('Connection died');
-            }
-            // You could try to reconnect here after some delay
-            setTimeout(() => {
-                this.initializeWebSocketConnection();
-            }, 5000);  // Try to reconnect every 5 seconds
-        };
-    }
-
-    wsSend(message) {
-        this.ws.send(JSON.stringify(message));
-    }
-
-    getUsers() {
-        return this.users;
-    }
-
-    getUsersWithUserSpheres() {
-        const usersWithSpheres = this.userSpheres.map(userSphere => userSphere.userID);
-        console.log(usersWithSpheres);
-        return usersWithSpheres;
-    }
-    removeUser(userID) {
-        const index = this.users.findIndex(user => user.userID === userID);
-        if (index !== -1) {
-            this.users.splice(index, 1);
-            removeUserFromList(userID); // Assuming you have a function to remove the user from the list
+// ‼ Error Handling
+            this.ws.onerror = (error) => {
+                console.error("WebSocket Error: ", error);
+            };
+    // 🚪 Connection Closed
+            this.ws.onclose = (event) => {
+                if (event.wasClean) {
+                    console.log(`Connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+                } else {
+                    console.error('Connection died');
+                }
+                // You could try to reconnect here after some delay
+                setTimeout(() => {
+                    this.initializeWebSocketConnection();
+                }, 5000);  // Try to reconnect every 5 seconds
+            };
         }
-    }
-
-    addUser(userID) {
-        const userExists = this.users.some(user => user.userID === userID);
-        if (!userExists) {
-            this.users.push({ userID }); // Assuming you want to add the user to the list with the userID property
-            addUserToList(userID); // Assuming you have a function to add the user to the list
-        }
-    }
-
-    updateUserID(oldUserID, newUserID) {
-        if (this.userSpheres[oldUserID]) {
-            const userSphereData = this.userSpheres[oldUserID];
-
-            // Update the userID within the userSphere's data if needed
-            // This assumes you have a method in UserSphere to handle the userID change
-            userSphereData.sphere.setUserID(newUserID);
-
-            // Reassign the userSphere data to the new userID
-            this.userSpheres[newUserID] = userSphereData;
-            delete this.userSpheres[oldUserID]; // Remove the old entry
-        }
-    }
-
-
-    createSphereAtPosition(position, userID, level) {
-        // const geometry = new THREE.SphereGeometry(0.1, 32, 32);
-        // const trans = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: false, opacity: 1 });
-        // const material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
-        // const outerSphere = new THREE.Mesh(geometry, trans);
-        const userSphere = new UserSphere(position, level, userID);
-        // outerSphere.layers.enable(1); // Add to the raycaster layer
-        userSphere.layers.enable(1); // Add to the raycaster layer
-        this.scene.add(userSphere);
-        // outerSphere.add(innerSphere);
-        // outerSphere.userData.userID = userID;
-        // const sprite = attachLabelToObjects(outerSphere, userID);
-        console.log('sphere created');
-        // this.userSpheres[userID] = userSphere;
-        console.log(this.userSpheres);
-        return userSphere;
-
-    };
-
-
-
     
 
 
-    
-    getObjectByProperty = (prop, value) => {
-        let foundObject = null;
-        const GLTF = getLoadedGLTF();
-        GLTF.scene.traverse((object) => {
-            if (object.userData && object.userData[prop] === value) {
-                foundObject = object;
-            }
-        });
-        return foundObject;};
+// 🧮 Methods / Functions
+        wsSend(message) {
+            this.ws.send(JSON.stringify(message));
+        }
 
-    getMyID() {
-        return this.myUserID;
-    }
+        getUsers() {
+            return this.users;
+        }
+
+        removeUser(userID) {
+            const index = this.users.findIndex(user => user.userID === userID);
+            if (index !== -1) {
+                this.users.splice(index, 1);
+                removeUserFromList(userID); // Assuming you have a function to remove the user from the list
+            }
+        }
+
+
+        updateUserList() {
+            // Remove all users from the list
+            this.users.forEach(user => {
+                removeUserFromList(user.userID);
+            });
+
+            // Add all users back to the list
+            this.users.forEach(user => {
+                addUserToList(user.userID);
+            });
+         }
+
+        addUser(userID) {
+            const userExists = this.users.some(user => user.userID === userID);
+            if (!userExists) {
+                this.users.push({ userID }); // Assuming you want to add the user to the list with the userID property
+                addUserToList(userID); // Assuming you have a function to add the user to the list
+            }
+        }
+
+        updateUserID(oldUserID, newUserID) {
+            if (this.userSpheres[oldUserID]) {
+                const userSphereData = this.userSpheres[oldUserID];
+
+                // Update the userID within the userSphere's data if needed
+                // This assumes you have a method in UserSphere to handle the userID change
+                userSphereData.sphere.setUserID(newUserID);
+
+                // Reassign the userSphere data to the new userID
+                this.userSpheres[newUserID] = userSphereData;
+                delete this.userSpheres[oldUserID]; // Remove the old entry
+            }
+        }
+
+
+        createSphereAtPosition(user) {
+            const userSphere = new UserSphere(user);
+            userSphere.layers.enable(1); // Add to the raycaster layer
+            this.scene.add(userSphere);
+            console.log('sphere created');
+            console.log(this.users);
+            return userSphere;
+
+        };
+
+        getObjectByProperty = (prop, value) => {
+            let foundObject = null;
+            const GLTF = getLoadedGLTF();
+            GLTF.scene.traverse((object) => {
+                if (object.userData && object.userData[prop] === value) {
+                    foundObject = object;
+                }
+            });
+            return foundObject;};
+            
+
+        getMyID() {
+            return this.myUserID;
+        }
 }
 
 export default WebSocketConnection;

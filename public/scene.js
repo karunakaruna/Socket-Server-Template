@@ -2,17 +2,6 @@
 
 let userID = null;
 const scene = new THREE.Scene();
-// const users = {};
-// const user = users[userID] = {
-//     ID: '010101010',
-//     position: { x: 0, y: 0, z: 0 }, // default position
-//     name: 'uuidname',
-//     count:  0, // Initialize count with the last online time from the database
-//     level: 1,
-//     favourites: [],
-//     mana: 1,
-// };
-
 
 
 import {WebSocketConnection} from './js/WebSockets.js';
@@ -28,10 +17,7 @@ import { UserSphere } from './js/scene/userSphere';
 import { initGrid } from './js/scene/grid';
 import { Lights } from './js/scene/lights';
 import { Resizer } from './js/util/Resizer';
-
 import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from './submit-module.js';
-
-
 import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
 
@@ -77,8 +63,8 @@ const animate = () => {
     TWEEN.update();
 
     // Move Spheres for each user
-    for (const userID in wsc.userSpheres) {
-        const userSphere = wsc.userSpheres[userID];
+    for (const userID in wsc.users) {
+        const userSphere = wsc.users[userID];
         if (userSphere && userSphere.getSphere()) {
             const targetPosition = userSphere.targetPosition;  // Assuming you have a targetPosition property
             userSphere.getSphere().position.lerp(targetPosition, 0.05);

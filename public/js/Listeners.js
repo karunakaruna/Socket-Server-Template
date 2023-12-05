@@ -116,7 +116,7 @@ export function addClickListener(map) {
 
         if (intersects.length > 0) {
             const intersection = intersects[0];
-            console.log('clicked')
+            // console.log('clicked')
             // Set the intersection point as the target position
             targetPosition.copy(intersection.point);
     
@@ -144,7 +144,7 @@ export function addClickListener(map) {
                     z: intersection.point.z
                 }
             };
-            console.log(payload);
+            // console.log(payload);
             wsc.wsSend(payload);
         }
     });

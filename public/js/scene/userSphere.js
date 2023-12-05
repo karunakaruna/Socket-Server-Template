@@ -43,6 +43,7 @@ export class UserSphere extends THREE.Object3D {
         this.sprite = attachLabelToObjectsAdv(this.getSphere(), this.name, 0, 1, -0.25);
         this.layers.enable(1);
         this.userSphere.name = 'userSphere';
+        
         parent.add(this.userSphere);
         // this.add(this.userSphere);
     }
@@ -56,7 +57,7 @@ export class UserSphere extends THREE.Object3D {
         this.name = this.user.name;
         this.count = this.user.count;
         this.level = this.user.level;
-
+        this.favourites = this.user.favourites;
         this.mana = this.user.mana;
         
         // ... update other properties as needed
