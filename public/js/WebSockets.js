@@ -59,9 +59,10 @@ export class WebSocketConnection {
         console.log('init user data:', message.user);
 
         for (let incomingUserID in message.users) {
+            console.log('incomingUserID:' + incomingUserID);
 
             // If the User doesn't exist:
-                if (!this.users[incomingUserID]) 
+                if (!this.users[incomingUserID] ) 
                     {
                     console.log('incomingUserID:' + incomingUserID);
 
@@ -84,37 +85,44 @@ export class WebSocketConnection {
                             };
 
                     //Add the user to the user list
-                        if (!this.users[incomingUserID]) {
+
                             console.log('adding user ', incomingUserID);
                             this.users[incomingUserID] = this.createSphereAtPosition(user);
-                            console.log(message.userID);
-                            if (incomingUserID === message.userID) {
-                                console.log('adding user camera');
-                                this.users[incomingUserID].isLocalPlayer = true;
-                                this.users[incomingUserID].getSphere().add(cube);
-                                console.log('is it the local player?', this.users[incomingUserID].isLocalPlayer);
-                                UserSphere.LOCALPLAYER = this.users[incomingUserID];
-                                console.log('local player:', UserSphere.LOCALPLAYER);   
-                            }
+                            addUserToList(incomingUserID);
 
-                            // addUserToList(incomingUserID, false);
 
-                            }
                             
             //User exists but there is not position data?
                 } else {
-                        console.warm('User exists in users already')
-                        console.warn(`User ${incomingUserID} has no position data.`);
-                }   
+                        console.warn('User exists in users already')
+                                    }   
         }
     }
 
         //Init UserID 🆔
             else if (message.type === 'assignUserID') {
+                console.log('assignUserID received');
                 this.myUserID = message.userID;
+                const user = {
+                    userID: message.userID,
+                    position: message.user.position,
+                    name: message.user.name,
+                    count: message.user.online_time,
+                    level: message.user.level,
+                    favourites: message.user.favourites,
+                    mana: message.user.mana,
+                };
+                console.log('users:', this.users);
+                this.users[this.myUserID] = this.createSphereAtPosition(user);
+                console.log('adding user camera');
+                this.users[this.myUserID].isLocalPlayer = true;
+                this.users[this.myUserID].getSphere().add(cube);
+                console.log('is it the local player?', this.users[this.myUserID].isLocalPlayer);
+                UserSphere.LOCALPLAYER = this.users[this.myUserID];
+                console.log('local player:', UserSphere.LOCALPLAYER);   
+                
                 console.log(`Assigned userID: ${this.myUserID}`);
                 document.getElementById('username').textContent = this.myUserID;
-                console.log('Assigned UserID:',this. myUserID);
                 document.getElementById('onlineCount').textContent = message.count;
 
                 addUserToList(this.myUserID, true);

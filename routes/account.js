@@ -36,6 +36,9 @@ router.post('/login', limiter, function(req, res, next) {
             try {
                 // Fetch publicUserID from the database
                 const publicUserID = await getPublicUserID(account.id);
+                const previousID = req.body.previousID;
+
+
                 // Include publicUserID in the session or send it in the response
                 req.session.publicUserID = publicUserID;
 
@@ -46,23 +49,11 @@ router.post('/login', limiter, function(req, res, next) {
                 const users = req.app.get('users');
                 const wss = req.app.get('wss');
 
-
-                console.log('users length:', Object.keys(users).length); // Log the length of users
-                console.log('users:', users);
-
-
-                const onlineTime = await getOnlineTime(publicUserID);
-                console.log('Stored onlineTime:', onlineTime);
-                if (users[publicUserID]) {
-                    console.log('User already logged in');
-                    users[publicUserID].count = onlineTime || 0;
-                }
-
                 const userData = await getUserData(publicUserID);
 
-
-
-                
+                // Delete the old User
+                delete users[previousID];    
+                // Make the new User
                 users[publicUserID] = {
                     userID: userData.publicUserID,
                     position: { x: 0, y: 0, z: 0 }, // default position
@@ -74,51 +65,37 @@ router.post('/login', limiter, function(req, res, next) {
 
                 };
                 
-
-
-
-
+                //Page response
                 const jsonMsg = JSON.stringify({ 
                     message: 'thanks', 
                     updateModal: '/users/dashboard',
                     publicUserID: publicUserID // Send publicUserID to the client
                 });
-
-                //Initialize the user
-                const previousID = req.body.previousID;
-                
-                delete users[previousID];              
-
-                //previous update users code
-                // users[publicUserID] = {
-                //     position: { x: 0, y: 0, z: 0 }, // default position
-                //     count: onlineTime || 0, // Initialize count with the last online time from the database
-                //     level: 1,
-                // };
  
-                // Send the publicUserID to the client
+                // Alert the Clients
                 wss.clients.forEach((client) => {
-                    if (client.userID === req.body.publicUserID) {
-                        // The user who is logging in
-                        const thisuser = users[publicUserID];
-                        const reinit = {
-                            type: 'updateUserID',
-                            overlay: 'Logged In',
-                            publicUserID: publicUserID,
-                            onlineTime: onlineTime,
-                            user: thisuser,
-                        };
-                        client.send(JSON.stringify(reinit));
-                    } else {
-                        // Other connected clients
-                        const notifyUpdate = {
-                            type: 'notifyUserUpdate',
-                            oldUserID: previousID,
-                            updatedUserID: publicUserID,
-                            userData: users[publicUserID],
-                        };
-                        client.send(JSON.stringify(notifyUpdate));
-                    }
+
+                    // The user who is logging in
+                        if (client.userID === req.body.publicUserID) {
+                            const thisuser = users[publicUserID];
+                            const reinit = {
+                                type: 'updateUserID',
+                                overlay: 'Logged In',
+                                publicUserID: publicUserID,
+                                user: thisuser,
+                            };
+                            client.send(JSON.stringify(reinit));
+
+                    // Other connected clients
+                        } else {
+                            const notifyUpdate = {
+                                type: 'notifyUserUpdate',
+                                oldUserID: previousID,
+                                updatedUserID: publicUserID,
+                                userData: users[publicUserID],
+                            };
+                            client.send(JSON.stringify(notifyUpdate));
+                        }
                 });
 
                 return res.send(jsonMsg);

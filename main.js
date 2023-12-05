@@ -252,9 +252,9 @@ wss.on("connection", function (ws, req) {
 
                 console.log('init user:', users[userID]);
                 // Send the assigned user ID to the connected client
-                onUserConnect(userID); //Broadcasts the user's ID to all users using 'init users'
-                ws.send(JSON.stringify({ type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }));
-
+                sendAndProceed(ws, { type: 'assignUserID', userID: userID, count: users[userID].count, user: users[userID] }, () => {
+                    onUserConnect(userID); // This will be called after 'assignUserID' is sent
+                });
                 updateObjects(userID); //Sends the objects from the object array to the user
                 broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true); //Broadcasts the user count to all users
                 if (wss.clients.size === 1) {
@@ -302,6 +302,19 @@ wss.on("connection", function (ws, req) {
                     } else {
                         console.log(`User ${userID} not found.`);
                     }
+                }
+
+
+                function sendAndProceed(ws, message, callback) {
+                    ws.send(JSON.stringify(message), (error) => {
+                        if (error) {
+                            console.error("Error sending message:", error);
+                            return;
+                        }
+                        if (callback) {
+                            callback();
+                        }
+                    });
                 }
 
 //📧 Messages
@@ -427,6 +440,8 @@ wss.on("connection", function (ws, req) {
         );
         console.log(users);
     }
+
+    
 
 //🔗 Disconnect
     async function onUserDisconnect(userID) {
