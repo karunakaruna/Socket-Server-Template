@@ -213,7 +213,7 @@ export class WebSocketConnection {
                 // Transfer old user data to the new user ID
                 if (this.users[oldID]) {
                     this.users[newID] = this.createSphereAtPosition(user);
-                    this.users[newID].setTargetPosition(oldposition);
+                    this.users[newID].updatePosition(oldposition);
                     this.users[newID].getSphere().add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
@@ -264,11 +264,9 @@ export class WebSocketConnection {
                 const newUserID = message.updatedUserID;
                 const updatedUserData = message.userData;
 
-                const temppos = new THREE.Vector3(
-                    this.users[oldUserID].position.x,
-                    this.users[oldUserID].position.y,
-                    this.users[oldUserID].position.z
-                );
+                const temppos = this.users[oldUserID].targetPosition;
+                    
+        
 
                 console.log('temppos:', temppos)
 
