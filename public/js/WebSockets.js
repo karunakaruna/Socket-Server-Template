@@ -2,7 +2,7 @@
 
 
 import { addLog } from './util/log.js';
-import { scene, cube, loadedGLTF,  beaconLightModel } from '../scene.js';
+import { scene, cube, loadedGLTF,  beaconLightModel, wsc } from '../scene.js';
 import { UserSphere } from './scene/userSphere.js';
 import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
@@ -180,10 +180,13 @@ export class WebSocketConnection {
             else if (message.type === 'userUpdate') {
                 //If player
                 if (message.userID === this.myUserID) {
-                    // player.setLevel(message.level);
+                    wsc.users[myUserID].setLevel(message.level);
+                    console.log('Localplayer leveled up')
                 //If not player
                 } else {
                     const sphere = this.users[message.userID];
+                    console.log('Other player leveled up')
+
                     if (sphere) 
                         {
                         sphere.setLevel(message.level);

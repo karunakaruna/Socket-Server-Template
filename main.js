@@ -520,7 +520,7 @@ wss.on("connection", function (ws, req) {
                         userID: userID,
                         level: user.level,
                     }),
-                    false
+                    true
                 );
                 break;
             }
