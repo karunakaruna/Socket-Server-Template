@@ -1,6 +1,7 @@
 //Loaders.js
 
 import {cube,camera} from '../scene.js';
+import { UserSphere } from './scene/userSphere.js';
 
 //All World Loader//
 let gltfScene;
@@ -12,9 +13,13 @@ const sprites = [];
 const boundingBox = new THREE.Box3();
 
 export function setBoundingBox(){
-    const cubePosition = cube.position;
-    const size = 60;
-    boundingBox.setFromCenterAndSize(cubePosition, new THREE.Vector3(size, size, size));
+    if (UserSphere.LOCALPLAYER && UserSphere.LOCALPLAYER.getSphere()) {
+        const cubePosition = UserSphere.LOCALPLAYER.getSphere().position;
+        const size = 60;
+        boundingBox.setFromCenterAndSize(cubePosition, new THREE.Vector3(size, size, size));
+    } else {
+        // Value doesn't exist, just relax or perform other actions
+    }
 };
 
 
