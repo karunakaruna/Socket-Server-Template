@@ -194,7 +194,7 @@ export class WebSocketConnection {
     //Updates the localplayers ID and updates the userlist
             else if (message.type === 'updateUserID') {
                 console.log('updateUserID received');
-
+                const oldposition = this.users[this.myUserID].targetPosition;
                 const oldID = this.myUserID;
                 const newID = message.publicUserID;
                 const user = message.user;
@@ -204,11 +204,11 @@ export class WebSocketConnection {
                 // Update the myUserID to the new ID
                 this.myUserID = newID;
 
-                const oldposition = this.users[oldID].position;
+                
                 // oldUser.updateUserData(user);
                         
   
-                console.log('oldID:', oldposition);
+                console.log('oldPosition:', oldposition);
 
                 // Transfer old user data to the new user ID
                 if (this.users[oldID]) {
