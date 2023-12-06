@@ -147,6 +147,7 @@ export class WebSocketConnection {
                 // if a sphere exists remove the sphere and its pointer 
                 if (userObject) {
                     this.scene.remove(userObject.getSphere());
+                    this.scene.remove(userObject);
                     delete this.users[message.userID];          
                       }
 
@@ -219,6 +220,7 @@ export class WebSocketConnection {
                     this.users[newID].getSphere().add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
+                    this.scene.remove(this.users[oldID]);
                     delete this.users[oldID];
                    
 
@@ -285,6 +287,7 @@ export class WebSocketConnection {
                     this.users[newUserID].setTargetPosition(temppos);
 
                     this.scene.remove(this.users[oldUserID].getSphere());
+                    this.scene.remove(this.users[oldUserID]);
                     delete this.users[oldUserID];
                 
                     removeUserFromList(oldUserID); // Assuming you have a function to remove the user from the list
