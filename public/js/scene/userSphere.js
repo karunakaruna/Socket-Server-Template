@@ -92,8 +92,9 @@ export class UserSphere extends THREE.Object3D {
     updatePosition(position) { 
         console.log(`updating position in userSphere ${this.userID} to: `, position);
         this.userSphere.position.copy(position);
+        this.userSphere.updateMatrix(); // Force matrix update
     };
-    
+
 
 
 

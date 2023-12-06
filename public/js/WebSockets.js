@@ -214,6 +214,8 @@ export class WebSocketConnection {
                 if (this.users[oldID]) {
                     this.users[newID] = this.createSphereAtPosition(user);
                     this.users[newID].updatePosition(oldposition);
+                    this.users[newID].setTargetPosition(oldposition);
+
                     this.users[newID].getSphere().add(cube);
                     // Remove the old user data
                     this.scene.remove(this.users[oldID].getSphere());
@@ -280,6 +282,7 @@ export class WebSocketConnection {
 
                     this.users[newUserID] = this.createSphereAtPosition(updatedUserData);
                     this.users[newUserID].updatePosition(temppos);
+                    this.users[newUserID].setTargetPosition(temppos);
 
                     this.scene.remove(this.users[oldUserID].getSphere());
                     delete this.users[oldUserID];
