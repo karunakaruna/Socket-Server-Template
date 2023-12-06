@@ -180,7 +180,7 @@ export class WebSocketConnection {
             else if (message.type === 'userUpdate') {
                 //If player
                 if (message.userID === this.myUserID) {
-                    wsc.users[myUserID].setLevel(message.level);
+                    this.users[this.myUserID].setLevel(message.level);
                     console.log('Localplayer leveled up')
                 //If not player
                 } else {
