@@ -6,6 +6,7 @@ import { spawnPingAtPosition } from './Spawners.js';
 import { showMenu } from './Menu.js';
 import { showModal } from './util/ShowModal.js';
 import { wsc } from '../scene.js';
+import { UserSphere} from './scene/userSphere.js'; 
 
 let targetRotationX = 0;
 let targetRotationZ = 0;
@@ -204,10 +205,13 @@ export function addRightClickListener(scene) {
                 // Now decide what menu to show based on the object
                 if (object.userData.URL) {
                     showMenu('url', event.clientX, event.clientY);
-                // } else if (object === yourUserSphere) {
-                //     showMenu('user', event.clientX, event.clientY);
-                } else if (isObjectAnotherUserSphere(object)) {
-                    showMenu('otherUser', event.clientX, event.clientY);
+                } else if (object.name ===  'userSphere') {
+                    if (object.parent.userID === wsc.myUserID) {
+                        showMenu('user', event.clientX, event.clientY);
+                    } else {
+                        showMenu('otherUser', event.clientX, event.clientY);
+                    }
+
                 } else {
                     showMenu('default', event.clientX, event.clientY);
                 }

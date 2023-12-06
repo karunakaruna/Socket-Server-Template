@@ -44,7 +44,9 @@ body {
     flex-direction: column;
     justify-content: flex-end;
     user-select: none;
-}
+    pointer-events: none; /* Allow clicking through the activity log */
+  }
+
 
 #log-list {
     list-style-type: none;
