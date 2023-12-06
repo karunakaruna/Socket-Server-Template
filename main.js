@@ -196,7 +196,7 @@ wss.on("connection", function (ws, req) {
                 console.log('Parsed Session:', req.session);}
                 });
 
-                console.log('honey im home');
+            console.log('honey im home');
             const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
             // Retrieve the session ID from the parsed cookies
             const rawSessionCookie = cookies['connect.sid'] || '';
@@ -422,6 +422,12 @@ wss.on("connection", function (ws, req) {
             });
         }, 50000);
     };
+
+    // function logIntervalIds() {
+    //     for (const userID in users) {
+    //         console.log(`User ${userID} intervalId: ${users[userID].count}`);
+    //     }
+    // }
 
 //🔗 Connect
     function onUserConnect(userID) {
