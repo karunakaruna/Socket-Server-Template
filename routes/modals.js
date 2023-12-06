@@ -78,6 +78,7 @@ router.get('/home', (req, res) => {
 
 // Endpoint to get the current users array
 router.post('/list-users', (req, res) => {
+    res.set('Cache-Control', 'no-store');
     const data = { 
         ok: true,
         users: req.app.get('users') 
