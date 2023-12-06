@@ -512,16 +512,18 @@ wss.on("connection", function (ws, req) {
                 if (user.level !== level) {
                     user.level = level;
                     sendToUser(userID, { type: "overlay", value: 'Level Up!' });
+
+                    broadcast(
+                        null,
+                        JSON.stringify({
+                            type: "userUpdate",
+                            userID: userID,
+                            level: user.level,
+                        }),
+                        true
+                    );
                 }
-                broadcast(
-                    null,
-                    JSON.stringify({
-                        type: "userUpdate",
-                        userID: userID,
-                        level: user.level,
-                    }),
-                    true
-                );
+           
                 break;
             }
         }
