@@ -11,7 +11,7 @@ wsc.initializeWebSocketConnection();
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, setBoundingBox, checkSpriteVisibility, loadedGLTF, pingModel, beaconLightModel     } from './js/Loaders';
 import { addMouseMovementListener, addScrollWheelListener, addClickListener, addRightClickListener } from './js/Listeners.js';
 import { DOM } from './js/util/DOM';
-import { initCamera, updateCamera } from './js/Camera';
+import { initCamera, updateCamera, calculateFocusDistance } from './js/Camera';
 import { activeMixers } from './js/Spawners.js';
 import { UserSphere } from './js/scene/userSphere';
 import { initGrid } from './js/scene/grid';
@@ -22,7 +22,7 @@ import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
 
 DOM();
-const { camera, renderer, cube, composer } = initCamera(scene);
+const { camera, renderer, cube, composer, bokehPass } = initCamera(scene);
 console.log('my user ID', wsc.myUserID);
 console.log('my user object', wsc.users[wsc.myUserID]);
 const vec = new THREE.Vector3(0,0,0);
@@ -72,7 +72,11 @@ const animate = () => {
             userSphere.getSphere().position.lerp(targetPosition, 0.05);
         }
     }
+
+    const focusDistance = calculateFocusDistance(camera, cube);
+    bokehPass.uniforms["focus"].value = focusDistance;
     // renderer.render(scene, camera);
+    
     composer.render();
     setBoundingBox();
     checkSpriteVisibility()

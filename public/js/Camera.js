@@ -5,7 +5,8 @@
     import { RenderPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/RenderPass.js';
     import { BloomPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/BloomPass.js';
     import { UnrealBloomPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/UnrealBloomPass.js';
-    
+    import { BokehPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/BokehPass.js';
+    import {focusDistance} from './Listeners.js';   
 
     let cubePosition = new THREE.Vector3(0, 0, 0);
     //Camera Movement
@@ -16,6 +17,13 @@
     const rotationSpeed = 0.1; // Adjust this for rotation speed
     let cameraFOV = 60;
     
+    export function calculateFocusDistance(camera, object) {
+        return camera.position.distanceTo(object.position);
+    }
+    
+ 
+
+
 
     export function initCamera(scene){
             // Initialize cube position, target position, and rotation
@@ -53,8 +61,18 @@
                     .001,  // kernel size
                     .1   // sigma ?
                 );
+                const bokehPass = new BokehPass(scene, camera, {
+                    focus: 10,
+                    aperture: 0.00125,
+                    maxblur: 0.01,
+                
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                });
                 composer.addPass(bloomPass);
-                    
+                composer.addPass(bokehPass);
+
+
            
             //Setup Basis Geometry (used for camera testing)
             const geometry = new THREE.BoxGeometry(0.1,0.1,0.1);
@@ -71,7 +89,7 @@
             cube.visible = true;
             cube.add(camera);
             scene.add(cube);
-            return { camera, renderer, cube, composer }
+            return { camera, renderer, cube, composer, bokehPass }
             };
     export function parentCamera(camera, user){
         user.add(camera);

@@ -7,7 +7,7 @@ import { showMenu } from './Menu.js';
 import { showModal } from './util/ShowModal.js';
 import { wsc } from '../scene.js';
 import { UserSphere} from './scene/userSphere.js'; 
-
+import { calculateFocusDistance } from './Camera.js';
 let targetRotationX = 0;
 let targetRotationZ = 0;
 let targetFOV = 60; // Initial target FOV
@@ -18,6 +18,10 @@ let targetPosition = new THREE.Vector3(0, 0, 0);
 const raycaster = new THREE.Raycaster();
 raycaster.layers.set(1);
 const mouse = new THREE.Vector2();
+export let focusDistance = 20;
+
+
+
 
 
 export function addMouseMovementListener(map) {
@@ -102,6 +106,7 @@ export function addScrollWheelListener() {
     window.addEventListener('wheel', (event) => {
         targetFOV += event.deltaY * 0.1; // Invert the zoom direction
         targetFOV = Math.min(Math.max(targetFOV, 25), 80); // Clamp FOV between 25 and 80
+
     });
 }
 export function addClickListener(map) {   
