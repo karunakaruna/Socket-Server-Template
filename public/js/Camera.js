@@ -1,7 +1,11 @@
     
     import { listener } from './Audio';
     import { targetRotationX, targetRotationZ, targetPosition, targetFOV} from './Listeners.js'
-
+    import { EffectComposer } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/RenderPass.js';
+    import { BloomPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/BloomPass.js';
+    import { UnrealBloomPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+    
 
     let cubePosition = new THREE.Vector3(0, 0, 0);
     //Camera Movement
@@ -27,10 +31,30 @@
             camera.add(listener); //👂
 
             //Renderer
-            const renderer = new THREE.WebGLRenderer();
+            const renderer = new THREE.WebGLRenderer({     
+                powerPreference: "high-performance",
+                antialias: false,
+                stencil: false,
+                depth: false});
+                
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 1); // Set a background color, if necessary
+            renderer.setClearAlpha(1); // Ensure alpha is set to 1
             document.body.appendChild(renderer.domElement);
-            
+
+            // Setup EffectComposer for post-processing
+                const composer = new EffectComposer(renderer);
+                composer.addPass(new RenderPass(scene, camera));
+
+                // Add BloomPass for glow effect
+                const bloomPass = new UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    .5, // strength5
+                    .001,  // kernel size
+                    .1   // sigma ?
+                );
+                composer.addPass(bloomPass);
+                    
            
             //Setup Basis Geometry (used for camera testing)
             const geometry = new THREE.BoxGeometry(0.1,0.1,0.1);
@@ -47,7 +71,7 @@
             cube.visible = true;
             cube.add(camera);
             scene.add(cube);
-            return { camera, renderer, cube }
+            return { camera, renderer, cube, composer }
             };
     export function parentCamera(camera, user){
         user.add(camera);
