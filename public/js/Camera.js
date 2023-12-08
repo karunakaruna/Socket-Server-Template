@@ -63,8 +63,8 @@
                 );
                 const bokehPass = new BokehPass(scene, camera, {
                     focus: 10,
-                    aperture: 0.00125,
-                    maxblur: 0.01,
+                    aperture: 0.000525,
+                    maxblur: 0.005,
                 
                     width: window.innerWidth,
                     height: window.innerHeight

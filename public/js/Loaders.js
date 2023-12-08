@@ -2,6 +2,7 @@
 
 import {cube,camera} from '../scene.js';
 import { UserSphere } from './scene/userSphere.js';
+// import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.150.0/examples/jsm/loaders/GLTFLoader.js';
 
 //All World Loader//
 let gltfScene;

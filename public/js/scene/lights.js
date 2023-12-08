@@ -9,6 +9,32 @@
         }
     }
 
-    
+
 
     
+
+    export class TextureSpot {
+        constructor(scene) {
+            const textureLoader = new THREE.TextureLoader();
+            const spotLightMap = textureLoader.load('./textures/Caspar.jpg');
+            const spotLight = new THREE.SpotLight(0xffffff);
+            spotLight.intensity = 1.5; // Set the intensity value
+            spotLight.angle = Math.PI / 5;
+            spotLight.penumbra = 0.3;
+            spotLight.position.set(0, 10, 0);
+            spotLight.castShadow = true;
+            spotLight.shadow.camera.near = 10;
+            spotLight.shadow.camera.far = 100;
+            spotLight.shadow.mapSize.width = 1024;
+            spotLight.shadow.mapSize.height = 1024;
+            spotLight.shadow.focus = 1;
+
+            spotLight.map = spotLightMap;
+            spotLight.target.position.set(0, 0, 0);
+            spotLight.target.updateMatrixWorld();
+            spotLight.shadow.camera.fov = 30;
+            scene.add(spotLight.target);
+            scene.add(spotLight);
+            console.log('SPOTLIGHT CREATED!!');
+        }
+    }

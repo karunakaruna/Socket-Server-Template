@@ -15,7 +15,7 @@ import { initCamera, updateCamera, calculateFocusDistance } from './js/Camera';
 import { activeMixers } from './js/Spawners.js';
 import { UserSphere } from './js/scene/userSphere';
 import { initGrid } from './js/scene/grid';
-import { Lights } from './js/scene/lights';
+import { Lights, TextureSpot } from './js/scene/lights';
 import { Resizer } from './js/util/Resizer';
 import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from './submit-module.js';
 import { attachLabelToObjectsAdv } from './js/Sprite.js';
@@ -41,6 +41,7 @@ scene.add(grid);
 grid.layers.enable(1); // Add to the raycaster layer
 
 new Lights(scene);
+// new TextureSpot(scene);
 new Resizer(camera, renderer, composer);
 
 
