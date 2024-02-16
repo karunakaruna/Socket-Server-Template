@@ -70,7 +70,7 @@
                     height: window.innerHeight
                 });
                 composer.addPass(bloomPass);
-                composer.addPass(bokehPass);
+                // composer.addPass(bokehPass);
 
 
            

@@ -165,3 +165,26 @@ async function updatePassword() {
         console.error('Error submitting form:', error);
     }
 };
+
+
+
+
+export function handleSubmit() {
+    var textInput = document.getElementById('textInput').value;
+    // Example object, replace with actual data as needed
+    var intersectionPoint = {x: 1, y: 2, z: 3}; // Placeholder values
+
+    var payload = {
+        type: 'customType',
+        text: textInput,
+        position: {
+            x: intersectionPoint.x,
+            y: intersectionPoint.y,
+            z: intersectionPoint.z
+        }
+    };
+    wsc.wsSend(payload);
+    console.log('Payload:', payload);
+    // Here, implement the actual WebSocket send logic, e.g., wsc.wsSend(payload);
+    // This part needs to be adapted to your specific WebSocket handling logic
+}

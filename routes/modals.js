@@ -96,6 +96,21 @@ router.post('/list-users', (req, res) => {
 
 
 
+router.post('/submit', (req, res) => {
+    try {
+        const data = {
+            title: 'Modal Title',
+            content: 'Content for the modal',
+            isAuthenticated: req.isAuthenticated() // true if the user is logged in
+        };
+        res.render('modal-submit.ejs', data);
+    } catch (error) {
+        console.error("Error rendering EJS:", error);
+        res.status(500).send('Server Error');
+    }
+});
+
+
 // Endpoint to get information about the current user
 router.post('/user-info', (req, res) => {
     try {

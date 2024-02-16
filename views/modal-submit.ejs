@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Submission</title>
+    <style>
+        p {
+            margin-top: -25px;
+        }
+
+    #custom-form-content {
+        pointer-events: auto;
+    }
+</style>
+    </style>
+</head>
+<body>
+    
+    <h1> Submit a landmark </h1>
+    <p style="text-align: right;">v.09</p>
+
+    <!-- Add custom form content here -->
+    <div id="custom-form-content">
+        <label for="textInput">Enter Details:</label>
+        <textarea id="textInput" name="textInput" rows="4" cols="50"></textarea><br>
+        <button id="landmark-submit">Submit</button>
+    </div>
+
+
+
+    <!-- Placeholder for success/error messages -->
+    <ul>
+        <% if(messages.success_msg) { %>
+            <li><%= messages.success_msg %></li>
+        <% } %>
+    </ul>
+
+    <ul>
+        <% if(messages.error){ %>
+            <li><%= messages.error %></li>
+        <% } %>
+    </ul>
+
+</body>
+</html>

@@ -179,6 +179,8 @@ if (modalElement) {
             updatePassword();
         } else if (event.target.id === 'submitEmailButton') {
             submitEmail();
+        } else if (event.target.id === 'landmark-submit') {
+            handleSubmit();
         } else if (event.target.id === 'logoutLink') {
             logOut();
             // Assuming updateModalContent is a function you have in scope
@@ -214,3 +216,25 @@ export function fetchUsers() {
         console.error('Error fetching users:', error);
     });
 }
+
+
+export function handleSubmit() {
+    var textInput = document.getElementById('textInput').value;
+    // Example object, replace with actual data as needed
+    var intersectionPoint = {x: 1, y: 2, z: 3}; // Placeholder values
+
+    var payload = {
+        type: 'customType',
+        text: textInput,
+        position: {
+            x: intersectionPoint.x,
+            y: intersectionPoint.y,
+            z: intersectionPoint.z
+        }
+    };
+
+    console.log('Payload:', payload);
+    // Here, implement the actual WebSocket send logic, e.g., wsc.wsSend(payload);
+    // This part needs to be adapted to your specific WebSocket handling logic
+}
+

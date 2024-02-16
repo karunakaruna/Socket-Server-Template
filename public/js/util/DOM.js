@@ -86,6 +86,50 @@ export class Modal {
     hide() {
         document.getElementById(this.modalId).style.display = 'none';
     }
+
+    createCustomModalContent(intersectionPoint) {
+        // // Custom content for the modal
+        // const customHTML = `
+        //     <div>
+        //         <label for="textInput">${objectName}: </label>
+        //         <textarea id="textInput" name="textInput" rows="4" cols="50"></textarea>
+        //         <button id="${this.modalId}-submit">Submit</button>
+        //     </div>
+        // `;
+
+        // // Replace or append to the modal content
+        // const contentElement = document.getElementById(`${this.modalId}-content`);
+        // contentElement.innerHTML = customHTML;
+
+        // Add event listener for the submit button
+        document.getElementById(`landmark-submit`).addEventListener('click', () => {
+            this.handleSubmit(textInput, intersectionPoint);
+        });
+    }
+
+    handleSubmit(intersectionPoint) {
+        const textInput = document.getElementById("textInput").value;
+
+        // Construct the payload with text input and coordinates
+        const payload = {
+            type: 'customType', // Specify the type as needed
+            text: textInput,
+            position: {
+                x: intersectionPoint.x,
+                y: intersectionPoint.y,
+                z: intersectionPoint.z
+            }
+        };
+
+        // Send the payload via WebSocket
+        wsc.wsSend(payload);
+        console.log('Payload sent:', payload);
+
+        // Optionally close the modal after sending
+        this.hide();
+    }
+
+
 }
 
 
@@ -166,6 +210,21 @@ export function DOM(){
         
         //closeContextMenu();
     });
+
+
+    //Default Menu
+
+    let landmarkModal = null;
+    const landmarkButton = document.querySelector("#landmarkButton").addEventListener("click", () => {
+        console.log("LandMARK");
+        if (!landmarkModal) {
+            landmarkModal = new Modal('landmark', '/modals/submit');
+        } else {
+            landmarkModal.show();
+        }
+        closeContextMenu();
+    });
+
 
 
         function sendIntersectionPoint(intersectionPoint, text) {
