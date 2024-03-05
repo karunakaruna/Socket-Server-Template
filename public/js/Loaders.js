@@ -53,6 +53,26 @@ export function checkSpriteVisibility() {
     }
 };
 
+
+
+// export function loadGrid(scene) {
+//     // Load grid
+//     const gridMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, wireframe: true });
+//     const gridLoader = new THREE.GLTFLoader();
+//     gridLoader.load('models/grid.glb', function (gltf) {
+//         const grid = gltf.scene;
+//         grid.traverse(function (child) {
+//             if (child.isMesh) {
+//                 child.material = gridMaterial;
+//             }
+//         });
+//         scene.add(grid);
+//     });
+// }
+
+
+
+
 export function loadAllWorlds(scene) {
     const loader = new THREE.GLTFLoader();
     loader.load('models/kernel_worlds.glb', function (gltf) {
@@ -154,32 +174,24 @@ export function loadPingModel(scene) {
     }
 
     export function loadBeaconLightModel(scene) {
-        const beaconLightLoader = new THREE.GLTFLoader();
-        let beaconLightModel; // Store the loaded beacon light model
-        beaconLightLoader.load('models/beaconlight.glb', (gltf) => {
-            beaconLightModel = gltf.scene; // Store the loaded model
-            beaconLightModel.animations = gltf.animations; // Store animations
-
-            beaconLightModel.scale.set(2, 2, 2);
-            beaconLightModel.position.set(0, 1, 0);
-            const materialRed = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-            beaconLightModel.traverse((child) => {
-                if (child.isMesh) {
-                    child.material = materialRed;
-                }
-            });
-            
-            beaconLightModel.visible = false;
-            scene.add(beaconLightModel);
-            
-            // If you end up adding animations for the beacon light later, you can initialize its animation mixer here:
-            // beaconLightMixer = new THREE.AnimationMixer(beaconLightModel);
-
-        }, undefined, (error) => {
-            console.error('An error occurred loading the beacon light GLB:', error);
+        return new Promise((resolve, reject) => {
+            const beaconLightLoader = new THREE.GLTFLoader();
+            beaconLightLoader.load('models/beaconlight.glb', (gltf) => {
+                beaconLightModel = gltf.scene;
+                beaconLightModel.animations = gltf.animations;
+                beaconLightModel.scale.set(2, 2, 2);
+                beaconLightModel.position.set(0, 1, 0);
+                beaconLightModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+                    }
+                });
+                beaconLightModel.visible = false;
+                scene.add(beaconLightModel);
+                resolve(beaconLightModel);
+            }, undefined, reject);
         });
-        
-}
+    }
 export { beaconLightModel };
 export { pingModel };
 export { gltfScene };

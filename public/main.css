@@ -48,16 +48,20 @@ body {
   }
 
 
+
+
 #log-list {
     list-style-type: none;
     padding: 0;
     margin: 0;
     text-shadow: 0px 0px 5px #000;  /* shadow for better readability */
     user-select: none;
+    pointer-events: none;
 }
 
 #log-list a {
   color: cyan;
+  pointer-events: auto;
 }
 
 

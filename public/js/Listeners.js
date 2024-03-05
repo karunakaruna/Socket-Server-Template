@@ -50,6 +50,24 @@ export function addMouseMovementListener(map) {
 
 
         }});
+
+    // window.addEventListener('keydown', (event) => {
+
+    //     if (event.code === 'space') {
+
+
+
+
+    //     };
+
+    //     });
+
+
+        
+
+
+
+
     window.addEventListener('mousemove', (event) => {
     
     const mouseX = event.clientX - window.innerWidth / 2;
@@ -62,7 +80,7 @@ export function addMouseMovementListener(map) {
     // Update the picking ray with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
     
-    const divs = [document.getElementById('floatingText'), document.getElementById('authorText'), document.getElementById('yearText')];
+    const divs = [document.getElementById('floatingText'), document.getElementById('authorText'), document.getElementById('yearText'),document.getElementById('descriptionText')];
     const imageDiv = document.getElementById('displayedImage');
     const imageElem = document.getElementById('imageDisplay');
 
@@ -99,6 +117,8 @@ export function addMouseMovementListener(map) {
                 document.getElementById('floatingText').innerText = userData.Name || "";
                 document.getElementById('authorText').innerText = userData.Author || "";
                 document.getElementById('yearText').innerText = userData.Year || "";
+                document.getElementById('descriptionText').innerText = userData.Lore || "";
+
         
                 // Update the image src if 'image' userData is present
                 if (userData.image) {

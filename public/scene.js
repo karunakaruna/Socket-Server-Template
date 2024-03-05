@@ -47,11 +47,26 @@ new Resizer(camera, renderer, composer);
 
 loadAllWorlds(scene);
 loadPingModel(scene);
-loadBeaconLightModel(scene); 
+// loadGrid(scene);
+loadBeaconLightModel(scene).then(() => {
+    console.log("Beacon Light Model loaded and ready for use.");
+    // Now safe to clone and use beaconLightModel
+}).catch((error) => {
+    console.error("An error occurred loading the beacon light GLB:", error);
+});
 addMouseMovementListener(scene);
 addScrollWheelListener();
 addClickListener(scene);
 addRightClickListener(scene);
+
+
+export function getBeaconLightModel() {
+    if (!beaconLightModel) {
+        throw new Error("BeaconLightModel is not loaded yet.");
+    }
+    return beaconLightModel;
+}
+
 
 export {loadedGLTF, pingModel, beaconLightModel, scene, cube, camera, userID, renderer};
 

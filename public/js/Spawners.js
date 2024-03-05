@@ -1,6 +1,6 @@
 //Spawners.js
 
-import { scene, pingModel, beaconLightModel } from '../scene.js';
+import { scene, pingModel, beaconLightModel, getBeaconLightModel } from '../scene.js';
 import { playSpatialAudio } from './Audio.js';
 import { loadAllWorlds, loadPingModel, loadBeaconLightModel, gltfScene,  setBoundingBox, checkSpriteVisibility } from './Loaders.js';
 import { attachLabelToObjectsAdv } from './Sprite.js';
@@ -61,40 +61,49 @@ function spawnPingAtPosition(position) {
 }
 
 // BEACONLIGHT <<<<<<<<<<<<
-function spawnBeaconLightAtPosition(position, model) {
-    const beaconLightInstance = model.clone();
-    beaconLightInstance.position.copy(position).add(new THREE.Vector3(0, 0, 0));
-    beaconLightInstance.visible = true;
+function spawnBeaconLightAtPosition(position) {
+    try {
+        // Assuming getBeaconLightModel() is a function that either returns the loaded model
+        // or throws an error if the model isn't loaded yet.
+        const beaconLightModel = getBeaconLightModel(); // Access the model safely
 
-    // Set the initial material opacity
-    beaconLightInstance.traverse((child) => {
-        if (child.isMesh && child.material) {
-            child.material.transparent = true; // Required to allow fading
-            child.material.opacity = 1;
-        }
-    });
+        const beaconLightInstance = beaconLightModel.clone();
+        beaconLightInstance.position.copy(position).add(new THREE.Vector3(0, 0, 0));
+        beaconLightInstance.visible = true;
 
-    scene.add(beaconLightInstance);
+        // Set the initial material opacity
+        beaconLightInstance.traverse((child) => {
+            if (child.isMesh && child.material) {
+                child.material.transparent = true; // Required to allow fading
+                child.material.opacity = 1;
+            }
+        });
 
-    // Play spatial audio at the given position
-    playSpatialAudio('beacon', position);
+        scene.add(beaconLightInstance);
 
-    // Fade out using Tween.js
-    const fadeOut = { opacity: 1 };
-    new TWEEN.Tween(fadeOut)
-        .to({ opacity: 0 }, 60000)  // 60 seconds
-        .onUpdate(() => {
-            beaconLightInstance.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    child.material.opacity = fadeOut.opacity;
-                }
-            });
-        })
-        .onComplete(() => {
-            scene.remove(beaconLightInstance);
-        })
-        .start();
+        // Play spatial audio at the given position
+        playSpatialAudio('beacon', position, 2);
+
+        // Fade out using Tween.js
+        const fadeOut = { opacity: 1 };
+        new TWEEN.Tween(fadeOut)
+            .to({ opacity: 0 }, 6000) // 60 seconds
+            .onUpdate(() => {
+                beaconLightInstance.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        child.material.opacity = fadeOut.opacity;
+                    }
+                });
+            })
+            .onComplete(() => {
+                scene.remove(beaconLightInstance);
+            })
+            .start();
+    } catch (error) {
+        console.error("Failed to spawn beacon light at position:", error);
     }
+}
+
 
 // ENTRANCE PING
 export function spawnEntrancePingAtPosition(position) {

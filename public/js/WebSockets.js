@@ -353,7 +353,7 @@ export class WebSocketConnection {
                 message.position.z
             );
             spawnPingAtPosition(receivedPosition);
-            spawnBeaconLightAtPosition(receivedPosition, this.beaconLightModel);
+            spawnBeaconLightAtPosition(receivedPosition);
 
         }
 
