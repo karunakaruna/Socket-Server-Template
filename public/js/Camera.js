@@ -1,6 +1,6 @@
     
     import { listener } from './Audio';
-    import { targetRotationX, targetRotationZ, targetPosition, targetFOV} from './Listeners.js'
+    import { targetRotationX, targetRotationZ, targetPosition, targetFOV, cameraPOS} from './Listeners.js'
     import { EffectComposer } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/EffectComposer.js';
     import { RenderPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/RenderPass.js';
     import { BloomPass } from 'https://cdn.skypack.dev/three@0.124.0/examples/jsm/postprocessing/BloomPass.js';
@@ -30,7 +30,7 @@
 
 
             // Camera Renderer Setup
-            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             // Adjust this for zoom speed
             const customUpVector = new THREE.Vector3(0, 0, 1); // Example: Use the default "up" direction
             camera.up.copy(customUpVector);
@@ -103,6 +103,9 @@
 
         camera.fov += (targetFOV - camera.fov) * fovLerpSpeed;
         camera.updateProjectionMatrix();
+        const positionLerpSpeed = 0.1; // Adjust this for position lerp speed
+
+        camera.position.lerp(new THREE.Vector3(0, cameraPOS, 0), positionLerpSpeed);
     
         // Use lerp to smoothly move the cube towards the target position
         cubePosition.lerp(targetPosition, damping);

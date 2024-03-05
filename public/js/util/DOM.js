@@ -326,6 +326,30 @@ export function DOM(){
     });
 
 
+    const demoButtonD = document.querySelector("#demoButtonD").addEventListener("click", () => {
+        console.log("Demo Button D clicked");
+        sendIntersectionPoint(intersectionPoint, '🍀');
+        closeContextMenu();
+    });
+
+    const demoButtonE = document.querySelector("#demoButtonE").addEventListener("click", () => {
+        console.log("Demo Button E clicked");
+        sendIntersectionPoint(intersectionPoint, '🌿');
+        closeContextMenu();
+    });
+
+    const demoButtonF = document.querySelector("#demoButtonF").addEventListener("click", () => {
+        console.log("Demo Button F clicked");
+        sendIntersectionPoint(intersectionPoint, '🗝');
+        closeContextMenu();
+    });
+
+    const demoButtonG = document.querySelector("#demoButtonG").addEventListener("click", () => {
+        console.log("Demo Button G clicked");
+        sendIntersectionPoint(intersectionPoint, '💎');
+        closeContextMenu();
+    });
+
 
 
 // Submit Related Events

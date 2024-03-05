@@ -90,6 +90,11 @@ export class UserSphere extends THREE.Object3D {
         this.targetPosition.copy(position);
     }
     
+    getTargetPosition() {
+        return this.targetPosition;
+    }
+
+
     updatePosition(position) { 
         console.log(`updating position in userSphere ${this.userID} to: `, position);
         this.userSphere.position.set(position.x, position.y, position.z);

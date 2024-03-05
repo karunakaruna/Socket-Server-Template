@@ -336,8 +336,9 @@ wss.on("connection", function (ws, req) {
                     currData.level = users[userID].level;
                     broadcast(ws, currData, false);
 
-                } 
-                
+                }             else if(currData.type === 'beacon2') {
+                    broadcast(null, JSON.stringify({ type: 'beacon2', position: currData.position }), true);
+                }
             //📶 Ping
                 else if(currData.type === 'ping') {
                     console.log('Received a server heartbeat ping');

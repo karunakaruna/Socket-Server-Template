@@ -25,7 +25,8 @@ export function setBoundingBox(){
 
 
 export function checkSpriteVisibility() {
-    const scaleFactor = camera.fov / 75;
+    const camerapositiony = camera.position.y;
+    const scaleFactor = (camera.fov + (camerapositiony/4))/ 75;
     for (const sprite of sprites) {
         if (sprite.isStar) {
             sprite.visible = boundingBox.containsPoint(sprite.position);
@@ -54,7 +55,7 @@ export function checkSpriteVisibility() {
 
 export function loadAllWorlds(scene) {
     const loader = new THREE.GLTFLoader();
-    loader.load('models/all_worlds.glb', function (gltf) {
+    loader.load('models/kernel_worlds.glb', function (gltf) {
     loadedGLTF = gltf;
     console.log("GLTF loaded:", loadedGLTF);
     gltfScene = gltf.scene;

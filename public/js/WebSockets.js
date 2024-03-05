@@ -343,6 +343,21 @@ export class WebSocketConnection {
                         addLog(`Beacon activated at <a href="${object.userData.URL}" target="_blank">${object.userData.Name}</a>`);
                     }
                 }
+
+        // 🚨 Beacon2 Received
+        else if (message.type === 'beacon2') {
+            console.log('beacon received');
+            const receivedPosition = new THREE.Vector3(
+                message.position.x,
+                message.position.y,
+                message.position.z
+            );
+            spawnPingAtPosition(receivedPosition);
+            spawnBeaconLightAtPosition(receivedPosition, this.beaconLightModel);
+
+        }
+
+
         // 🏛 Entrance to Location
                 else if (message.type === 'entrance') {
                     console.log('received entrance ping');

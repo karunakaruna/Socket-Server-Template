@@ -1,18 +1,21 @@
 //Listeners.js
 
+
 import { camera,  cube } from '../scene.js';
 import { gltfScene } from './Loaders.js';
-import { spawnPingAtPosition } from './Spawners.js';
+import { spawnPingAtPosition, spawnBeaconLightAtPosition } from './Spawners.js';
 import { showMenu } from './Menu.js';
 import { showModal } from './util/ShowModal.js';
-import { wsc } from '../scene.js';
+import { wsc,beaconLightModel } from '../scene.js';
 import { UserSphere} from './scene/userSphere.js'; 
 import { calculateFocusDistance } from './Camera.js';
 let targetRotationX = 0;
 let targetRotationZ = 0;
 let targetFOV = 60; // Initial target FOV
+let cameraPOS = 35; // Initial camera position
 let maxrot = 25;
 let targetPosition = new THREE.Vector3(0, 0, 0);
+let userPosition = new THREE.Vector3(0, 0, 0);
 
 // Raycaster
 const raycaster = new THREE.Raycaster();
@@ -26,6 +29,27 @@ export let focusDistance = 20;
 
 export function addMouseMovementListener(map) {
 
+
+    window.addEventListener('keydown', (event) => {
+        const thisuser = wsc.users[wsc.myUserID];
+        userPosition = thisuser.getTargetPosition();
+        if (event.code === 'Space') {
+          spawnPingAtPosition(userPosition); // Call the function to spawn a beacon
+          const payload = {
+            type: 'beacon2',
+            userID: wsc.myUserID,
+            position: {
+                x: userPosition.x,
+                y: userPosition.y,
+                z: userPosition.z
+            }
+        };
+        wsc.wsSend(payload);
+
+
+
+
+        }});
     window.addEventListener('mousemove', (event) => {
     
     const mouseX = event.clientX - window.innerWidth / 2;
@@ -101,11 +125,22 @@ export function addMouseMovementListener(map) {
 
 }
 
+
+
+
+
+
+
+
     // Listen to scroll wheel
 export function addScrollWheelListener() {
     window.addEventListener('wheel', (event) => {
         targetFOV += event.deltaY * 0.1; // Invert the zoom direction
-        targetFOV = Math.min(Math.max(targetFOV, 25), 80); // Clamp FOV between 25 and 80
+        targetFOV = Math.min(Math.max(targetFOV, 15), 80); // Clamp FOV between 25 and 80
+
+        cameraPOS += event.deltaY * 0.1; // Invert the zoom direction
+        cameraPOS = Math.min(Math.max(cameraPOS, 25), 120);
+
 
     });
 }
@@ -229,7 +264,7 @@ export function addRightClickListener(scene) {
 export { intersectionPoint, selectedObject, screenPoint };
 
 
-export { gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV};
+export { gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV, cameraPOS};
 
 
 
