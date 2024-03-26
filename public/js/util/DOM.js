@@ -215,27 +215,44 @@ export function DOM(){
     //Default Menu
 
     let landmarkModal = null;
-    const landmarkButton = document.querySelector("#landmarkButton").addEventListener("click", () => {
-        console.log("LandMARK");
-        if (!landmarkModal) {
-            landmarkModal = new Modal('landmark', '/modals/submit');
-        } else {
-            landmarkModal.show();
-        }
-        closeContextMenu();
-    });
+
+    //❌Removed to test non modal version
+    // const landmarkButton = document.querySelector("#landmarkButton").addEventListener("click", () => {
+    //     console.log("LandMARK");
+    //     if (!landmarkModal) {
+    //         landmarkModal = new Modal('landmark', '/modals/submit');
+    //     } else {
+    //         landmarkModal.show();
+    //     }
+    //     closeContextMenu();
+    // });
 
 
 
-        function sendIntersectionPoint(intersectionPoint, text) {
-            const message = {
-                type: 'create',
-                point: intersectionPoint,
-                userID: wsc.myUserID,
-                text: text
-            };
-            wsc.wsSend(message);
-        }
+    function sendIntersectionPoint(intersectionPoint, text) {
+        const message = {
+            type: 'create',
+            point: intersectionPoint,
+            userID: wsc.myUserID,
+            text: text
+        };
+        wsc.wsSend(message);
+    }
+
+    function sendLandmark(intersectionPoint, text) {
+        const message = {
+            type: 'landmark',
+            point: intersectionPoint,
+            userID: wsc.myUserID,
+            text: text
+        };
+        wsc.wsSend(message);
+    }
+
+
+
+
+
 
     let listuserModal = null;
     const listUserButton = document.querySelector("#listUsersButton").addEventListener("click", () => {
@@ -253,17 +270,9 @@ export function DOM(){
 
 
     let userInfoModal = null;
-    const addButton = document.querySelector("#addButton").addEventListener("click", () => {
-        console.log("Add");
-        if (!userInfoModal) {
-            
-            userInfoModal = new Modal('userpage', '/modals/user-info');
-        } else {
-            userInfoModal.show();
-            userInfoModal.updateModalContent('/modals/user-info');
-        }
-        closeContextMenu();
-    });
+
+
+
 
 
 
@@ -278,31 +287,33 @@ export function DOM(){
 
 
 
-    const wsclist = document.querySelector("#wsclist").addEventListener("click", () => {
-        console.log('wsc.users list:' );
-        console.log(wsc.getUsers());
-        // if (!userInfoModal) {
-            
-        //     userInfoModal = new Modal('wsclist', '/modals/user-info');
-        // } else {
-        //     userInfoModal.show();
-        //     userInfoModal.updateModalContent('/modals/user-info');
-        // }
-        closeContextMenu();
-    });
+    //❌Remove button from list
 
-    const wscspherelist = document.querySelector("#wscspherelist").addEventListener("click", () => {
-        console.log('wsc.userSpheres list:' );
-        console.log(wsc.userSpheres);
-        // if (!userInfoModal) {
-            
-        //     userInfoModal = new Modal('wsclist', '/modals/user-info');
-        // } else {
-        //     userInfoModal.show();
-        //     userInfoModal.updateModalContent('/modals/user-info');
-        // }
-        closeContextMenu();
-    });
+        // const addButton = document.querySelector("#addButton").addEventListener("click", () => {
+        //     console.log("Add");
+        //     if (!userInfoModal) {
+                
+        //         userInfoModal = new Modal('userpage', '/modals/user-info');
+        //     } else {
+        //         userInfoModal.show();
+        //         userInfoModal.updateModalContent('/modals/user-info');
+        //     }
+        //     closeContextMenu();
+        // });
+
+    //❌Remove button from list
+        // const wsclist = document.querySelector("#wsclist").addEventListener("click", () => {
+        //     console.log('wsc.users list:' );
+        //     console.log(wsc.getUsers());
+        //     closeContextMenu();
+        // });
+
+    //❌Remove button from list
+        // const wscspherelist = document.querySelector("#wscspherelist").addEventListener("click", () => {
+        //     console.log('wsc.userSpheres list:' );
+        //     console.log(wsc.userSpheres);
+        //     closeContextMenu();
+        // });
 
 
 
@@ -349,6 +360,22 @@ export function DOM(){
         sendIntersectionPoint(intersectionPoint, '💎');
         closeContextMenu();
     });
+
+
+
+
+
+    // Landmark Submission Button
+    const submitarea = document.querySelector("#submitbutton").addEventListener("click", () => {
+        console.log("Submit Button Clicked");
+        const textarea = document.getElementById('textarea2');
+        const content = textarea.value;
+        sendIntersectionPoint(intersectionPoint, content);
+
+        console.log(content);
+        closeContextMenu();
+    });
+
 
 
 

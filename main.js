@@ -28,11 +28,6 @@ const sessionsecret = process.env.SECRET;
 const cookieParser = require('cookie-parser');
 const { parse } = require('cookie');
 
-
-
-
-
-
 const WebSocket = require("ws");
 
 
@@ -162,6 +157,7 @@ getPostgresVersion();
 //Memory Objects
 let users = {};
 let objects = [];    
+let landmarks = [];    
 let keepAliveId;
 
 
@@ -256,6 +252,7 @@ wss.on("connection", function (ws, req) {
                     onUserConnect(userID); // This will be called after 'assignUserID' is sent
                 });
                 updateObjects(userID); //Sends the objects from the object array to the user
+                updateLandmarks(userID); //Sends the objects from the object array to the user
                 broadcast(null, JSON.stringify({ type: 'userCount', value: wss.clients.size }), true); //Broadcasts the user count to all users
                 if (wss.clients.size === 1) {
                     console.log("first connection. starting keepalive");
@@ -270,10 +267,22 @@ wss.on("connection", function (ws, req) {
                     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
                 }
 
+        //📦 Add landmark
+        function addLandmark(point, id, text) {
+            objects.push({ point, id, text });
+            console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
+            broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
+        }
+
         //📦 Send objects to user
-                function updateObjects(userID){
-                    sendToUser(userID, { type: 'objects', value: objects});
-                }
+            function updateObjects(userID){
+                sendToUser(userID, { type: 'objects', value: objects});
+            }
+
+            function updateLandmarks(userID){
+                sendToUser(userID, { type: 'landmarks', value: landmarks});
+            }
+
 
         //🔮 Check if user has enough mana to cast spell
                 function getUserCount(userID, currData) {
@@ -303,6 +312,36 @@ wss.on("connection", function (ws, req) {
                         console.log(`User ${userID} not found.`);
                     }
                 }
+
+                function getUserCountForLandmark(userID, currData) {
+                    //Select the user from the array
+                    if (users.hasOwnProperty(userID)) {
+                        const user = users[userID];
+                        console.log(`User ${userID} count: ${user.count}`);
+                        
+                        //Check if user has enough mana
+                        if (user.count >= 10) {
+                            user.count -= 10;
+                            console.log(`Subtracted 10 from User ${userID} count. New count: ${user.count}`);
+                            //Update the user's count
+                            sendToUser(userID, { type: "count", value: users[userID].count });
+                            //Add the object to the objects array
+                            addLandmark(currData.point, currData.userID, currData.text);
+                            //Send some feedback to the user
+                            sendToUser(userID, { type: "overlay", value: 'Spell Cast :)' });
+                            return 1;
+                            
+                        } else {
+                            sendToUser(userID, { type: "overlay", value: 'Not enough mana' });
+                            console.log("Not enough mana");
+                            return 0;
+                        }
+                    } else {
+                        console.log(`User ${userID} not found.`);
+                    }
+                }
+                    
+
 
 
                 function sendAndProceed(ws, message, callback) {
@@ -369,6 +408,10 @@ wss.on("connection", function (ws, req) {
                     console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
                     console.log("Intersection Point:", currData.point);
                     getUserCount(currData.userID, currData);
+                } else if (currData.type === 'landmark') {
+                    console.log(`Received a landmark message from user: ${currData.userID} with text: ${currData.text}`);
+                    console.log("Intersection Point:", currData.point);
+                    getUserCountForLandmark(currData.userID, currData);
                 }
 
                 //String

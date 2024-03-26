@@ -34,6 +34,12 @@ contextMenus.forEach(menu => {
     });
 });
 
+export function logTextAreaContent(){
+    console.log('hui');
+
+
+};
+
 contextMenus.forEach(menu => {
     const buttons = menu.querySelectorAll('button');
     buttons.forEach(button => {
@@ -45,6 +51,11 @@ contextMenus.forEach(menu => {
                 const secondMenu = document.getElementById('secondMenu');
                 showMenu('second', event.clientX, event.clientY);
                 // secondMenu.classList.add('show');
+            } else if (button.id === 'landmarkButton') {
+                console.log('landmarkButton');
+                showMenu('landmark', event.clientX, event.clientY);
+
+
             }
         });
     });

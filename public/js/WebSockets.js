@@ -4,7 +4,7 @@
 import { addLog } from './util/log.js';
 import { scene, cube, loadedGLTF,  beaconLightModel, wsc } from '../scene.js';
 import { UserSphere } from './scene/userSphere.js';
-import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects} from './Spawners.js';
+import { spawnBeaconLightAtPosition, spawnPingAtPosition, spawnEntrancePingAtPosition, updateUserObjects, updateLandmarks} from './Spawners.js';
 import { attachLabelToObjects, createLabelSprite } from './Sprite.js';
 import { addUserToList, removeUserFromList } from './util/Userlist.js';
 import { boundingBox, getLoadedGLTF  } from './Loaders';
@@ -308,6 +308,15 @@ export class WebSocketConnection {
                 console.log('objects');
                 updateUserObjects(scene, message.value);
             
+    //🌷 Landmarks
+            } else if (message.type === 'landmarks') {
+                // Handle userConnected message
+                console.log(message);
+                console.log('landmarks');
+                updateLandmarks(scene, message.value);
+
+
+
     //Overlay Message   
             } else if (message.type === 'overlay') {
                 console.log('overlay');
