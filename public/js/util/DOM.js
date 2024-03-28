@@ -239,12 +239,13 @@ export function DOM(){
         wsc.wsSend(message);
     }
 
-    function sendLandmark(intersectionPoint, text) {
+    function sendLandmark(intersectionPoint, linkContent, description) {
         const message = {
             type: 'landmark',
             point: intersectionPoint,
             userID: wsc.myUserID,
-            text: text
+            link: linkContent,
+            description: description
         };
         wsc.wsSend(message);
     }
@@ -368,9 +369,16 @@ export function DOM(){
     // Landmark Submission Button
     const submitarea = document.querySelector("#submitbutton").addEventListener("click", () => {
         console.log("Submit Button Clicked");
+
+        //Grab the link
+        const link = document.getElementById('linkbox');
+        const linkContent = link.value;
+        //Grab the text area
         const textarea = document.getElementById('textarea2');
-        const content = textarea.value;
-        sendIntersectionPoint(intersectionPoint, content);
+        const description = textarea.value;
+
+
+        sendLandmark(intersectionPoint, linkContent, description);
 
         console.log(content);
         closeContextMenu();

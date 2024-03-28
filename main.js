@@ -260,6 +260,8 @@ wss.on("connection", function (ws, req) {
                 }
             }
 
+
+//📦Objects
         //📦 Add object
                 function addObject(point, id, text) {
                     objects.push({ point, id, text });
@@ -267,24 +269,17 @@ wss.on("connection", function (ws, req) {
                     broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
                 }
 
-        //📦 Add landmark
-        function addLandmark(point, id, text) {
-            objects.push({ point, id, text });
-            console.log(`Added object with point ${point} and id ${id} with ${text} to objects.`);
-            broadcast(null, JSON.stringify({ type: 'objects', value: objects}), true);
-        }
+
 
         //📦 Send objects to user
-            function updateObjects(userID){
-                sendToUser(userID, { type: 'objects', value: objects});
-            }
-
-            function updateLandmarks(userID){
-                sendToUser(userID, { type: 'landmarks', value: landmarks});
-            }
+                function updateObjects(userID){
+                    sendToUser(userID, { type: 'objects', value: objects});
+                }
 
 
-        //🔮 Check if user has enough mana to cast spell
+
+
+         //📦 Check if user has enough mana to cast spell
                 function getUserCount(userID, currData) {
                     //Select the user from the array
                     if (users.hasOwnProperty(userID)) {
@@ -313,6 +308,22 @@ wss.on("connection", function (ws, req) {
                     }
                 }
 
+
+//📍  Landmarks
+
+    //📍 Add landmark
+        function addLandmark(point, id, link, description) {
+            landmarks.push({ point, id, link, description });
+            console.log(`Added object with point ${point} and id ${id} with link: ${link} and description: ${description} to landmarks.`);
+            broadcast(null, JSON.stringify({ type: 'landmarks', value: landmarks}), true);
+        }
+
+        //📍  Update User Landmarks
+                function updateLandmarks(userID){
+                    sendToUser(userID, { type: 'landmarks', value: landmarks});
+                }
+
+        //📍  Check if user has enough mana to add landmark
                 function getUserCountForLandmark(userID, currData) {
                     //Select the user from the array
                     if (users.hasOwnProperty(userID)) {
@@ -326,7 +337,7 @@ wss.on("connection", function (ws, req) {
                             //Update the user's count
                             sendToUser(userID, { type: "count", value: users[userID].count });
                             //Add the object to the objects array
-                            addLandmark(currData.point, currData.userID, currData.text);
+                            addLandmark(currData.point, currData.userID, currData.link, currData.description);
                             //Send some feedback to the user
                             sendToUser(userID, { type: "overlay", value: 'Spell Cast :)' });
                             return 1;
@@ -408,8 +419,9 @@ wss.on("connection", function (ws, req) {
                     console.log(`Received a create message from user: ${currData.userID} with text: ${currData.text}`);
                     console.log("Intersection Point:", currData.point);
                     getUserCount(currData.userID, currData);
+            //📍 Creation - fired when someone creates a landmark
                 } else if (currData.type === 'landmark') {
-                    console.log(`Received a landmark message from user: ${currData.userID} with text: ${currData.text}`);
+                    console.log(`Received a landmark message from user: ${currData.userID} with link: ${currData.link} and description: ${currData.description}`);
                     console.log("Intersection Point:", currData.point);
                     getUserCountForLandmark(currData.userID, currData);
                 }

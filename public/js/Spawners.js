@@ -183,14 +183,14 @@ export function spawnEntrancePingAtPosition(position) {
         const landmarkArray = [];
         console.log(landmarks);
         // Create a cube geometry
-        const geometry = new THREE.BoxGeometry(.1, .1, .1);
+        const geometry = new THREE.BoxGeometry(.25, .25, .25);
 
         // Create a simple material
         const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
         // Iterate through the objects array
-        for (const object of objects) {
-            const { point, id, text } = object;
+        for (const landmark of landmarks) {
+            const { point, id, link, description } = landmark;
 
             // Create a cube mesh by cloning the geometry and material
             const cube = new THREE.Mesh(geometry.clone(), material.clone());
@@ -198,7 +198,7 @@ export function spawnEntrancePingAtPosition(position) {
             // Set the position of the cube
             cube.position.copy(point);
             //Attach Label to Objects
-            attachLabelToObjectsAdv(cube, text, 0 , .25, 0);
+            attachLabelToObjectsAdv(cube, link, 0 , .25, 0);
             // Add the cube to the object array
             landmarkArray.push(cube);
         }
@@ -207,8 +207,8 @@ export function spawnEntrancePingAtPosition(position) {
         const group = new THREE.Group();
 
         // Add all the objects to the group
-        for (const landmark of landmarkArray) {
-            group.add(landmark);
+        for (const landmarkObject of landmarkArray) {
+            group.add(landmarkObject);
         }
 
         // Add the group to the scene
