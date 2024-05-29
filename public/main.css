@@ -145,6 +145,7 @@ body {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
   border-radius: 5px;
+  z-index: 1000;
   overflow: hidden; 
 }
 
@@ -221,6 +222,7 @@ body {
   pointer-events: auto; /* Enables clicking on the modal */
   margin: auto; /* Helps with centering in some cases */
   /* Other styles for the modal */
+  z-index: 1000; /* Ensure it's on top */
 }
 
 
@@ -238,6 +240,7 @@ body {
 
 .modal-container {
   display: flex;
+  z-index: 1000;
   justify-content: center;
   align-items: center;
   position: fixed;

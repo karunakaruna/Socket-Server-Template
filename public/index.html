@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metacarta</title>
+    <link rel="stylesheet" href="main.css">
+    <!-- <link rel="stylesheet" type="text/css" href="index.css"> -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
+    <script src="modal.js"></script>
+    <!-- <script src='./js/util/Userlist-script.js'></script> -->
+    </head>
+    <body id="map">
+        <button id="minimizeButton" style="display: none;" position="absolute">👁</button>
+        <div id="fullScreenDiv" class="full-screen">
+            <!-- Content fetched from the server will be inserted here -->
+        </div>
+
+            <div id="container"></div>
+            
+        <!-- Top Text - -->
+            <div id="info">
+                <h2>World Tree Map</h2>
+                <h3>Meta-Carta</h3>
+                <div id="usersOnline">Users Online: <span id="userCount">#</span></div>
+                <div id="userName">UserID: <span id="username">...</span></div>`
+                <div id="onlineCountDiv">OnlineTime: <span id="onlineCount">...</span></div>
+                <div id="coordinatesText"></div>
+            </div>
+        
+        <!-- User List -->
+            <div id="userlist-div" class="userlist">
+                <h3>Users Online:</h3>
+                <ul id="user-list-ul"></ul>
+            </div>
+
+        <!-- Metadata Mouseover -->
+              <div id="floatingText" style="position: fixed; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
+              <div id="authorText" style="position: fixed; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
+              <div id="yearText" style="position: fixed; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
+              <div id="descriptionText" style="position: fixed; width: 300px; color: white; font-size: 1em; pointer-events: none; user-select: none;"></div>
+        
+        <!-- Image Display -->
+            <div id="displayedImage" style="width:200px; height:200px; overflow:hidden;position: fixed;">
+                <img id="imageDisplay" src="" style="height:100%;">
+            </div>
+        
+        <!-- Url Context Menu - Displays when rightclicking on a URL Object -->
+            <div id="urlMenu" class="contextMenu">
+                <button id="examineButton">Examine</button>
+                <button id="saveFavouriteButton">Save Favourite</button>
+                <button id="inviteFriendButton">Invite Friend</button>
+            </div>
+
+        <!-- User Context Menu - Displays when rightclicking on self Object -->
+            <div id="userMenu" class="contextMenu">
+                <button id="goAFKButton">Go AFK</button>
+                <button id="playerSettingsButton">Player Settings</button>
+                <button id="inventoryButton">Inventory</button>
+            </div>
+
+        <!-- Other User Context Menu - Displays when rightclicking on other User Object -->
+            <div id="otherUserMenu" class="contextMenu">
+                <button id="trustButton">Trust</button>
+                <button id="addFriendButton">Add Friend</button>
+                <button id="viewProfileButton">View Profile</button>
+            </div>
+        
+
+
+
+        <!-- Default Context Menu - Displays when rightclicking on the map -->
+            <div id="defaultMenu" class="contextMenu">
+                <button id="createButton">Create</button>
+                <button id="landmarkButton">Landmark</button>
+                <button id="listUsersButton">List Users</button>
+                <button id="levelUpButton">Level Up</button> 
+            </div>
+
+        <!-- Second Context Menu - Submenu of the createButton -->
+            <div id="secondMenu" class="contextMenu">
+                <button id="demoButtonA">🌷</button>
+                <button id="demoButtonB">🌟</button>
+                <button id="demoButtonC">♥</button>
+                <button id="demoButtonD">🍀</button>
+                <button id="demoButtonE">🌿</button>
+                <button id="demoButtonF">🗝</button>
+                <button id="demoButtonG">💎</button>
+            </div>
+        
+        <!-- Landmark Context Menu - Displays when rightclicking on a Landmark Object -->
+            <div id="landmarkMenu" class="contextMenu">
+                <div>        
+                    <div id="formContainer" style="display: flex; flex-direction: column;">
+                        <input type="text" id="linkbox" placeholder="Link">
+                        <textarea id="textarea2" rows="4" cols="50" placeholder="Description"></textarea>
+                        <button id="submitbutton">Add Landmark</button>
+                    </div>
+                </div>
+            </div>
+        
+        
+
+        <!-- Activity Log - Covers the left side of the screen and shows whats been happening -->
+            <div class="activity-log">
+                <ul id="log-list"></ul>
+            </div>
+
+
+        <!-- Url Modal - Pops up when a user clicks on a world. -->
+            <div id="urlModal" class="map-modal">
+                <div class="map-modal-content">
+                    <p id="modalText">Enter</p>
+                    <button id="confirmButton">Confirm</button>
+                </div>
+            </div>
+        
+        
+        
+        <!-- Modal Container - This is the container for all modals -->
+            <div class="modal-container" id="modal-container">
+            <div id="myModal" class="login-modal">
+                <div class="modal-content" id="modal-content">
+                    <!-- Rendered EJS content will be inserted here -->
+                </div>
+            </div>
+            </div>
+
+
+        <!-- Log contains a function addLog that creates a bulletin to the global log. -->
+            <script src="/js/log.js"></script>
+
+        <!-- Library Imports -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js"></script>
+            <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
+            <script src="https://unpkg.com/three@0.126.0/examples/js/controls/OrbitControls.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js" integrity="sha512-WoO4Ih0CDOSLYafy22wZD/mcJ7k0ESLqtQsFa6zFKnEUrbtuGU+GkLtVhgt93xa2qewG5gKEC6CWlN8OaCTSVg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+            <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+            <script src="lib/CSS2DRenderer.js"></script>
+
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+        
+        <!-- Three.js Scene -->
+            <script type="module" src="scene.js"></script>
+            
+        <!-- Form Submission -->
+            <script type='module' src='../public/submit-module.js' ></script>
+        
+
+
+
+
+           <!-- These are all the scripts handlging the Modal fetching using .ejs -->
+            <script>
+                    //This is the Modal Div - I need to bring this into the map.ejs
+                    fetch('/modals/home', {
+                            credentials: 'include'  // Include credentials with the request
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            $('#modal-content').html(html);
+                            $('#myModal').show();
+                        })
+                        .catch(error => console.error('Error:', error));
+        
+        
+                        $(document).ready(function() {
+                            $("#myModal").draggable({
+                            start: function(event, ui) {
+                                $(this).css({
+                                    transform: 'none', // Remove transform property
+                                    top: $(this).position().top,
+                                    left: $(this).position().left
+                                });
+                            },
+                            stop: function(event, ui) {
+                // $(this).css('transform', 'translate(-50%, -50%)'); // Reapply transform
+                        }
+                    });
+                        $("#dragbutton").draggable();
+        
+                $(document).mouseup(function(e) {
+                    var container = $("#myModal");
+
+                    if (!container.is(e.target) && container.has(e.target).length === 0) {
+                        container.hide();
+                        $("#minimizeButton").show();
+                    }
+                });
+        
+                    $("#minimizeButton").click(function() {
+                        $("#myModal").show();
+                        $("#myModal").animate({
+                            opacity: 1,
+    
+                        }, 500);
+                        $("#minimizeButton").hide();
+                    });
+                });
+
+                // Prevent clicking through modals so you don't click on the map behind it
+                        
+                $(document).ready(function() {
+                    console.log('DOM loaded');
+                    // Function to stop click event propagation
+                    function stopClickPropagation(event) {
+                        event.stopPropagation();
+                    }
+        
+                    // Add event listeners to each menu div
+                    var menuDivs = $('.contextMenu');
+                    menuDivs.on('click', stopClickPropagation);
+                    console.log('stopping click propagation');
+                });
+        
+                $(document).ready(function() {
+                    console.log('DOM loaded');
+                    // Function to stop click event propagation
+                    function stopClickPropagation(event) {
+                        event.stopPropagation();
+                    }
+        
+                    // Add event listeners to each menu div
+                    var urlDivs = $('.map-modal');
+                    urlDivs.on('click', stopClickPropagation);
+                    console.log('stopping click propagation');
+                });
+        
+        
+                $(document).ready(function() {
+                    console.log('DOM loaded');
+                    // Function to stop click event propagation
+                    function stopClickPropagation(event) {
+                        event.stopPropagation();
+                    }
+        
+                    // Add event listeners to each menu div
+                    var modalDivs = $('.login-modal');
+                    modalDivs.on('click', stopClickPropagation);
+                    console.log('stopping click propagation');
+                });
+            
+            </script>
+
+    </body>    
+</html>

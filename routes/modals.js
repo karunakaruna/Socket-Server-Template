@@ -46,19 +46,6 @@ router.get('/forgotpassword', limiter, (req, res) => {
 
 
 
-// router.get('/home', (req, res) => {
-//     try {
-//         const data = {
-//             title: 'Modal Title',
-//             content: 'Content for the modal'
-//         };
-//         res.render('modal-content-home.ejs', data);
-//     } catch (error) {
-//         console.error("Error rendering EJS:", error);
-//         res.status(500).send('Server Error');
-//     }
-// });
-
 router.get('/home', (req, res) => {
     try {
         const data = {
@@ -83,7 +70,6 @@ router.post('/list-users', (req, res) => {
         ok: true,
         users: req.app.get('users') 
     };
-
     // Check for a custom header or a query parameter to determine the response type
     if (req.headers['x-requested-with'] === 'fetch') {
         // Client expects JSON
