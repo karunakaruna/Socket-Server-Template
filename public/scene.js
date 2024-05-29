@@ -22,7 +22,7 @@ import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
 
 DOM();
-const { camera, renderer, cube, composer, bokehPass } = initCamera(scene);
+const { camera, renderer, cube, composer, bokehPass, bloomPass } = initCamera(scene);
 console.log('my user ID', wsc.myUserID);
 console.log('my user object', wsc.users[wsc.myUserID]);
 const vec = new THREE.Vector3(0,0,0);

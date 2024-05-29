@@ -40,7 +40,7 @@
 
             //Renderer
             const renderer = new THREE.WebGLRenderer({     
-                powerPreference: "high-performance",
+                powerPreference: "low-power",
                 antialias: false,
                 stencil: false,
                 depth: false});
@@ -57,7 +57,7 @@
                 // Add BloomPass for glow effect
                 const bloomPass = new UnrealBloomPass(
                     new THREE.Vector2(window.innerWidth, window.innerHeight),
-                    .5, // strength5
+                    0, // strength5
                     .001,  // kernel size
                     .1   // sigma ?
                 );
@@ -89,7 +89,7 @@
             cube.visible = true;
             cube.add(camera);
             scene.add(cube);
-            return { camera, renderer, cube, composer, bokehPass }
+            return { camera, renderer, cube, composer, bokehPass, }
             };
     export function parentCamera(camera, user){
         user.add(camera);
