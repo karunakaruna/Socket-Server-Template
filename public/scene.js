@@ -19,7 +19,6 @@ import { Lights, TextureSpot } from './js/scene/lights';
 import { Resizer } from './js/util/Resizer';
 import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from './submit-module.js';
 import { attachLabelToObjectsAdv } from './js/Sprite.js';
-import posthog from 'posthog-js'
 
 
 DOM();
@@ -28,11 +27,10 @@ console.log('my user ID', wsc.myUserID);
 console.log('my user object', wsc.users[wsc.myUserID]);
 const vec = new THREE.Vector3(0,0,0);
 
-posthog.init('phc_t82qchdUXKIr2RxxDtg1FO7ai169CvC1YLLjGt0L7DQ', { api_host: 'https://us.i.posthog.com' })   
 posthog.capture('UserID', { property: wsc.myUserID})
 // const player = new UserSphere(null, cube);
 // scene.add(player);
-// const playerlevel = player.getLevel();
+// const playerlevel = player.getLevel();   
 // player.layers.enable(1); // Add userSphere to specified level
 // console.log('userSphereLevel: ' + playerlevel);
 
