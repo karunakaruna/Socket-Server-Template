@@ -35,7 +35,7 @@ export class WebSocketConnection {
 
     
     initializeWebSocketConnection() {
-        const wsURL = 'wss://metacarta-b8f465580dc6.herokuapp.com/';
+        const wsURL = 'wss://worldtree-geckos.herokuapp.com/';
         this.ws = new WebSocket(wsURL);
         this.ws.withCredentials = true; // Set withCredentials to true
         this.ws.onopen = () => {
