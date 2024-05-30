@@ -23,13 +23,7 @@ raycaster.layers.set(1);
 const mouse = new THREE.Vector2();
 export let focusDistance = 20;
 
-
-
-
-
 export function addMouseMovementListener(map) {
-
-
     window.addEventListener('keydown', (event) => {
         const thisuser = wsc.users[wsc.myUserID];
         userPosition = thisuser.getTargetPosition();
@@ -45,28 +39,7 @@ export function addMouseMovementListener(map) {
             }
         };
         wsc.wsSend(payload);
-
-
-
-
         }});
-
-    // window.addEventListener('keydown', (event) => {
-
-    //     if (event.code === 'space') {
-
-
-
-
-    //     };
-
-    //     });
-
-
-        
-
-
-
 
     window.addEventListener('mousemove', (event) => {
     
@@ -88,6 +61,7 @@ export function addMouseMovementListener(map) {
         div.style.left = `${event.clientX}px`;
         div.style.top = `${event.clientY + index * 25}px`; // Stack the divs vertically
     });
+
     imageDiv.style.left = `${event.clientX}px`;
     imageDiv.style.top = `${event.clientY - 220}px`; 
 
@@ -111,7 +85,6 @@ export function addMouseMovementListener(map) {
         for (let i = 0; i < intersects.length; i++) 
         {
             const userData = intersects[i].object.userData;
-        
             if (userData) 
             {
                 document.getElementById('floatingText').innerText = userData.Name || "";
@@ -119,7 +92,6 @@ export function addMouseMovementListener(map) {
                 document.getElementById('yearText').innerText = userData.Year || "";
                 document.getElementById('descriptionText').innerText = userData.Lore || "";
 
-        
                 // Update the image src if 'image' userData is present
                 if (userData.image) {
                     imageElem.src = userData.image;
@@ -139,17 +111,8 @@ export function addMouseMovementListener(map) {
     // If no object is intersected
     divs.forEach(div => div.innerText = '');
     imageElem.src = '';  // Also clear the image if no object is intersected
-});
-
-    
-
+    });
 }
-
-
-
-
-
-
 
 
     // Listen to scroll wheel
@@ -157,11 +120,8 @@ export function addScrollWheelListener() {
     window.addEventListener('wheel', (event) => {
         targetFOV += event.deltaY * 0.1; // Invert the zoom direction
         targetFOV = Math.min(Math.max(targetFOV, 15), 80); // Clamp FOV between 25 and 80
-
         cameraPOS += event.deltaY * 0.1; // Invert the zoom direction
         cameraPOS = Math.min(Math.max(cameraPOS, 25), 120);
-
-
     });
 }
 export function addClickListener(map) {   
@@ -171,7 +131,6 @@ export function addClickListener(map) {
             document.querySelectorAll('.contextMenu').forEach(menu => {
                 menu.style.display = 'none';
             });
-            posthog.capture('mouseclick', { property: mouse.x })
             //Raycast
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(map.children, true);
@@ -187,7 +146,6 @@ export function addClickListener(map) {
                     intersection.point.z
                 );
 
-            
                 const thisuser = wsc.users[wsc.myUserID];
                 thisuser.setTargetPosition(target);
         
@@ -202,7 +160,6 @@ export function addClickListener(map) {
                 if (userData && userData.URL) {
                     // Show the modal and spawn an entrance ping when the URL is confirmed.
                     posthog.capture('URL Entered', { property: userData.URL })
-
                     showModal(userData.Name || 'Unknown', userData.URL, intersection.point, event);
                     return; // Exit to avoid further processing since the URL takes precedence
                 }
@@ -224,13 +181,8 @@ export function addClickListener(map) {
                 wsc.wsSend(payload);
             }
     });
-
     return targetPosition
 }
-
-
-
-
 
 // Define a variable to store the intersection point coordinates
 let intersectionPoint = null;
@@ -283,10 +235,7 @@ export function addRightClickListener(scene) {
 }
 
 // Export the intersection point variable
-export { intersectionPoint, selectedObject, screenPoint };
-
-
-export { gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV, cameraPOS};
+export { intersectionPoint, selectedObject, screenPoint, gltfScene, targetPosition, targetRotationX, targetRotationZ, targetFOV, cameraPOS};
 
 
 

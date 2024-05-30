@@ -1,4 +1,4 @@
-//Scene3.js
+//Scene.js
 
 let userID = null;
 const scene = new THREE.Scene();
@@ -20,7 +20,28 @@ import { Resizer } from './js/util/Resizer';
 import { submitForm, submitRegisterForm, logOut, submitEmail, updatePassword } from './submit-module.js';
 import { attachLabelToObjectsAdv } from './js/Sprite.js';
 
+function loadNewWorld(worldPath) {
+    loadAllWorlds(scene, worldPath);
+}
 
+function setupWorldButtons() {
+    const buttons = [
+        { id: 'load-world-1', path: 'models/grid6.glb' },
+        { id: 'load-world-2', path: 'models/all_worlds.glb' },
+        { id: 'load-world-3', path: 'models/kernel_worlds.glb' }
+        // Add more button configurations as needed
+    ];
+
+    buttons.forEach(button => {
+        document.getElementById(button.id).addEventListener('click', () => {
+            console.log('Loading file:', button.path);
+            loadNewWorld(button.path);
+        });
+    });
+}
+
+// Call the setup function to initialize event listeners
+setupWorldButtons();
 DOM();
 const { camera, renderer, cube, composer, bokehPass, bloomPass } = initCamera(scene);
 console.log('my user ID', wsc.myUserID);
@@ -33,6 +54,8 @@ posthog.capture('UserID', { property: wsc.myUserID})
 // const playerlevel = player.getLevel();   
 // player.layers.enable(1); // Add userSphere to specified level
 // console.log('userSphereLevel: ' + playerlevel);
+
+
 
 
 const grid = initGrid();
