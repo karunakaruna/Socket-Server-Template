@@ -201,6 +201,8 @@ export function addClickListener(map) {
                 const userData = intersection.object.userData;
                 if (userData && userData.URL) {
                     // Show the modal and spawn an entrance ping when the URL is confirmed.
+                    posthog.capture('URL Entered', { property: userData.URL })
+
                     showModal(userData.Name || 'Unknown', userData.URL, intersection.point, event);
                     return; // Exit to avoid further processing since the URL takes precedence
                 }
