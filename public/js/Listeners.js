@@ -171,7 +171,7 @@ export function addClickListener(map) {
             document.querySelectorAll('.contextMenu').forEach(menu => {
                 menu.style.display = 'none';
             });
-            
+            posthog.capture('mouseclick', { property: mouse.x })
             //Raycast
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(map.children, true);
