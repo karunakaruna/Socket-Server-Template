@@ -1,15 +1,18 @@
 const http = require("http");
 const express = require("express");
-const app = express();
+const { v4: uuidv4 } = require("uuid");
+const WebSocket = require("ws");
 
+const app = express();
 app.use(express.static("public"));
-// require("dotenv").config();
 
 const serverPort = process.env.PORT || 3000;
 const server = http.createServer(app);
-const WebSocket = require("ws");
 
 let keepAliveId;
+
+// In-memory object to track connected clients
+const connectedClients = {};
 
 const wss =
   process.env.NODE_ENV === "production"
@@ -19,65 +22,136 @@ const wss =
 server.listen(serverPort);
 console.log(`Server started on port ${serverPort} in stage ${process.env.NODE_ENV}`);
 
-wss.on("connection", function (ws, req) {
-  console.log("Connection Opened");
-  console.log("Client size: ", wss.clients.size);
+// Function to send a user update to all clients
+const sendUserUpdate = () => {
+  const users = Object.values(connectedClients).map(({ id, listeningTo }) => ({
+    id,
+    listeningTo,
+  }));
 
-  if (wss.clients.size === 1) {
-    console.log("first connection. starting keepalive");
-    keepServerAlive();
-  }
-
-  ws.on("message", (data) => {
-    let stringifiedData = data.toString();
-    if (stringifiedData === 'pong') {
-      console.log('keepAlive');
-      return;
-    }
-    broadcast(ws, stringifiedData, false);
+  const updateMessage = JSON.stringify({
+    type: "userupdate",
+    users,
   });
 
-  ws.on("close", (data) => {
-    console.log("closing connection");
-
-    if (wss.clients.size === 0) {
-      console.log("last client disconnected, stopping keepAlive interval");
-      clearInterval(keepAliveId);
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(updateMessage);
     }
   });
-});
-
-// Implement broadcast function because of ws doesn't have it
-const broadcast = (ws, message, includeSelf) => {
-  if (includeSelf) {
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  } else {
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  }
 };
 
-/**
- * Sends a ping message to all connected clients every 50 seconds
- */
- const keepServerAlive = () => {
+// Broadcast relevant data to clients subscribed to the sender
+const broadcastToSubscribers = (senderId, message) => {
+  Object.values(connectedClients).forEach((client) => {
+    if (client.listeningTo.includes(senderId)) {
+      client.socket.send(message);
+    }
+  });
+};
+
+// Keep server alive with pings
+const keepServerAlive = () => {
   keepAliveId = setInterval(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send('ping');
+        client.send("ping");
       }
     });
   }, 50000);
 };
 
+// Handle new connections
+// Handle new connections
+wss.on("connection", (ws) => {
+  const userId = uuidv4(); // Generate unique ID
+  console.log(`Connection Opened for user: ${userId}`);
 
-app.get('/', (req, res) => {
-    res.send('Hello World!');
+  // Add new client to connectedClients
+  connectedClients[userId] = {
+    id: userId,
+    listeningTo: [], // Initialize with an empty subscription list
+    socket: ws,
+  };
+
+  // Send the user their ID
+  ws.send(
+    JSON.stringify({
+      type: "welcome",
+      id: userId,
+    })
+  );
+
+  // Print the number of connected users and user list
+  const connectedUserCount = Object.keys(connectedClients).length;
+  const userList = Object.keys(connectedClients).map((id) => id.slice(-8)); // Show last 8 characters of UUID
+  console.log(`Number of connected users: ${connectedUserCount}`);
+  console.log(`Connected user list (last 8 characters of UUID): [${userList.join(", ")}]`);
+
+  if (connectedUserCount === 1) {
+    console.log("First connection. Starting keepAlive");
+    keepServerAlive();
+  }
+
+  sendUserUpdate(); // Notify all clients about the updated user list
+
+  ws.on("message", (data) => {
+    let parsedData;
+    try {
+      parsedData = JSON.parse(data);
+      console.log("Received data:", parsedData);
+    } catch (err) {
+      console.error("Invalid JSON received:", data);
+      return;
+    }
+  
+    // Find the sender's UUID using the WebSocket object
+    const senderId = Object.keys(connectedClients).find(
+      (id) => connectedClients[id].socket === ws
+    );
+  
+    console.log(`Message received from user: ${senderId}`);
+  
+    if (parsedData.type === "pong") {
+      console.log("keepAlive");
+      return;
+    }
+  
+    if (parsedData.type === "updatelisteningto") {
+      // Update the user's listeningTo list
+      const { newListeningTo } = parsedData;
+      if (Array.isArray(newListeningTo)) {
+        connectedClients[senderId].listeningTo = newListeningTo;
+        console.log(`Updated listeningTo for user ${senderId}:`, newListeningTo);
+        sendUserUpdate(); // Notify all clients about the updated user list
+      }
+    } else if (parsedData.type === "message") {
+      const message = parsedData.message;
+      console.log(`Received message from ${senderId}:`, message);
+      broadcastToSubscribers(senderId, JSON.stringify({ type: "message", from: senderId, message }));
+    }
+  });
+
+  ws.on("close", () => {
+    console.log(`Connection Closed for user: ${userId}`);
+    delete connectedClients[userId]; // Remove the user from connectedClients
+
+    const connectedUserCount = Object.keys(connectedClients).length;
+    const userList = Object.keys(connectedClients).map((id) => id.slice(-8)); // Show last 8 characters of UUID
+    console.log(`Number of connected users: ${connectedUserCount}`);
+    console.log(`Connected user list (last 8 characters of UUID): [${userList.join(", ")}]`);
+
+    if (connectedUserCount === 0) {
+      console.log("Last client disconnected, stopping keepAlive interval");
+      clearInterval(keepAliveId);
+    }
+
+    sendUserUpdate(); // Notify all clients about the updated user list
+  });
+});
+
+
+// Express route
+app.get("/", (req, res) => {
+  res.send("Hello World!");
 });
