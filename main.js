@@ -108,38 +108,27 @@ wss.on("connection", (ws) => {
     let parsedData;
     try {
       parsedData = JSON.parse(data);
-      //console.log("Received data:", parsedData);
     } catch (err) {
       console.error("Invalid JSON received:", data);
       return;
     }
 
-    // Find the sender's UUID using the WebSocket object
     const senderId = Object.keys(connectedClients).find(
       (id) => connectedClients[id].socket === ws
     );
 
-    //console.log(`Message received from user: ${senderId}`);
-
     if (parsedData.type === "pong") {
-      console.log("keepAlive");
       return;
     }
 
     if (parsedData.type === "updatelisteningto") {
-      // Update the user's listeningTo list
       const { newListeningTo } = parsedData;
       if (Array.isArray(newListeningTo)) {
         connectedClients[senderId].listeningTo = newListeningTo;
-        console.log(`Updated listeningTo for user ${senderId}:`, newListeningTo);
-        sendUserUpdate(); // Notify all clients about the updated user list
+        sendUserUpdate();
       }
     } else if (parsedData.type === "data") {
-      // Relay data only to subscribers
       const dataPayload = parsedData.data;
-      //console.log(`Data received from ${senderId}:`, dataPayload);
-
-      // Broadcast to subscribers
       broadcastToSubscribers(
         senderId,
         JSON.stringify({
@@ -149,12 +138,8 @@ wss.on("connection", (ws) => {
         })
       );
     } else if (parsedData.type === "usercoordinate") {
-      // Extract coordinates
       const { coordinates } = parsedData;
       if (coordinates) {
-        //console.log(`Received coordinates from ${senderId}:`, coordinates);
-
-        // Send coordinates to all clients except the sender
         broadcastCoordinatesToOthers(
           senderId,
           JSON.stringify({
@@ -169,23 +154,33 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     console.log(`Connection Closed for user: ${userId}`);
-    delete connectedClients[userId]; // Remove the user from connectedClients
+    delete connectedClients[userId];
 
     const connectedUserCount = Object.keys(connectedClients).length;
-    const userList = Object.keys(connectedClients).map((id) => id.slice(-8)); // Show last 8 characters of UUID
+    const userList = Object.keys(connectedClients).map((id) => id.slice(-8));
     console.log(`Number of connected users: ${connectedUserCount}`);
     console.log(`Connected user list (last 8 characters of UUID): [${userList.join(", ")}]`);
 
     if (connectedUserCount === 0) {
-      console.log("Last client disconnected, stopping keepAlive interval");
       clearInterval(keepAliveId);
     }
 
-    sendUserUpdate(); // Notify all clients about the updated user list
+    sendUserUpdate();
   });
 });
 
-// Express route
+// Express route for connected users
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  const userList = Object.values(connectedClients).map(({ id }) => id);
+  res.send(`
+    <html>
+      <head>
+        <title>Connected Users</title>
+      </head>
+      <body>
+        <h1>Connected Users</h1>
+        <pre>${userList.join("\n")}</pre>
+      </body>
+    </html>
+  `);
 });
