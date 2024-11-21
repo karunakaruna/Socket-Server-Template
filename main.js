@@ -50,6 +50,15 @@ const broadcastToSubscribers = (senderId, message) => {
   });
 };
 
+// Broadcast user coordinate updates to all clients except the sender
+const broadcastCoordinatesToOthers = (senderId, message) => {
+  Object.values(connectedClients).forEach((client) => {
+    if (client.id !== senderId) {
+      client.socket.send(message);
+    }
+  });
+};
+
 // Keep server alive with pings
 const keepServerAlive = () => {
   keepAliveId = setInterval(() => {
@@ -61,7 +70,6 @@ const keepServerAlive = () => {
   }, 50000);
 };
 
-// Handle new connections
 // Handle new connections
 wss.on("connection", (ws) => {
   const userId = uuidv4(); // Generate unique ID
@@ -95,6 +103,7 @@ wss.on("connection", (ws) => {
 
   sendUserUpdate(); // Notify all clients about the updated user list
 
+  // Handle new messages from clients
   ws.on("message", (data) => {
     let parsedData;
     try {
@@ -104,19 +113,19 @@ wss.on("connection", (ws) => {
       console.error("Invalid JSON received:", data);
       return;
     }
-  
+
     // Find the sender's UUID using the WebSocket object
     const senderId = Object.keys(connectedClients).find(
       (id) => connectedClients[id].socket === ws
     );
-  
+
     console.log(`Message received from user: ${senderId}`);
-  
+
     if (parsedData.type === "pong") {
       console.log("keepAlive");
       return;
     }
-  
+
     if (parsedData.type === "updatelisteningto") {
       // Update the user's listeningTo list
       const { newListeningTo } = parsedData;
@@ -125,10 +134,36 @@ wss.on("connection", (ws) => {
         console.log(`Updated listeningTo for user ${senderId}:`, newListeningTo);
         sendUserUpdate(); // Notify all clients about the updated user list
       }
-    } else if (parsedData.type === "message") {
-      const message = parsedData.message;
-      console.log(`Received message from ${senderId}:`, message);
-      broadcastToSubscribers(senderId, JSON.stringify({ type: "message", from: senderId, message }));
+    } else if (parsedData.type === "data") {
+      // Relay data only to subscribers
+      const dataPayload = parsedData.data;
+      console.log(`Data received from ${senderId}:`, dataPayload);
+
+      // Broadcast to subscribers
+      broadcastToSubscribers(
+        senderId,
+        JSON.stringify({
+          type: "data",
+          from: senderId,
+          data: dataPayload,
+        })
+      );
+    } else if (parsedData.type === "usercoordinate") {
+      // Extract coordinates
+      const { coordinates } = parsedData;
+      if (coordinates) {
+        console.log(`Received coordinates from ${senderId}:`, coordinates);
+
+        // Send coordinates to all clients except the sender
+        broadcastCoordinatesToOthers(
+          senderId,
+          JSON.stringify({
+            type: "usercoordinateupdate",
+            from: senderId,
+            coordinates,
+          })
+        );
+      }
     }
   });
 
@@ -149,7 +184,6 @@ wss.on("connection", (ws) => {
     sendUserUpdate(); // Notify all clients about the updated user list
   });
 });
-
 
 // Express route
 app.get("/", (req, res) => {
