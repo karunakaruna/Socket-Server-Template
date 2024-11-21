@@ -108,7 +108,7 @@ wss.on("connection", (ws) => {
     let parsedData;
     try {
       parsedData = JSON.parse(data);
-      console.log("Received data:", parsedData);
+      //console.log("Received data:", parsedData);
     } catch (err) {
       console.error("Invalid JSON received:", data);
       return;
@@ -119,7 +119,7 @@ wss.on("connection", (ws) => {
       (id) => connectedClients[id].socket === ws
     );
 
-    console.log(`Message received from user: ${senderId}`);
+    //console.log(`Message received from user: ${senderId}`);
 
     if (parsedData.type === "pong") {
       console.log("keepAlive");
@@ -137,7 +137,7 @@ wss.on("connection", (ws) => {
     } else if (parsedData.type === "data") {
       // Relay data only to subscribers
       const dataPayload = parsedData.data;
-      console.log(`Data received from ${senderId}:`, dataPayload);
+      //console.log(`Data received from ${senderId}:`, dataPayload);
 
       // Broadcast to subscribers
       broadcastToSubscribers(
@@ -152,7 +152,7 @@ wss.on("connection", (ws) => {
       // Extract coordinates
       const { coordinates } = parsedData;
       if (coordinates) {
-        console.log(`Received coordinates from ${senderId}:`, coordinates);
+        //console.log(`Received coordinates from ${senderId}:`, coordinates);
 
         // Send coordinates to all clients except the sender
         broadcastCoordinatesToOthers(
