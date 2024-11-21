@@ -14,13 +14,12 @@ let keepAliveId;
 // In-memory object to track connected clients
 const connectedClients = {};
 
-const wss =
-  process.env.NODE_ENV === "production"
-    ? new WebSocket.Server({ server })
-    : new WebSocket.Server({ port: 5001 });
+// Attach WebSocket server to the same HTTP server
+const wss = new WebSocket.Server({ server });
 
-server.listen(serverPort);
-console.log(`Server started on port ${serverPort} in stage ${process.env.NODE_ENV}`);
+server.listen(serverPort, () => {
+  console.log(`Server started on port ${serverPort}`);
+});
 
 // Function to send a user update to all clients
 const sendUserUpdate = () => {
@@ -78,7 +77,7 @@ wss.on("connection", (ws) => {
   // Add new client to connectedClients
   connectedClients[userId] = {
     id: userId,
-    listeningTo: [], // Initialize with an empty subscription list
+    listeningTo: [],
     socket: ws,
   };
 
@@ -90,18 +89,7 @@ wss.on("connection", (ws) => {
     })
   );
 
-  // Print the number of connected users and user list
-  const connectedUserCount = Object.keys(connectedClients).length;
-  const userList = Object.keys(connectedClients).map((id) => id.slice(-8)); // Show last 8 characters of UUID
-  console.log(`Number of connected users: ${connectedUserCount}`);
-  console.log(`Connected user list (last 8 characters of UUID): [${userList.join(", ")}]`);
-
-  if (connectedUserCount === 1) {
-    console.log("First connection. Starting keepAlive");
-    keepServerAlive();
-  }
-
-  sendUserUpdate(); // Notify all clients about the updated user list
+  sendUserUpdate();
 
   // Handle new messages from clients
   ws.on("message", (data) => {
@@ -156,12 +144,7 @@ wss.on("connection", (ws) => {
     console.log(`Connection Closed for user: ${userId}`);
     delete connectedClients[userId];
 
-    const connectedUserCount = Object.keys(connectedClients).length;
-    const userList = Object.keys(connectedClients).map((id) => id.slice(-8));
-    console.log(`Number of connected users: ${connectedUserCount}`);
-    console.log(`Connected user list (last 8 characters of UUID): [${userList.join(", ")}]`);
-
-    if (connectedUserCount === 0) {
+    if (Object.keys(connectedClients).length === 0) {
       clearInterval(keepAliveId);
     }
 
