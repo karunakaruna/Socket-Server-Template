@@ -9,79 +9,97 @@ app.use(express.static("public"));
 const serverPort = process.env.PORT || 3000;
 const server = http.createServer(app);
 
-let keepAliveId;
+// In-memory storage for user metadata
+const users = {};
+let numUsers = 0;
 
-// In-memory object to track connected clients
-const connectedClients = {};
-
-// Attach WebSocket server to the same HTTP server
+// Attach WebSocket server
 const wss = new WebSocket.Server({ server });
 
 server.listen(serverPort, () => {
   console.log(`Server started on port ${serverPort}`);
 });
 
-// Function to send a user update to all clients
-const sendUserUpdate = () => {
-  const users = Object.values(connectedClients).map(({ id, listeningTo }) => ({
-    id,
-    listeningTo,
+// Function to broadcast user updates
+const broadcastUserUpdate = () => {
+  const userList = Object.values(users).map((user) => ({
+    id: user.id,
+    username: user.username || "",
+    description: user.description || "",
+    tx: user.tx || 0,
+    ty: user.ty || 0,
+    tz: user.tz || 0,
+    afk: user.afk || false,
+    textstream: user.textstream || "",
+    listeningTo: user.listeningTo || [],
   }));
 
-  const updateMessage = JSON.stringify({
+  const message = JSON.stringify({
     type: "userupdate",
-    users,
+    numUsers,
+    users: userList,
   });
 
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(updateMessage);
+      client.send(message);
     }
   });
 };
 
-// Broadcast relevant data to clients subscribed to the sender
-const broadcastToSubscribers = (senderId, message) => {
-  Object.values(connectedClients).forEach((client) => {
-    if (client.listeningTo.includes(senderId)) {
-      client.socket.send(message);
+// Efficiently update user data
+const updateUserData = (userId, data) => {
+  if (!users[userId]) return;
+
+  Object.keys(data).forEach((key) => {
+    if (users[userId][key] !== data[key]) {
+      users[userId][key] = data[key]; // Update only if value changes
     }
   });
 };
 
-// Broadcast user coordinate updates to all clients except the sender
-const broadcastCoordinatesToOthers = (senderId, message) => {
-  Object.values(connectedClients).forEach((client) => {
-    if (client.id !== senderId) {
-      client.socket.send(message);
+// Broadcast coordinate updates
+const broadcastCoordinates = (senderId, coordinates) => {
+  const message = JSON.stringify({
+    type: "usercoordinateupdate",
+    from: senderId,
+    coordinates,
+  });
+
+  wss.clients.forEach((client) => {
+    if (
+      client.readyState === WebSocket.OPEN &&
+      users[client.userId] &&
+      client.userId !== senderId
+    ) {
+      client.send(message);
     }
   });
 };
 
-// Keep server alive with pings
-const keepServerAlive = () => {
-  keepAliveId = setInterval(() => {
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send("ping");
-      }
-    });
-  }, 5000);
-};
-
-// Handle new connections
+// WebSocket connection handler
 wss.on("connection", (ws) => {
-  const userId = uuidv4(); // Generate unique ID
-  console.log(`Connection Opened for user: ${userId}`);
+  const userId = uuidv4();
+  console.log(`User connected: ${userId}`);
+  numUsers++;
 
-  // Add new client to connectedClients
-  connectedClients[userId] = {
+  // Initialize user metadata
+  users[userId] = {
     id: userId,
+    username: `User_${userId.slice(0, 5)}`, // Default username
     listeningTo: [],
-    socket: ws,
+    description: "",
+    tx: 0,
+    ty: 0,
+    tz: 0,
+    afk: false,
+    textstream: "",
   };
 
-  // Send the user their ID
+  // Attach userId to WebSocket
+  ws.userId = userId;
+
+  // Send welcome message
   ws.send(
     JSON.stringify({
       type: "welcome",
@@ -89,81 +107,81 @@ wss.on("connection", (ws) => {
     })
   );
 
-  sendUserUpdate();
+  // Broadcast updated user list
+  broadcastUserUpdate();
 
-  // Handle new messages from clients
+  // Handle incoming messages
   ws.on("message", (data) => {
-    let parsedData;
+    let message;
     try {
-      parsedData = JSON.parse(data);
+      message = JSON.parse(data);
     } catch (err) {
-      console.error("Invalid JSON received:", data);
+      console.error("Invalid JSON:", data);
       return;
     }
 
-    const senderId = Object.keys(connectedClients).find(
-      (id) => connectedClients[id].socket === ws
-    );
+    const { type } = message;
 
-    if (parsedData.type === "pong") {
-      return;
+    if (type === "pong") {
+      return; // Keep-alive response
     }
 
-    if (parsedData.type === "updatelisteningto") {
-      const { newListeningTo } = parsedData;
-      if (Array.isArray(newListeningTo)) {
-        connectedClients[senderId].listeningTo = newListeningTo;
-        sendUserUpdate();
+    if (type === "updatemetadata") {
+      // Update user metadata
+      updateUserData(ws.userId, message.data);
+      broadcastUserUpdate();
+    } else if (type === "updatelisteningto") {
+      // Update user's listeningTo links
+      if (Array.isArray(message.data)) {
+        users[ws.userId].listeningTo = message.data;
+        broadcastUserUpdate();
       }
-    } else if (parsedData.type === "data") {
-      const dataPayload = parsedData.data;
-      broadcastToSubscribers(
-        senderId,
-        JSON.stringify({
-          type: "data",
-          from: senderId,
-          data: dataPayload,
-        })
-      );
-    } else if (parsedData.type === "usercoordinate") {
-      const { coordinates } = parsedData;
+    } else if (type === "usercoordinate") {
+      // Update user coordinates and broadcast
+      const { coordinates } = message;
       if (coordinates) {
-        console.log(`Received coordinates from user ${senderId}:`, coordinates);
-        broadcastCoordinatesToOthers(
-          senderId,
-          JSON.stringify({
-            type: "usercoordinateupdate",
-            from: senderId,
-            coordinates,
-          })
-        );
+        updateUserData(ws.userId, coordinates);
+        broadcastCoordinates(ws.userId, coordinates);
       }
+    } else if (type === "data") {
+      // Broadcast custom data to listeners
+      const { data: payload } = message;
+      const recipients = users[ws.userId].listeningTo;
+      recipients.forEach((recipientId) => {
+        const recipient = Object.values(wss.clients).find(
+          (client) => client.userId === recipientId
+        );
+        if (recipient && recipient.readyState === WebSocket.OPEN) {
+          recipient.send(
+            JSON.stringify({
+              type: "data",
+              from: ws.userId,
+              data: payload,
+            })
+          );
+        }
+      });
     }
   });
 
+  // Handle disconnections
   ws.on("close", () => {
-    console.log(`Connection Closed for user: ${userId}`);
-    delete connectedClients[userId];
-
-    if (Object.keys(connectedClients).length === 0) {
-      clearInterval(keepAliveId);
-    }
-
-    sendUserUpdate();
+    console.log(`User disconnected: ${ws.userId}`);
+    delete users[ws.userId];
+    numUsers--;
+    broadcastUserUpdate();
   });
 });
 
-// Express route for connected users
+// Express route for debugging
 app.get("/", (req, res) => {
-  const userList = Object.values(connectedClients).map(({ id }) => id);
   res.send(`
     <html>
-      <head>
-        <title>Connected Users</title>
-      </head>
+      <head><title>Server Status</title></head>
       <body>
-        <h1>Connected Users</h1>
-        <pre>${userList.join("\n")}</pre>
+        <h1>Server Status</h1>
+        <p>Number of connected users: ${numUsers}</p>
+        <pre>${JSON.stringify(users, null, 2)}</pre>
       </body>
     </html>
   `);
