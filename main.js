@@ -31,7 +31,8 @@ const broadcastUserUpdate = () => {
     tz: user.tz || 0,
     afk: user.afk || false,
     textstream: user.textstream || "",
-    listeningTo: user.listeningTo || [],
+    // Ensure listeningTo remains unchanged
+    listeningTo: user.listeningTo ? [...user.listeningTo] : [], // Shallow copy for safety
   }));
 
   const message = JSON.stringify({
@@ -47,13 +48,14 @@ const broadcastUserUpdate = () => {
   });
 };
 
+
 // Efficiently update user data
 const updateUserData = (userId, data) => {
   if (!users[userId]) return;
 
   Object.keys(data).forEach((key) => {
-    if (users[userId][key] !== data[key]) {
-      users[userId][key] = data[key]; // Update only if value changes
+    if (key in users[userId] && users[userId][key] !== data[key]) {
+      users[userId][key] = data[key];
     }
   });
 };
@@ -77,6 +79,32 @@ const broadcastCoordinates = (senderId, coordinates) => {
   });
 };
 
+// Ping heartbeat function
+const startHeartbeat = () => {
+  setInterval(() => {
+    const currentTime = new Date().toISOString();
+    console.log(`[PING HEARTBEAT] Time: ${currentTime}, Connected Users: ${numUsers}`);
+    
+    // Log each user's listening status
+    Object.entries(users).forEach(([userId, user]) => {
+      console.log(`User ${user.username} (${userId}) is listening to:`, user.listeningTo);
+    });
+
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(
+          JSON.stringify({
+            type: "ping", 
+            time: currentTime,
+            numUsers,
+          })
+        );
+      }
+    });
+  }, 5000); // Ping every 5 seconds
+};
+
+// WebSocket connection handler
 // WebSocket connection handler
 wss.on("connection", (ws) => {
   const userId = uuidv4();
@@ -86,8 +114,8 @@ wss.on("connection", (ws) => {
   // Initialize user metadata
   users[userId] = {
     id: userId,
-    username: `User_${userId.slice(0, 5)}`, // Default username
-    listeningTo: [],
+    username: `User_${userId.slice(0, 5)}`,
+    listeningTo: [], // Start with an empty list
     description: "",
     tx: 0,
     ty: 0,
@@ -116,62 +144,118 @@ wss.on("connection", (ws) => {
     try {
       message = JSON.parse(data);
     } catch (err) {
-      console.error("Invalid JSON:", data);
+      console.error("Invalid JSON received:", data);
       return;
     }
 
     const { type } = message;
 
-    if (type === "pong") {
-      return; // Keep-alive response
-    }
+    switch (type) {
+      case "pong":
+        console.log(`Pong received from user: ${ws.userId}`);
+        break;
 
-    if (type === "updatemetadata") {
-      // Update user metadata
-      updateUserData(ws.userId, message.data);
-      broadcastUserUpdate();
-    } else if (type === "updatelisteningto") {
-      // Update user's listeningTo links
-      if (Array.isArray(message.data)) {
-        users[ws.userId].listeningTo = message.data;
-        broadcastUserUpdate();
-      }
-    } else if (type === "usercoordinate") {
-      // Update user coordinates and broadcast
-      const { coordinates } = message;
-      if (coordinates) {
-        updateUserData(ws.userId, coordinates);
-        broadcastCoordinates(ws.userId, coordinates);
-      }
-    } else if (type === "data") {
-      // Broadcast custom data to listeners
-      const { data: payload } = message;
-      const recipients = users[ws.userId].listeningTo;
-      recipients.forEach((recipientId) => {
-        const recipient = Object.values(wss.clients).find(
-          (client) => client.userId === recipientId
-        );
-        if (recipient && recipient.readyState === WebSocket.OPEN) {
-          recipient.send(
-            JSON.stringify({
-              type: "data",
-              from: ws.userId,
-              data: payload,
-            })
+      case "updatemetadata":
+        if (message.data) {
+          updateUserData(ws.userId, message.data);
+          broadcastUserUpdate();
+        } else {
+          console.error(`Invalid metadata update from user ${ws.userId}:`, message.data);
+        }
+        break;
+
+      case "updatelisteningto":
+        console.log(`User ${ws.userId} updating listening list to:`, message.newListeningTo);
+        if (Array.isArray(message.newListeningTo)) {
+          if (users[ws.userId]) {
+            // Update only the user's listeningTo list
+            users[ws.userId].listeningTo = message.newListeningTo;
+            console.log(`Updated listeningTo for user ${ws.userId}:`, users[ws.userId].listeningTo);
+            broadcastUserUpdate();
+          } else {
+            console.error(`User ${ws.userId} not found for listeningTo update.`);
+          }
+        } else {
+          console.error(`Invalid listeningTo data from user ${ws.userId}:`, message.newListeningTo);
+        }
+        break;
+
+      case "usercoordinate":
+        const { coordinates } = message;
+        if (coordinates && users[ws.userId]) {
+          updateUserData(ws.userId, coordinates);
+          broadcastCoordinates(ws.userId, coordinates);
+        } else {
+          console.error(
+            `Invalid coordinates or user not found for user ${ws.userId}:`,
+            coordinates
           );
         }
-      });
+        break;
+
+      case "clearlist":
+        console.log(`Clearing listening list for user: ${ws.userId}`);
+        if (users[ws.userId]) {
+          users[ws.userId].listeningTo = [];
+          broadcastUserUpdate();
+        } else {
+          console.error(`User ${ws.userId} not found for clearlist.`);
+        }
+        break;
+
+      case "data":
+        const { data: payload } = message;
+        if (payload && Array.isArray(users[ws.userId]?.listeningTo)) {
+          const recipients = users[ws.userId].listeningTo;
+
+          // Route data to users in the listeningTo list
+          recipients.forEach((recipientId) => {
+            const recipientClient = Array.from(wss.clients).find(
+              (client) => client.userId === recipientId
+            );
+
+            if (recipientClient && recipientClient.readyState === WebSocket.OPEN) {
+              recipientClient.send(
+                JSON.stringify({
+                  type: "data",
+                  from: ws.userId,
+                  data: payload,
+                })
+              );
+              // console.log(`Data sent from user ${ws.userId} to ${recipientId}:`, payload);
+            } else {
+              // console.error(
+              //   `Recipient ${recipientId} not found or not connected for data message from user ${ws.userId}.`
+              // );
+            }
+          });
+        } else {
+          console.error(
+            `Invalid data payload or empty listeningTo list for user ${ws.userId}:`,
+            payload
+          );
+        }
+        break;
+
+      default:
+        console.error(`Unhandled message type "${type}" from user ${ws.userId}:`, message);
     }
   });
 
   // Handle disconnections
   ws.on("close", () => {
     console.log(`User disconnected: ${ws.userId}`);
-    delete users[ws.userId];
-    numUsers--;
+    if (users[ws.userId]) {
+      delete users[ws.userId];
+    }
+    numUsers = Math.max(0, numUsers - 1);
     broadcastUserUpdate();
   });
 });
+
+
+// Start the ping heartbeat
+startHeartbeat();
 
 // Express route for debugging
 app.get("/", (req, res) => {
