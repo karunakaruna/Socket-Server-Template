@@ -166,19 +166,35 @@ wss.on("connection", (ws) => {
 
       case "updatelisteningto":
         console.log(`User ${ws.userId} updating listening list to:`, message.newListeningTo);
+      
         if (Array.isArray(message.newListeningTo)) {
           if (users[ws.userId]) {
-            // Update only the user's listeningTo list
-            users[ws.userId].listeningTo = message.newListeningTo;
-            console.log(`Updated listeningTo for user ${ws.userId}:`, users[ws.userId].listeningTo);
+            // Filter out the user's own ID from the `newListeningTo` list
+            const filteredListeningTo = message.newListeningTo.filter(
+              (listeningId) => listeningId !== ws.userId
+            );
+      
+            // Update the user's listeningTo list
+            users[ws.userId].listeningTo = filteredListeningTo;
+      
+            console.log(
+              `Updated listeningTo for user ${ws.userId} (filtered):`,
+              users[ws.userId].listeningTo
+            );
+      
+            // Broadcast the updated user list to all clients
             broadcastUserUpdate();
           } else {
             console.error(`User ${ws.userId} not found for listeningTo update.`);
           }
         } else {
-          console.error(`Invalid listeningTo data from user ${ws.userId}:`, message.newListeningTo);
+          console.error(
+            `Invalid listeningTo data from user ${ws.userId}:`,
+            message.newListeningTo
+          );
         }
         break;
+        
 
       case "usercoordinate":
         const { coordinates } = message;
