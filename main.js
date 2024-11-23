@@ -66,7 +66,7 @@ const keepServerAlive = () => {
         client.send("ping");
       }
     });
-  }, 50000);
+  }, 5000);
 };
 
 // Handle new connections
