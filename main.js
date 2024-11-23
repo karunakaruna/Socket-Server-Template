@@ -128,6 +128,7 @@ wss.on("connection", (ws) => {
     } else if (parsedData.type === "usercoordinate") {
       const { coordinates } = parsedData;
       if (coordinates) {
+        console.log(`Received coordinates from user ${senderId}:`, coordinates);
         broadcastCoordinatesToOthers(
           senderId,
           JSON.stringify({
