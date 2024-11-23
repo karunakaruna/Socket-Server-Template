@@ -105,7 +105,6 @@ const startHeartbeat = () => {
 };
 
 // WebSocket connection handler
-// WebSocket connection handler
 wss.on("connection", (ws) => {
   const userId = uuidv4();
   console.log(`User connected: ${userId}`);
