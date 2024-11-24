@@ -9,9 +9,12 @@ app.use(express.static("public"));
 const serverPort = process.env.PORT || 3000;
 const server = http.createServer(app);
 
-// In-memory storage for user metadata
+// In-memory storage for user metadata and WebSocket clients
 const users = {};
 let numUsers = 0;
+
+// Efficient client lookup using a Map
+const clientMap = new Map();
 
 // Attach WebSocket server
 const wss = new WebSocket.Server({ server });
@@ -31,7 +34,6 @@ const broadcastUserUpdate = () => {
     tz: user.tz || 0,
     afk: user.afk || false,
     textstream: user.textstream || "",
-    // Ensure listeningTo remains unchanged
     listeningTo: user.listeningTo ? [...user.listeningTo] : [], // Shallow copy for safety
   }));
 
@@ -47,7 +49,6 @@ const broadcastUserUpdate = () => {
     }
   });
 };
-
 
 // Efficiently update user data
 const updateUserData = (userId, data) => {
@@ -85,7 +86,6 @@ const startHeartbeat = () => {
     const currentTime = new Date().toISOString();
     console.log(`[PING HEARTBEAT] Time: ${currentTime}, Connected Users: ${numUsers}`);
     
-    // Log each user's listening status
     Object.entries(users).forEach(([userId, user]) => {
       console.log(`User ${user.username} (${userId}) is listening to:`, user.listeningTo);
     });
@@ -101,7 +101,7 @@ const startHeartbeat = () => {
         );
       }
     });
-  }, 5000); // Ping every 5 seconds
+  }, 5000);
 };
 
 // WebSocket connection handler
@@ -110,11 +110,10 @@ wss.on("connection", (ws) => {
   console.log(`User connected: ${userId}`);
   numUsers++;
 
-  // Initialize user metadata
   users[userId] = {
     id: userId,
     username: `User_${userId.slice(0, 5)}`,
-    listeningTo: [], // Start with an empty list
+    listeningTo: [],
     description: "",
     tx: 0,
     ty: 0,
@@ -123,10 +122,9 @@ wss.on("connection", (ws) => {
     textstream: "",
   };
 
-  // Attach userId to WebSocket
   ws.userId = userId;
+  clientMap.set(userId, ws);
 
-  // Send welcome message
   ws.send(
     JSON.stringify({
       type: "welcome",
@@ -134,10 +132,8 @@ wss.on("connection", (ws) => {
     })
   );
 
-  // Broadcast updated user list
   broadcastUserUpdate();
 
-  // Handle incoming messages
   ws.on("message", (data) => {
     let message;
     try {
@@ -165,22 +161,28 @@ wss.on("connection", (ws) => {
 
       case "updatelisteningto":
         console.log(`User ${ws.userId} updating listening list to:`, message.newListeningTo);
-      
+
         if (Array.isArray(message.newListeningTo)) {
           if (users[ws.userId]) {
-            // Filter out the user's own ID from the `newListeningTo` list
             const filteredListeningTo = message.newListeningTo.filter(
               (listeningId) => listeningId !== ws.userId
             );
-            // Update the user's listeningTo list
+
+            if (
+              JSON.stringify(users[ws.userId].listeningTo) ===
+              JSON.stringify(filteredListeningTo)
+            ) {
+              console.log(`No change in listeningTo for user ${ws.userId}.`);
+              return;
+            }
+
             users[ws.userId].listeningTo = filteredListeningTo;
-            
+
             console.log(
               `Updated listeningTo for user ${ws.userId} (filtered):`,
               users[ws.userId].listeningTo
             );
-      
-            // Broadcast the updated user list to all clients
+
             broadcastUserUpdate();
           } else {
             console.error(`User ${ws.userId} not found for listeningTo update.`);
@@ -192,7 +194,6 @@ wss.on("connection", (ws) => {
           );
         }
         break;
-        
 
       case "usercoordinate":
         const { coordinates } = message;
@@ -217,56 +218,58 @@ wss.on("connection", (ws) => {
         }
         break;
 
-      case "data":
-        const { data: payload } = message;
-        if (payload && Array.isArray(users[ws.userId]?.listeningTo)) {
-          const recipients = users[ws.userId].listeningTo;
-
-          // Route data to users in the listeningTo list
-          recipients.forEach((recipientId) => {
-            const recipientClient = Array.from(wss.clients).find(
-              (client) => client.userId === recipientId
+        case "data":
+          const { data: payload } = message;
+        
+          if (payload) {
+            // Iterate through all users to find who is listening to the sender (ws.userId)
+            Object.entries(users).forEach(([recipientId, recipientData]) => {
+              if (
+                Array.isArray(recipientData.listeningTo) &&
+                recipientData.listeningTo.includes(ws.userId)
+              ) {
+                const recipientClient = clientMap.get(recipientId);
+        
+                if (recipientClient && recipientClient.readyState === WebSocket.OPEN) {
+                  recipientClient.send(
+                    JSON.stringify({
+                      type: "data",
+                      from: ws.userId,
+                      data: payload,
+                    })
+                  );
+                  console.log(`Data sent from user ${ws.userId} to ${recipientId}:`, payload);
+                } else {
+                  console.warn(
+                    `Recipient ${recipientId} not found or not connected for data message from user ${ws.userId}.`
+                  );
+                }
+              }
+            });
+          } else {
+            console.error(
+              `Invalid data payload for user ${ws.userId}:`,
+              payload
             );
-
-            if (recipientClient && recipientClient.readyState === WebSocket.OPEN) {
-              recipientClient.send(
-                JSON.stringify({
-                  type: "data",
-                  from: ws.userId,
-                  data: payload,
-                })
-              );
-              // console.log(`Data sent from user ${ws.userId} to ${recipientId}:`, payload);
-            } else {
-              // console.error(
-              //   `Recipient ${recipientId} not found or not connected for data message from user ${ws.userId}.`
-              // );
-            }
-          });
-        } else {
-          console.error(
-            `Invalid data payload or empty listeningTo list for user ${ws.userId}:`,
-            payload
-          );
-        }
-        break;
+          }
+          break;
+        
 
       default:
         console.error(`Unhandled message type "${type}" from user ${ws.userId}:`, message);
     }
   });
 
-  // Handle disconnections
   ws.on("close", () => {
     console.log(`User disconnected: ${ws.userId}`);
     if (users[ws.userId]) {
       delete users[ws.userId];
     }
+    clientMap.delete(ws.userId);
     numUsers = Math.max(0, numUsers - 1);
     broadcastUserUpdate();
   });
 });
-
 
 // Start the ping heartbeat
 startHeartbeat();
