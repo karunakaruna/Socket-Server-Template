@@ -238,7 +238,7 @@ wss.on("connection", (ws) => {
                       data: payload,
                     })
                   );
-                  console.log(`Data sent from user ${ws.userId} to ${recipientId}:`, payload);
+                  // console.log(`Data sent from user ${ws.userId} to ${recipientId}:`, payload);
                 } else {
                   console.warn(
                     `Recipient ${recipientId} not found or not connected for data message from user ${ws.userId}.`
