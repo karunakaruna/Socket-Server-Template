@@ -172,10 +172,9 @@ wss.on("connection", (ws) => {
             const filteredListeningTo = message.newListeningTo.filter(
               (listeningId) => listeningId !== ws.userId
             );
-      
             // Update the user's listeningTo list
             users[ws.userId].listeningTo = filteredListeningTo;
-      
+            
             console.log(
               `Updated listeningTo for user ${ws.userId} (filtered):`,
               users[ws.userId].listeningTo
