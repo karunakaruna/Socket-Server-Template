@@ -150,46 +150,15 @@ wss.on("connection", (ws) => {
         console.log(`Pong received from user: ${ws.userId}`);
         break;
 
-        case "updatemetadata":
-          if (message.data) {
-            const { id, username, description, afk, textstream } = message.data;
-        
-            if (users[ws.userId]) {
-              // Update only the changed fields
-              if (username !== undefined) users[ws.userId].username = username;
-              if (description !== undefined) users[ws.userId].description = description;
-              if (afk !== undefined) users[ws.userId].afk = afk;
-              if (textstream !== undefined) users[ws.userId].textstream = textstream;
-        
-              console.log(`Metadata updated for user ${ws.userId}:`, users[ws.userId]);
-        
-              // Broadcast the update to all other clients
-              const updateMessage = JSON.stringify({
-                type: "userupdate",
-                users: [
-                  {
-                    id: ws.userId,
-                    username: users[ws.userId].username,
-                    description: users[ws.userId].description,
-                    afk: users[ws.userId].afk,
-                    textstream: users[ws.userId].textstream,
-                  }
-                ]
-              });
-        
-              wss.clients.forEach((client) => {
-                if (client !== ws && client.readyState === WebSocket.OPEN) {
-                  client.send(updateMessage);
-                }
-              });
-            } else {
-              console.error(`User ${ws.userId} not found for metadata update.`);
-            }
-          } else {
-            console.error(`Invalid metadata update from user ${ws.userId}:`, message.data);
-          }
-          break;
-        
+      case "updatemetadata":
+        if (message.data) {
+          updateUserData(ws.userId, message.data);
+          broadcastUserUpdate();
+        } else {
+          console.error(`Invalid metadata update from user ${ws.userId}:`, message.data);
+        }
+        break;
+
       case "updatelisteningto":
         console.log(`User ${ws.userId} updating listening list to:`, message.newListeningTo);
 
