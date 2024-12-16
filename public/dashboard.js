@@ -521,6 +521,31 @@ ws.onerror = function(error) {
     addLogEntry('WebSocket connection error', 'error');
 };
 
+// Add style for purple messages
+const style = document.createElement('style');
+style.textContent = `
+    .message-type-worldtree {
+        color: #b19cd9;
+        font-weight: bold;
+    }
+`;
+document.head.appendChild(style);
+
+// Logo click handler
+document.getElementById('logo').addEventListener('click', function() {
+    // Animate the logo
+    this.classList.remove('animate');
+    void this.offsetWidth; // Force reflow
+    this.classList.add('animate');
+    
+    // Send message to server
+    ws.send(JSON.stringify({
+        type: 'metadata',
+        message: 'WorldTree Seed activated! 🌱✨',
+        logType: 'worldtree'
+    }));
+});
+
 // WebSocket message handling
 ws.onmessage = function(event) {
     try {
@@ -570,12 +595,12 @@ ws.onmessage = function(event) {
                 break;
 
             case 'serverlog':
-                // Filter coordinate messages if enabled
-                if (document.getElementById('filter-coordinates')?.checked && 
-                    (message.message.includes('coordinate') || message.message.includes('position'))) {
-                    return;
+                // Only show non-coordinate messages
+                if (!document.getElementById('filter-coordinates')?.checked || 
+                    (!message.message.includes('coordinate') && 
+                     !message.message.includes('position'))) {
+                    addLogEntry(message.message, message.logType || 'info');
                 }
-                addLogEntry(message.message, message.logType || 'info');
                 break;
 
             case 'userupdate':
@@ -682,8 +707,8 @@ function isDashboardUser(user) {
 window.addEventListener('load', detectMobile);
 window.addEventListener('resize', detectMobile);
 
-const style = document.createElement('style');
-style.textContent = `
+const style2 = document.createElement('style');
+style2.textContent = `
     .log-entry.highlight-change {
         background-color: rgba(255, 255, 0, 0.1);
         font-weight: bold;
@@ -692,7 +717,7 @@ style.textContent = `
         border-radius: 4px;
     }
 `;
-document.head.appendChild(style);
+document.head.appendChild(style2);
 
 function createWelcomeMessage(userId) {
     const natureEmojis = ['🌱', '🌳', '🌲', '🌿', '🍃', '🌸', '🦋', '🐝', '🌺', '🍄'];

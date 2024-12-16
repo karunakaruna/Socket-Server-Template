@@ -271,24 +271,35 @@ wss.on("connection", (ws) => {
 
     const { type } = message;
 
-    // Filter out coordinate-related, position, ping, and pong messages from logging and broadcasting
-    if (!type.toLowerCase().includes('coordinate') && 
-        !type.toLowerCase().includes('position') && 
-        type !== 'ping' && 
-        type !== 'pong') {
-      console.log(`Received ${type} message from ${ws.userId || 'unknown user'}`);
-      // Only broadcast non-coordinate/position messages to server log
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: "serverlog",
-            message: `Received ${type} message from ${ws.userId || 'unknown user'}`
+    switch (type) {
+      case "requestCsvInfo":
+        // Silently handle CSV info requests
+        const csvInfo = getCsvInfo();
+        if (csvInfo) {
+          ws.send(JSON.stringify({
+            type: 'csvinfo',
+            info: csvInfo
           }));
         }
-      });
-    }
+        break;
 
-    switch (type) {
+      case "metadata":
+      case "status":
+      case "rename":
+      case "connect":
+      case "disconnect":
+        // Only broadcast these types of messages
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'serverlog',
+              message: message.message,
+              logType: message.type
+            }));
+          }
+        });
+        break;
+
       case "pong":
         console.log(`Pong received from user: ${ws.userId}`);
         break;
@@ -396,16 +407,6 @@ wss.on("connection", (ws) => {
             );
           }
           break;
-
-      case "requestCsvInfo":
-        const csvInfo = getCsvInfo();
-        if (csvInfo) {
-          ws.send(JSON.stringify({
-            type: 'csvinfo',
-            info: csvInfo
-          }));
-        }
-        break;
 
       default:
         console.error(`Unhandled message type "${type}" from user ${ws.userId}:`, message);
