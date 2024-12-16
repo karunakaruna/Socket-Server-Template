@@ -11,27 +11,21 @@ function updateLastSave(timestamp) {
 }
 
 function addLogEntry(message, type = 'info') {
-    // Skip coordinate and position related messages
-    if (message.toLowerCase().includes('coordinate') || 
-        message.toLowerCase().includes('position') || 
-        message.includes('ping') || 
-        message.includes('pong')) {
-        return;
-    }
+    const log = document.getElementById('log-container');
+    if (!log) return;
 
-    const logPanel = document.getElementById('log-container');
-    if (!logPanel) return;
-    
     const entry = document.createElement('div');
     entry.className = `log-entry message-type-${type}`;
+    
     const timestamp = new Date().toLocaleTimeString();
     entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
-    logPanel.appendChild(entry);
-    logPanel.scrollTop = logPanel.scrollHeight;
+    
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
 
-    // Keep only the last 100 entries
-    while (logPanel.children.length > 100) {
-        logPanel.removeChild(logPanel.firstChild);
+    // Keep only last 1000 entries
+    while (log.children.length > 1000) {
+        log.removeChild(log.firstChild);
     }
 }
 
@@ -117,11 +111,19 @@ function updateUsersTable() {
     // Clear the table
     userTableBody.innerHTML = '';
 
+    // Track processed user IDs to prevent duplicates
+    const processedIds = new Set();
+
     // Add active users
     Array.from(activeUsers.values()).forEach(user => {
+        if (processedIds.has(user.id)) return;
+        processedIds.add(user.id);
+
         const row = document.createElement('tr');
         const displayName = user.username || `User_${user.id.slice(0, 5)}`;
-        const position = `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})`;
+        const position = user.tx !== undefined ? 
+            `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})` : 
+            'N/A';
         
         row.innerHTML = `
             <td>${displayName}</td>
@@ -133,8 +135,11 @@ function updateUsersTable() {
         userTableBody.appendChild(row);
     });
 
-    // Add dashboard viewers
+    // Add dashboard viewers (only if they're not already shown as users)
     Array.from(dashboardViewers.values()).forEach(viewer => {
+        if (processedIds.has(viewer.id)) return;
+        processedIds.add(viewer.id);
+
         const row = document.createElement('tr');
         const deviceBadge = viewer.deviceType === 'mobile' ? 
             '<span class="badge mobile">Mobile</span>' : 
@@ -150,9 +155,14 @@ function updateUsersTable() {
         userTableBody.appendChild(row);
     });
 
-    // Update counts
-    document.getElementById('user-count').textContent = activeUsers.size;
-    document.getElementById('viewer-count').textContent = dashboardViewers.size;
+    // Update counts (only count unique users)
+    const uniqueUsers = new Set(Array.from(activeUsers.values()).map(u => u.id));
+    const uniqueViewers = new Set(Array.from(dashboardViewers.values())
+        .filter(v => !uniqueUsers.has(v.id))
+        .map(v => v.id));
+
+    document.getElementById('user-count').textContent = uniqueUsers.size;
+    document.getElementById('viewer-count').textContent = uniqueViewers.size;
 }
 
 let logMessages = [];
@@ -259,11 +269,78 @@ function updateLastSaveTime() {
 
 let scene, camera, renderer, controls;
 const userSpheres = new Map(); // Store user spheres
+const userLabels = new Map(); // Store user labels
 
 function createUserSphere(color = 0x7aa2f7) {
     const geometry = new THREE.SphereGeometry(0.2, 32, 32);
     const material = new THREE.MeshBasicMaterial({ color: color });
     return new THREE.Mesh(geometry, material);
+}
+
+function createTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 64;
+
+    // Background
+    context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Text
+    context.font = '24px Arial';
+    context.fillStyle = 'white';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({ 
+        map: texture,
+        sizeAttenuation: false
+    });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(0.1, 0.025, 1);
+    return sprite;
+}
+
+function updateUserPosition(userId, coordinates, username) {
+    let user = userSpheres.get(userId);
+    if (!user) {
+        // Create new user representation
+        const geometry = new THREE.SphereGeometry(0.1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const sphere = new THREE.Mesh(geometry, material);
+        const label = createTextSprite(username || userId);
+        sphere.add(label);
+        label.position.y = 0.2;
+        
+        user = sphere;
+        userSpheres.set(userId, user);
+        scene.add(user);
+    }
+
+    // Update position
+    user.position.set(coordinates.tx || 0, coordinates.ty || 0, coordinates.tz || 0);
+    
+    // Update label text if username changed
+    if (username && user.children[0].material.map.image) {
+        const context = user.children[0].material.map.image.getContext('2d');
+        context.clearRect(0, 0, user.children[0].material.map.image.width, user.children[0].material.map.image.height);
+        
+        // Redraw background
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.fillRect(0, 0, user.children[0].material.map.image.width, user.children[0].material.map.image.height);
+        
+        // Redraw text
+        context.font = '24px Arial';
+        context.fillStyle = 'white';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(username, user.children[0].material.map.image.width / 2, user.children[0].material.map.image.height / 2);
+        
+        user.children[0].material.map.needsUpdate = true;
+    }
 }
 
 function initThreeJS() {
@@ -319,6 +396,13 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame(animate);
     if (renderer && scene && camera) {
+        // Update label rotations to face camera
+        userSpheres.forEach(user => {
+            if (user.children[0]) {
+                user.children[0].quaternion.copy(camera.quaternion);
+            }
+        });
+        
         if (controls) controls.update();
         renderer.render(scene, camera);
     }
@@ -368,15 +452,15 @@ function updateLastSaveInfo() {
     }
     
     if (lastCsvInfo.saveTime) {
-        const timeStr = new Date(lastCsvInfo.saveTime).toLocaleString();
+        const timeStr = lastCsvInfo.saveTime.toLocaleString();
         let infoStr = `Last Save: ${timeStr}`;
         
-        if (lastCsvInfo.size !== undefined) {
-            const sizeMB = (lastCsvInfo.size / (1024 * 1024)).toFixed(2);
+        if (lastCsvInfo.fileSize !== undefined) {
+            const sizeMB = (lastCsvInfo.fileSize / (1024 * 1024)).toFixed(2);
             infoStr += ` (${sizeMB} MB`;
             
-            if (lastCsvInfo.rows !== undefined && lastCsvInfo.size < 10 * 1024 * 1024) {
-                infoStr += `, ${lastCsvInfo.rows} rows`;
+            if (lastCsvInfo.rowCount !== undefined) {
+                infoStr += `, ${lastCsvInfo.rowCount} rows`;
             }
             
             infoStr += ')';
@@ -398,6 +482,11 @@ function updateCsvInfo(info) {
     };
     updateLastSaveInfo();
 }
+
+// Request CSV info periodically
+setInterval(() => {
+    ws.send(JSON.stringify({ type: 'requestCsvInfo' }));
+}, 5000);
 
 // WebSocket connection
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -439,25 +528,25 @@ ws.onmessage = function(event) {
 
         switch (message.type) {
             case 'welcome':
-                // Set UUID as soon as we get the welcome message
                 const dashboardUuid = document.getElementById('dashboard-uuid');
                 if (dashboardUuid) {
                     dashboardUuid.textContent = message.id;
-                    // Add self to dashboard viewers
+                    // Add self to dashboard viewers with device type
                     dashboardViewers.set(message.id, {
                         id: message.id,
                         username: 'Dashboard Viewer',
                         type: 'viewer',
                         deviceType: isMobileDevice() ? 'mobile' : 'desktop'
                     });
+                    updateUsersTable();
                 }
-                updateUsersTable();
+                // Add welcome message
+                addLogEntry(createWelcomeMessage(message.id), 'connection');
                 break;
-                
+
             case 'connect':
                 addLogEntry(message.message, 'connection');
-                // Only add other dashboard viewers, not ourselves
-                if (message.userType === 'viewer' && message.userId !== document.getElementById('dashboard-uuid')?.textContent) {
+                if (message.userType === 'viewer') {
                     dashboardViewers.set(message.userId, {
                         id: message.userId,
                         username: 'Dashboard Viewer',
@@ -470,15 +559,17 @@ ws.onmessage = function(event) {
 
             case 'csvinfo':
                 if (message.info) {
-                    updateCsvInfo(message.info);
+                    lastCsvInfo = {
+                        saveTime: message.info.modifiedTime ? new Date(message.info.modifiedTime) : null,
+                        fileSize: message.info.size,
+                        rowCount: message.info.rows,
+                        exists: message.info.exists
+                    };
+                    updateLastSaveInfo();
                 }
                 break;
-                
+
             case 'serverlog':
-                if (message.message.includes('Data saved to CSV')) {
-                    // Request updated CSV info from server
-                    ws.send(JSON.stringify({ type: 'requestCsvInfo' }));
-                }
                 // Filter coordinate messages if enabled
                 if (document.getElementById('filter-coordinates')?.checked && 
                     (message.message.includes('coordinate') || message.message.includes('position'))) {
@@ -486,7 +577,7 @@ ws.onmessage = function(event) {
                 }
                 addLogEntry(message.message, message.logType || 'info');
                 break;
-                
+
             case 'userupdate':
                 if (message.users) {
                     // Clear existing users first
@@ -524,7 +615,7 @@ ws.onmessage = function(event) {
                     updateUsersTable();
                 }
                 break;
-                
+
             case 'usercoordinateupdate':
                 if (message.from && message.coordinates) {
                     const user = activeUsers.get(message.from);
@@ -545,7 +636,7 @@ ws.onmessage = function(event) {
                     }
                 }
                 break;
-                
+
             case 'disconnect':
                 const userId = message.userId;
                 if (activeUsers.has(userId)) {
@@ -557,17 +648,20 @@ ws.onmessage = function(event) {
                 updateUsersTable();
                 addLogEntry(message.message, 'connection');
                 break;
-                
+
             case 'metadata':
                 if (!document.getElementById('filter-metadata')?.checked) {
-                    addLogEntry(message.message, 'metadata');
+                    addLogEntry(message.message, 'metadata', {
+                        userId: message.userId,
+                        changes: message.changes
+                    });
                 }
                 break;
-                
+
             case 'ping':
                 // Silent ping handling
                 break;
-                
+
             default:
                 console.log('Unknown message type:', message.type);
                 break;
@@ -587,3 +681,24 @@ function isDashboardUser(user) {
 // Mobile detection
 window.addEventListener('load', detectMobile);
 window.addEventListener('resize', detectMobile);
+
+const style = document.createElement('style');
+style.textContent = `
+    .log-entry.highlight-change {
+        background-color: rgba(255, 255, 0, 0.1);
+        font-weight: bold;
+        padding: 4px;
+        margin: 2px 0;
+        border-radius: 4px;
+    }
+`;
+document.head.appendChild(style);
+
+function createWelcomeMessage(userId) {
+    const natureEmojis = ['🌱', '🌳', '🌲', '🌿', '🍃', '🌸', '🦋', '🐝', '🌺', '🍄'];
+    const randomEmojis = Array.from({ length: 5 }, () => 
+        natureEmojis[Math.floor(Math.random() * natureEmojis.length)]
+    ).join(' ');
+    
+    return `Welcome to WorldTree! ${randomEmojis} New connection: ${userId}`;
+}

@@ -51,10 +51,32 @@
             justify-content: center;
         }
 
-        .header .logo {
-            font-size: 2.5rem;
-            margin-right: 1rem;
-            line-height: 1;
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            display: inline-block;
+        }
+        
+        .logo:hover {
+            transform: scale(1.1);
+        }
+        
+        @keyframes growTree {
+            0% { content: '🌱'; transform: scale(1); }
+            33% { content: '🌳'; transform: scale(1.2); }
+            66% { content: '💎'; transform: scale(1.4); }
+            100% { content: '🌱'; transform: scale(1); }
+        }
+        
+        .logo.animate {
+            animation: growTree 2s ease-in-out;
         }
 
         .dashboard-container {
@@ -377,10 +399,10 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo">🌱</div>
-        <div>
-            <h1>WorldTree Seed</h1>
-            <p>v0.1 - Server Monitor</p>
+        <div class="logo-container">
+            <span id="logo" class="logo">🌱</span>
+            <span class="title">WorldTree Seed</span>
+            <span class="version">v0.1 - Server Monitor</span>
         </div>
     </div>
     <div class="dashboard-container">
@@ -468,6 +490,13 @@
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById('logo').addEventListener('click', function() {
+            this.classList.remove('animate');
+            void this.offsetWidth; // Force reflow
+            this.classList.add('animate');
+        });
+    </script>
     <script src="/dashboard.js"></script>
 </body>
 </html>
