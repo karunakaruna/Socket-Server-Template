@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorldTree Seed - Server Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="/node_modules/three/examples/js/renderers/CSS2DRenderer.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1b26;
+            --bg-secondary: #24283b;
+            --text-primary: #a9b1d6;
+            --text-secondary: #7aa2f7;
+            --accent: #7dcfff;
+            --error: #f7768e;
+            --success: #9ece6a;
+            --warning: #e0af68;
+            --info: #7dcfff;
+            --update: #bb9af7;
+            --card-bg: rgba(36, 40, 59, 0.8);
+            --base-font-size: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1rem;
+            text-align: center;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header .logo {
+            font-size: 2.5rem;
+            margin-right: 1rem;
+            line-height: 1;
+        }
+
+        .dashboard-container {
+            display: flex;
+            flex: 1;
+            gap: 1rem;
+            padding: 1rem;
+            height: calc(100vh - 80px); /* Adjust based on header height */
+            overflow: hidden;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 400px;
+            min-width: 300px;
+            overflow-y: auto;
+        }
+
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Important for flex child */
+        }
+
+        .server-status, .system-settings, .connected-users, .server-log {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .server-log {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #log-container {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .settings-group {
+            margin-bottom: 1rem;
+        }
+
+        .filter-toggles label, .slider-group label, .theme-toggle label {
+            display: block;
+            margin: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        select {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 0.3rem;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        .users-table-container {
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        #users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #users-table th, #users-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--bg-secondary);
+        }
+
+        #users-table th {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+        }
+
+        .log-entry {
+            margin: 0.2rem 0;
+            line-height: 1.4;
+        }
+
+        .log-time {
+            color: var(--accent);
+        }
+
+        .log-type {
+            color: var(--warning);
+            margin: 0 0.5rem;
+        }
+
+        .status-online {
+            color: var(--success);
+        }
+
+        .status-afk {
+            color: var(--warning);
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online {
+            background-color: var(--success);
+        }
+
+        .status-dot.offline {
+            background-color: var(--error);
+        }
+
+        .user-count {
+            color: var(--accent);
+        }
+
+        .viewer-count {
+            color: var(--warning);
+        }
+
+        .message-type-coordinate {
+            color: var(--info);
+        }
+
+        .message-type-metadata {
+            color: var(--update);
+        }
+
+        .message-type-connection {
+            color: var(--success);
+        }
+
+        .message-type-error {
+            color: var(--error);
+        }
+
+        #three-container {
+            width: 100%;
+            height: 300px;
+            background-color: #1a1b26;
+            border: 1px solid #363b54;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .viewer-container {
+            margin-bottom: 20px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .section-header {
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--accent);
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .badge.viewer {
+            background-color: #565f89;
+            color: #9699a3;
+        }
+        .badge.user {
+            background-color: #7aa2f7;
+            color: #1a1b26;
+        }
+
+        .last-save {
+            margin-left: 15px;
+            color: #9699a3;
+            font-size: 0.9em;
+        }
+
+        .user-info-panel {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            background-color: var(--bg-primary);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 24px;
+        }
+
+        .user-details {
+            flex-grow: 1;
+        }
+
+        .user-name {
+            font-size: 1.1em;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .user-id {
+            font-family: monospace;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+                height: auto;
+                overflow: auto;
+            }
+
+            .left-panel {
+                width: 100%;
+            }
+
+            .right-panel {
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🌱</div>
+        <div>
+            <h1>WorldTree Seed</h1>
+            <p>v0.1 - Server Monitor</p>
+        </div>
+    </div>
+    <div class="dashboard-container">
+        <div class="left-panel">
+            <div class="user-info-panel">
+                <div class="user-avatar">👁️</div>
+                <div class="user-details">
+                    <div class="user-name">Dashboard Viewer</div>
+                    <div class="user-id" id="dashboard-uuid">Connecting...</div>
+                </div>
+            </div>
+            <div class="server-status">
+                <h2>Server Status</h2>
+                <div class="status-container">
+                    <div class="status-indicator">
+                        <div id="status-dot" class="status-dot online"></div>
+                        <span id="status-text">Online</span>
+                    </div>
+                    <div>
+                        <span class="user-counts">
+                            (<span id="user-count">0</span> users, <span id="viewer-count">0</span> viewers)
+                        </span>
+                        <span id="last-save-time" class="last-save">Last Save: Never</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="system-settings">
+                <h2>System Settings</h2>
+                <div class="settings-group">
+                    <h3>Log Filters</h3>
+                    <div class="filter-toggles">
+                        <label><input type="checkbox" id="filter-coordinates" checked> Hide Coordinate Updates</label>
+                        <label><input type="checkbox" id="filter-connections"> Hide Connection Messages</label>
+                        <label><input type="checkbox" id="filter-metadata"> Hide Metadata Updates</label>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <h3>Display Settings</h3>
+                    <div class="slider-group">
+                        <label>Text Size
+                            <input type="range" id="text-size" min="12" max="24" value="16">
+                        </label>
+                    </div>
+                    <div class="theme-toggle">
+                        <label>Theme
+                            <select id="theme-select">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="system">System</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connected-users">
+                <h2>Connected Users</h2>
+                <div class="users-table-container">
+                    <table id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Position</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="viewer-container">
+                <div class="section-header">3D Viewer</div>
+                <div id="three-container"></div>
+            </div>
+            <div class="server-log">
+                <h2>Server Log</h2>
+                <div id="log-container"></div>
+            </div>
+        </div>
+    </div>
+    <script src="/dashboard.js"></script>
+</body>
+</html>
