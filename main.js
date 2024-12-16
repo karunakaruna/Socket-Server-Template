@@ -145,6 +145,23 @@ wss.on("connection", (ws) => {
 
     const { type } = message;
 
+    // Filter out coordinate-related, position, ping, and pong messages from logging and broadcasting
+    if (!type.toLowerCase().includes('coordinate') && 
+        !type.toLowerCase().includes('position') && 
+        type !== 'ping' && 
+        type !== 'pong') {
+      console.log(`Received ${type} message from ${ws.userId || 'unknown user'}`);
+      // Only broadcast non-coordinate/position messages to server log
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "serverlog",
+            message: `Received ${type} message from ${ws.userId || 'unknown user'}`
+          }));
+        }
+      });
+    }
+
     switch (type) {
       case "pong":
         console.log(`Pong received from user: ${ws.userId}`);

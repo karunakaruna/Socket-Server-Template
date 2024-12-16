@@ -11,6 +11,14 @@ function updateLastSave(timestamp) {
 }
 
 function addLogEntry(message, type = 'info') {
+    // Skip coordinate and position related messages
+    if (message.toLowerCase().includes('coordinate') || 
+        message.toLowerCase().includes('position') || 
+        message.includes('ping') || 
+        message.includes('pong')) {
+        return;
+    }
+
     const logPanel = document.getElementById('log-container');
     if (!logPanel) return;
     
@@ -237,6 +245,13 @@ function updateUsersTable() {
 }
 
 let scene, camera, renderer, controls;
+const userSpheres = new Map(); // Store user spheres
+
+function createUserSphere(color = 0x7aa2f7) {
+    const geometry = new THREE.SphereGeometry(0.2, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ color: color });
+    return new THREE.Mesh(geometry, material);
+}
 
 function initThreeJS() {
     const container = document.getElementById('three-container');
@@ -259,12 +274,6 @@ function initThreeJS() {
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
-
-    // Add a cube to test rendering
-    const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshBasicMaterial({ color: 0x7aa2f7, wireframe: true });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
 
     // Add grid
     const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
@@ -341,28 +350,56 @@ ws.onmessage = function(event) {
                 if (message.users) {
                     // Clear existing users first
                     activeUsers.clear();
-                    dashboardViewers.clear();
+
+                    // Update user spheres
+                    const existingSphereIds = new Set(userSpheres.keys());
                     
                     message.users.forEach(user => {
-                        if (isDashboardUser(user)) {
-                            dashboardViewers.set(user.id, user);
-                        } else {
+                        if (!isDashboardUser(user)) {
                             activeUsers.set(user.id, user);
+                            
+                            // Create or update sphere for user
+                            let sphere = userSpheres.get(user.id);
+                            if (!sphere) {
+                                sphere = createUserSphere(Math.random() * 0xffffff); // Random color for each user
+                                userSpheres.set(user.id, sphere);
+                                scene.add(sphere);
+                            }
+                            
+                            // Update sphere position
+                            sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
+                            existingSphereIds.delete(user.id);
                         }
                     });
-                    updateUsersTable();
+                    
+                    // Remove spheres for disconnected users
+                    existingSphereIds.forEach(id => {
+                        const sphere = userSpheres.get(id);
+                        if (sphere) {
+                            scene.remove(sphere);
+                            userSpheres.delete(id);
+                        }
+                    });
+
+                    updateUserList(Array.from(activeUsers.values()));
                 }
                 break;
             case 'usercoordinateupdate':
-                if (message.coordinates) {
+                if (message.from && message.coordinates) {
+                    // Update position in active users
                     const user = activeUsers.get(message.from);
                     if (user) {
-                        user.tx = message.coordinates.tx;
-                        user.ty = message.coordinates.ty;
-                        user.tz = message.coordinates.tz;
-                        updateUsersTable();
+                        user.tx = message.coordinates.tx || user.tx;
+                        user.ty = message.coordinates.ty || user.ty;
+                        user.tz = message.coordinates.tz || user.tz;
+                        updateUserPosition(message.from, message.coordinates);
+                        
+                        // Update sphere position
+                        const sphere = userSpheres.get(message.from);
+                        if (sphere) {
+                            sphere.position.set(user.tx, user.ty, user.tz);
+                        }
                     }
-                    addLogEntry(`Position update from ${message.from}: (${message.coordinates.tx.toFixed(2)}, ${message.coordinates.ty.toFixed(2)}, ${message.coordinates.tz.toFixed(2)})`, 'coordinate');
                 }
                 break;
             case 'disconnect':
@@ -381,7 +418,10 @@ ws.onmessage = function(event) {
                     lastSaveTime = new Date();
                     updateLastSaveTime();
                 }
-                addLogEntry(message.message, message.logType || 'info');
+                // Filter coordinate and position related messages from the log
+                if (!message.message.includes('coordinate') && !message.message.includes('position')) {
+                    addLogEntry(message.message, message.logType || 'info');
+                }
                 break;
             case 'metadata':
                 addLogEntry(message.message, 'metadata');
