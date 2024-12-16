@@ -329,23 +329,75 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initThreeJS, 100);
 });
 
+// CSV file info
+let lastCsvInfo = {
+    saveTime: null,
+    fileSize: null,
+    rowCount: null,
+    exists: false
+};
+
+// Mobile detection using User Agent
+function isMobileDevice() {
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+    return mobileRegex.test(navigator.userAgent) || window.innerWidth <= 768;
+}
+
 // Mobile detection
 function detectMobile() {
-    const isMobile = window.innerWidth <= 768;
-    document.body.classList.toggle('is-mobile', isMobile);
+    const mobile = isMobileDevice();
+    document.body.classList.toggle('is-mobile', mobile);
     
     // Update dashboard viewer type
     const dashboardId = document.getElementById('dashboard-uuid')?.textContent;
     if (dashboardId && dashboardViewers.has(dashboardId)) {
         const viewer = dashboardViewers.get(dashboardId);
-        viewer.deviceType = isMobile ? 'mobile' : 'desktop';
+        viewer.deviceType = mobile ? 'mobile' : 'desktop';
         updateUsersTable();
     }
 }
 
-// Initialize mobile detection
-window.addEventListener('load', detectMobile);
-window.addEventListener('resize', detectMobile);
+// Update last save info display
+function updateLastSaveInfo() {
+    const lastSaveElement = document.getElementById('last-save-time');
+    if (!lastSaveElement) return;
+    
+    if (!lastCsvInfo.exists) {
+        lastSaveElement.textContent = 'No CSV file found';
+        return;
+    }
+    
+    if (lastCsvInfo.saveTime) {
+        const timeStr = new Date(lastCsvInfo.saveTime).toLocaleString();
+        let infoStr = `Last Save: ${timeStr}`;
+        
+        if (lastCsvInfo.size !== undefined) {
+            const sizeMB = (lastCsvInfo.size / (1024 * 1024)).toFixed(2);
+            infoStr += ` (${sizeMB} MB`;
+            
+            if (lastCsvInfo.rows !== undefined && lastCsvInfo.size < 10 * 1024 * 1024) {
+                infoStr += `, ${lastCsvInfo.rows} rows`;
+            }
+            
+            infoStr += ')';
+        }
+        
+        lastSaveElement.textContent = infoStr;
+    } else {
+        lastSaveElement.textContent = 'Last Save: Never';
+    }
+}
+
+// Update CSV info when received
+function updateCsvInfo(info) {
+    lastCsvInfo = {
+        saveTime: info.modifiedTime ? new Date(info.modifiedTime) : null,
+        fileSize: info.size,
+        rowCount: info.rows,
+        exists: info.exists
+    };
+    updateLastSaveInfo();
+}
 
 // WebSocket connection
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -396,7 +448,7 @@ ws.onmessage = function(event) {
                         id: message.id,
                         username: 'Dashboard Viewer',
                         type: 'viewer',
-                        deviceType: window.innerWidth <= 768 ? 'mobile' : 'desktop'
+                        deviceType: isMobileDevice() ? 'mobile' : 'desktop'
                     });
                 }
                 updateUsersTable();
@@ -404,15 +456,35 @@ ws.onmessage = function(event) {
                 
             case 'connect':
                 addLogEntry(message.message, 'connection');
-                // Only add other dashboard viewers, not ourselves (we do that in welcome)
+                // Only add other dashboard viewers, not ourselves
                 if (message.userType === 'viewer' && message.userId !== document.getElementById('dashboard-uuid')?.textContent) {
                     dashboardViewers.set(message.userId, {
                         id: message.userId,
                         username: 'Dashboard Viewer',
-                        type: 'viewer'
+                        type: 'viewer',
+                        deviceType: message.deviceType || 'desktop'
                     });
                     updateUsersTable();
                 }
+                break;
+
+            case 'csvinfo':
+                if (message.info) {
+                    updateCsvInfo(message.info);
+                }
+                break;
+                
+            case 'serverlog':
+                if (message.message.includes('Data saved to CSV')) {
+                    // Request updated CSV info from server
+                    ws.send(JSON.stringify({ type: 'requestCsvInfo' }));
+                }
+                // Filter coordinate messages if enabled
+                if (document.getElementById('filter-coordinates')?.checked && 
+                    (message.message.includes('coordinate') || message.message.includes('position'))) {
+                    return;
+                }
+                addLogEntry(message.message, message.logType || 'info');
                 break;
                 
             case 'userupdate':
@@ -486,22 +558,6 @@ ws.onmessage = function(event) {
                 addLogEntry(message.message, 'connection');
                 break;
                 
-            case 'serverlog':
-                const isDataSaved = message.message.includes('Data saved to CSV');
-                if (isDataSaved) {
-                    lastSaveTime = new Date();
-                    updateLastSaveTime();
-                }
-                
-                // Filter coordinate messages if enabled
-                if (document.getElementById('filter-coordinates')?.checked && 
-                    (message.message.includes('coordinate') || message.message.includes('position'))) {
-                    return;
-                }
-                
-                addLogEntry(message.message, message.logType || 'info');
-                break;
-                
             case 'metadata':
                 if (!document.getElementById('filter-metadata')?.checked) {
                     addLogEntry(message.message, 'metadata');
@@ -527,3 +583,7 @@ function isDashboardUser(user) {
            user.description?.toLowerCase().includes('dashboard') ||
            user.id?.toLowerCase().includes('dashboard');
 }
+
+// Mobile detection
+window.addEventListener('load', detectMobile);
+window.addEventListener('resize', detectMobile);

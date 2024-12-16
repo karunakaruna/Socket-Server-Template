@@ -2,6 +2,7 @@ const http = require("http");
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require("ws");
+const fs = require("fs");
 
 const app = express();
 app.use(express.static("public"));
@@ -44,6 +45,94 @@ let numUsers = 0;
 
 // Efficient client lookup using a Map
 const clientMap = new Map();
+
+// Function to get CSV file info
+function getCsvInfo() {
+    // Default CSV paths to check
+    const csvPaths = ['data.csv', 'output.csv', 'coordinates.csv'].filter(path => {
+        try {
+            return fs.existsSync(path);
+        } catch (error) {
+            return false;
+        }
+    });
+
+    if (csvPaths.length === 0) {
+        return {
+            modifiedTime: null,
+            size: 0,
+            rows: 0,
+            exists: false
+        };
+    }
+
+    // Get the most recently modified CSV
+    const mostRecentCsv = csvPaths.reduce((latest, current) => {
+        const currentStats = fs.statSync(current);
+        if (!latest || currentStats.mtime > fs.statSync(latest).mtime) {
+            return current;
+        }
+        return latest;
+    }, null);
+
+    try {
+        const stats = fs.statSync(mostRecentCsv);
+        
+        // Only read file content if it's not too large (e.g., < 10MB)
+        let rowCount = 0;
+        if (stats.size < 10 * 1024 * 1024) {
+            const fileContent = fs.readFileSync(mostRecentCsv, 'utf8');
+            rowCount = fileContent.split('\n').length - 1; // -1 for header
+        }
+        
+        return {
+            modifiedTime: stats.mtime,
+            size: stats.size,
+            rows: rowCount,
+            exists: true,
+            path: mostRecentCsv
+        };
+    } catch (error) {
+        console.error('Error reading CSV file:', error);
+        return {
+            modifiedTime: null,
+            size: 0,
+            rows: 0,
+            exists: false
+        };
+    }
+}
+
+// Track CSV state
+let lastCsvState = getCsvInfo();
+
+// Check for CSV updates periodically
+setInterval(() => {
+    const currentState = getCsvInfo();
+    if (currentState.exists && 
+        (!lastCsvState.exists || 
+         currentState.modifiedTime?.getTime() !== lastCsvState.modifiedTime?.getTime() ||
+         currentState.size !== lastCsvState.size)) {
+        
+        lastCsvState = currentState;
+        broadcastCsvUpdate();
+    }
+}, 5000); // Check every 5 seconds
+
+// Broadcast CSV update to all clients
+function broadcastCsvUpdate() {
+    const csvInfo = getCsvInfo();
+    const message = JSON.stringify({
+        type: 'csvinfo',
+        info: csvInfo
+    });
+    
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
 
 // Start the server
 server.listen(serverPort, '0.0.0.0', () => {
@@ -159,6 +248,15 @@ wss.on("connection", (ws) => {
       id: userId,
     })
   );
+
+  // Send initial CSV info
+  const csvInfo = getCsvInfo();
+  if (csvInfo) {
+    ws.send(JSON.stringify({
+      type: 'csvinfo',
+      info: csvInfo
+    }));
+  }
 
   broadcastUserUpdate();
 
@@ -298,7 +396,16 @@ wss.on("connection", (ws) => {
             );
           }
           break;
-        
+
+      case "requestCsvInfo":
+        const csvInfo = getCsvInfo();
+        if (csvInfo) {
+          ws.send(JSON.stringify({
+            type: 'csvinfo',
+            info: csvInfo
+          }));
+        }
+        break;
 
       default:
         console.error(`Unhandled message type "${type}" from user ${ws.userId}:`, message);
