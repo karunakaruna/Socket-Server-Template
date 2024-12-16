@@ -6,8 +6,37 @@ const WebSocket = require("ws");
 const app = express();
 app.use(express.static("public"));
 
+// Get port from environment variable
 const serverPort = process.env.PORT || 3000;
+
+// Add a health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// Create HTTP server
 const server = http.createServer(app);
+
+// Configure WebSocket server
+const wss = new WebSocket.Server({ 
+  server,
+  perMessageDeflate: false, // Disable per-message deflate to reduce latency
+  maxPayload: 65536 // Limit payload size to 64KB
+});
+
+// Track connection attempts and errors
+wss.on('error', (error) => {
+  console.error('WebSocket Server Error:', error);
+});
+
+// Log all WebSocket events for debugging
+wss.on('listening', () => {
+  console.log('WebSocket server is listening');
+});
+
+wss.on('headers', (headers, request) => {
+  console.log('WebSocket headers:', headers);
+});
 
 // In-memory storage for user metadata and WebSocket clients
 const users = {};
@@ -16,11 +45,10 @@ let numUsers = 0;
 // Efficient client lookup using a Map
 const clientMap = new Map();
 
-// Attach WebSocket server
-const wss = new WebSocket.Server({ server });
-
-server.listen(serverPort, () => {
+// Start the server
+server.listen(serverPort, '0.0.0.0', () => {
   console.log(`Server started on port ${serverPort}`);
+  console.log(`WebSocket server is running at ws://0.0.0.0:${serverPort}`);
 });
 
 // Function to broadcast user updates

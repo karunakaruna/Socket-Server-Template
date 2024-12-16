@@ -73,33 +73,82 @@ function updateUserPosition(userId, coordinates) {
 }
 
 function updateUserList(users) {
-    const userList = document.getElementById('user-list');
-    const currentUsers = new Set();
+    const userTableBody = document.getElementById('users-table-body');
+    if (!userTableBody) {
+        console.error('Could not find users-table-body element');
+        return;
+    }
+
+    // Clear existing rows
+    userTableBody.innerHTML = '';
+    
+    // Update user count
+    document.getElementById('user-count').textContent = users.length;
     
     users.forEach(user => {
-        currentUsers.add(user.id);
-        let userElement = document.getElementById(`user-${user.id}`);
+        const row = document.createElement('tr');
         
-        if (!userElement) {
-            userElement = createUserElement(user);
-            userList.appendChild(userElement);
-        } else {
-            // Update existing user element
-            const newElement = createUserElement(user);
-            userElement.innerHTML = newElement.innerHTML;
-            userElement.className = newElement.className;
-        }
+        // Only show name if it exists and isn't empty
+        const displayName = user.username && user.username.trim() ? user.username : `User_${user.id.slice(0, 5)}`;
+        
+        const position = `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})`;
+        const status = user.afk ? 'AFK' : 'Online';
+        const statusClass = user.afk ? 'status-afk' : 'status-online';
+        
+        row.innerHTML = `
+            <td>${displayName}</td>
+            <td><span class="badge user">User</span></td>
+            <td class="${statusClass}">${status}</td>
+            <td>${position}</td>
+            <td>${user.description || ''}</td>
+        `;
+        
+        userTableBody.appendChild(row);
     });
-    
-    // Remove users that are no longer connected
-    Array.from(userList.children).forEach(child => {
-        const userId = child.id.replace('user-', '');
-        if (!currentUsers.has(userId)) {
-            child.remove();
-        }
+}
+
+function updateUsersTable() {
+    const userTableBody = document.getElementById('users-table-body');
+    if (!userTableBody) {
+        console.error('Could not find users-table-body element');
+        return;
+    }
+
+    // Clear the table
+    userTableBody.innerHTML = '';
+
+    // Add active users
+    Array.from(activeUsers.values()).forEach(user => {
+        const row = document.createElement('tr');
+        const displayName = user.username || `User_${user.id.slice(0, 5)}`;
+        const position = `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})`;
+        
+        row.innerHTML = `
+            <td>${displayName}</td>
+            <td><span class="badge user">User</span></td>
+            <td class="status-online">Online</td>
+            <td>${position}</td>
+            <td>${user.description || ''}</td>
+        `;
+        userTableBody.appendChild(row);
     });
 
-    document.getElementById('connected-users').textContent = users.length;
+    // Add dashboard viewers
+    Array.from(dashboardViewers.values()).forEach(viewer => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${viewer.username || 'Anonymous'}</td>
+            <td><span class="badge viewer">Viewer</span></td>
+            <td class="status-online">Online</td>
+            <td>N/A</td>
+            <td>Dashboard Viewer</td>
+        `;
+        userTableBody.appendChild(row);
+    });
+
+    // Update counts
+    document.getElementById('user-count').textContent = activeUsers.size;
+    document.getElementById('viewer-count').textContent = dashboardViewers.size;
 }
 
 let logMessages = [];
@@ -193,55 +242,15 @@ let activeUsers = new Map();
 let dashboardViewers = new Map();
 
 function updateLastSaveTime() {
-    const saveTimeElement = document.getElementById('last-save-time');
-    if (saveTimeElement && lastSaveTime) {
-        const timeStr = new Date(lastSaveTime).toLocaleTimeString();
-        saveTimeElement.textContent = `Last Save: ${timeStr}`;
-    }
-}
-
-function updateUsersTable() {
-    const userTableBody = document.getElementById('users-table-body');
-    if (!userTableBody) return;
-
-    // Clear table
-    userTableBody.innerHTML = '';
+    const lastSaveElement = document.getElementById('last-save-time');
+    if (!lastSaveElement) return;
     
-    // Add active users
-    Array.from(activeUsers.values())
-        .sort((a, b) => (a.username || '').localeCompare(b.username || ''))
-        .forEach(user => {
-            const row = document.createElement('tr');
-            const status = user.afk ? 'AFK' : 'Online';
-            
-            row.innerHTML = `
-                <td>${user.username || 'Anonymous'}</td>
-                <td><span class="badge user">User</span></td>
-                <td class="status-${status.toLowerCase()}">${status}</td>
-                <td>${user.tx?.toFixed(2) || '0.00'}, ${user.ty?.toFixed(2) || '0.00'}, ${user.tz?.toFixed(2) || '0.00'}</td>
-                <td>${user.description || ''}</td>
-            `;
-            userTableBody.appendChild(row);
-        });
-
-    // Add viewers
-    Array.from(dashboardViewers.values())
-        .sort((a, b) => (a.username || '').localeCompare(b.username || ''))
-        .forEach(viewer => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${viewer.username || 'Anonymous'}</td>
-                <td><span class="badge viewer">Viewer</span></td>
-                <td class="status-online">Online</td>
-                <td>N/A</td>
-                <td>Dashboard Viewer</td>
-            `;
-            userTableBody.appendChild(row);
-        });
-
-    // Update counts
-    document.getElementById('user-count').textContent = activeUsers.size;
-    document.getElementById('viewer-count').textContent = dashboardViewers.size;
+    if (lastSaveTime) {
+        const formattedTime = new Date(lastSaveTime).toLocaleTimeString();
+        lastSaveElement.textContent = `Last Save: ${formattedTime}`;
+    } else {
+        lastSaveElement.textContent = 'Last Save: Never';
+    }
 }
 
 let scene, camera, renderer, controls;
@@ -317,20 +326,36 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // WebSocket connection
-const ws = new WebSocket(`ws://${window.location.hostname}:${window.location.port}`);
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+// For local development, use the port. For deployed version, use the host directly
+const wsUrl = window.location.port 
+    ? `${protocol}//${window.location.hostname}:${window.location.port}`
+    : `${protocol}//${window.location.hostname}`;
+const ws = new WebSocket(wsUrl);
 
+// Add connection status indicator
 ws.onopen = function() {
-    console.log('WebSocket Connected');
+    console.log('WebSocket Connected to:', wsUrl);
+    addLogEntry('Connected to server', 'connection');
+    document.getElementById('connection-status').className = 'status-online';
 };
 
 ws.onclose = function() {
-    console.log('WebSocket Disconnected');
+    console.log('WebSocket Disconnected from:', wsUrl);
     document.getElementById('dashboard-uuid').textContent = 'Disconnected';
+    document.getElementById('connection-status').className = 'status-offline';
+    addLogEntry('WebSocket disconnected - attempting to reconnect...', 'error');
+    // Try to reconnect after a delay
+    setTimeout(() => {
+        window.location.reload();
+    }, 5000);
 };
 
-ws.onerror = function() {
-    console.log('WebSocket Error');
+ws.onerror = function(error) {
+    console.error('WebSocket Error for:', wsUrl, error);
     document.getElementById('dashboard-uuid').textContent = 'Connection Error';
+    document.getElementById('connection-status').className = 'status-error';
+    addLogEntry('WebSocket connection error', 'error');
 };
 
 // WebSocket message handling
@@ -341,35 +366,55 @@ ws.onmessage = function(event) {
         switch (message.type) {
             case 'welcome':
                 // Set UUID as soon as we get the welcome message
-                document.getElementById('dashboard-uuid').textContent = message.id;
+                const dashboardUuid = document.getElementById('dashboard-uuid');
+                if (dashboardUuid) {
+                    dashboardUuid.textContent = message.id;
+                    // Add self to dashboard viewers
+                    dashboardViewers.set(message.id, {
+                        id: message.id,
+                        username: 'Dashboard Viewer',
+                        type: 'viewer'
+                    });
+                }
+                updateUsersTable();
                 break;
+                
             case 'connect':
                 addLogEntry(message.message, 'connection');
+                // Only add other dashboard viewers, not ourselves (we do that in welcome)
+                if (message.userType === 'viewer' && message.userId !== document.getElementById('dashboard-uuid')?.textContent) {
+                    dashboardViewers.set(message.userId, {
+                        id: message.userId,
+                        username: 'Dashboard Viewer',
+                        type: 'viewer'
+                    });
+                    updateUsersTable();
+                }
                 break;
+                
             case 'userupdate':
                 if (message.users) {
                     // Clear existing users first
                     activeUsers.clear();
-
-                    // Update user spheres
-                    const existingSphereIds = new Set(userSpheres.keys());
                     
+                    // Update active users (excluding dashboard viewers)
                     message.users.forEach(user => {
                         if (!isDashboardUser(user)) {
                             activeUsers.set(user.id, user);
-                            
-                            // Create or update sphere for user
-                            let sphere = userSpheres.get(user.id);
-                            if (!sphere) {
-                                sphere = createUserSphere(Math.random() * 0xffffff); // Random color for each user
-                                userSpheres.set(user.id, sphere);
-                                scene.add(sphere);
-                            }
-                            
-                            // Update sphere position
-                            sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
-                            existingSphereIds.delete(user.id);
                         }
+                    });
+                    
+                    // Update 3D viewer
+                    const existingSphereIds = new Set(userSpheres.keys());
+                    Array.from(activeUsers.values()).forEach(user => {
+                        let sphere = userSpheres.get(user.id);
+                        if (!sphere) {
+                            sphere = createUserSphere(Math.random() * 0xffffff);
+                            userSpheres.set(user.id, sphere);
+                            scene.add(sphere);
+                        }
+                        sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
+                        existingSphereIds.delete(user.id);
                     });
                     
                     // Remove spheres for disconnected users
@@ -380,28 +425,32 @@ ws.onmessage = function(event) {
                             userSpheres.delete(id);
                         }
                     });
-
-                    updateUserList(Array.from(activeUsers.values()));
+                    
+                    updateUsersTable();
                 }
                 break;
+                
             case 'usercoordinateupdate':
                 if (message.from && message.coordinates) {
-                    // Update position in active users
                     const user = activeUsers.get(message.from);
                     if (user) {
-                        user.tx = message.coordinates.tx || user.tx;
-                        user.ty = message.coordinates.ty || user.ty;
-                        user.tz = message.coordinates.tz || user.tz;
-                        updateUserPosition(message.from, message.coordinates);
+                        // Update user position
+                        user.tx = message.coordinates.tx ?? user.tx;
+                        user.ty = message.coordinates.ty ?? user.ty;
+                        user.tz = message.coordinates.tz ?? user.tz;
                         
                         // Update sphere position
                         const sphere = userSpheres.get(message.from);
                         if (sphere) {
                             sphere.position.set(user.tx, user.ty, user.tz);
                         }
+
+                        // Update position in table
+                        updateUsersTable();
                     }
                 }
                 break;
+                
             case 'disconnect':
                 const userId = message.userId;
                 if (activeUsers.has(userId)) {
@@ -413,28 +462,40 @@ ws.onmessage = function(event) {
                 updateUsersTable();
                 addLogEntry(message.message, 'connection');
                 break;
+                
             case 'serverlog':
-                if (message.message.includes('Data saved to CSV')) {
+                const isDataSaved = message.message.includes('Data saved to CSV');
+                if (isDataSaved) {
                     lastSaveTime = new Date();
                     updateLastSaveTime();
                 }
-                // Filter coordinate and position related messages from the log
-                if (!message.message.includes('coordinate') && !message.message.includes('position')) {
-                    addLogEntry(message.message, message.logType || 'info');
+                
+                // Filter coordinate messages if enabled
+                if (document.getElementById('filter-coordinates')?.checked && 
+                    (message.message.includes('coordinate') || message.message.includes('position'))) {
+                    return;
+                }
+                
+                addLogEntry(message.message, message.logType || 'info');
+                break;
+                
+            case 'metadata':
+                if (!document.getElementById('filter-metadata')?.checked) {
+                    addLogEntry(message.message, 'metadata');
                 }
                 break;
-            case 'metadata':
-                addLogEntry(message.message, 'metadata');
-                break;
+                
             case 'ping':
                 // Silent ping handling
                 break;
+                
             default:
-                console.log('Unhandled message type:', message.type);
+                console.log('Unknown message type:', message.type);
+                break;
         }
     } catch (error) {
         console.error('Error processing message:', error);
-        addLogEntry(`Error: ${error.message}`, 'error');
+        addLogEntry('Error processing message: ' + error.message, 'error');
     }
 };
 
