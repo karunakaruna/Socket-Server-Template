@@ -136,9 +136,13 @@ function updateUsersTable() {
     // Add dashboard viewers
     Array.from(dashboardViewers.values()).forEach(viewer => {
         const row = document.createElement('tr');
+        const deviceBadge = viewer.deviceType === 'mobile' ? 
+            '<span class="badge mobile">Mobile</span>' : 
+            '<span class="badge desktop">Desktop</span>';
+            
         row.innerHTML = `
             <td>${viewer.username || 'Anonymous'}</td>
-            <td><span class="badge viewer">Viewer</span></td>
+            <td><span class="badge viewer">Viewer</span> ${deviceBadge}</td>
             <td class="status-online">Online</td>
             <td>N/A</td>
             <td>Dashboard Viewer</td>
@@ -325,6 +329,24 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initThreeJS, 100);
 });
 
+// Mobile detection
+function detectMobile() {
+    const isMobile = window.innerWidth <= 768;
+    document.body.classList.toggle('is-mobile', isMobile);
+    
+    // Update dashboard viewer type
+    const dashboardId = document.getElementById('dashboard-uuid')?.textContent;
+    if (dashboardId && dashboardViewers.has(dashboardId)) {
+        const viewer = dashboardViewers.get(dashboardId);
+        viewer.deviceType = isMobile ? 'mobile' : 'desktop';
+        updateUsersTable();
+    }
+}
+
+// Initialize mobile detection
+window.addEventListener('load', detectMobile);
+window.addEventListener('resize', detectMobile);
+
 // WebSocket connection
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 // For local development, use the port. For deployed version, use the host directly
@@ -373,7 +395,8 @@ ws.onmessage = function(event) {
                     dashboardViewers.set(message.id, {
                         id: message.id,
                         username: 'Dashboard Viewer',
-                        type: 'viewer'
+                        type: 'viewer',
+                        deviceType: window.innerWidth <= 768 ? 'mobile' : 'desktop'
                     });
                 }
                 updateUsersTable();

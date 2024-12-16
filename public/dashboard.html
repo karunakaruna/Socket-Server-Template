@@ -253,13 +253,14 @@
             border-radius: 3px;
             font-size: 0.8em;
         }
-        .badge.viewer {
-            background-color: #565f89;
-            color: #9699a3;
+        .badge.mobile {
+            background-color: var(--accent);
+            color: var(--bg-primary);
         }
-        .badge.user {
-            background-color: #7aa2f7;
-            color: #1a1b26;
+        
+        .badge.desktop {
+            background-color: var(--text-secondary);
+            color: var(--bg-primary);
         }
 
         .last-save {
@@ -313,15 +314,56 @@
             .dashboard-container {
                 flex-direction: column;
                 height: auto;
-                overflow: auto;
+                padding: 0.5rem;
+                margin-top: 60px;
             }
 
             .left-panel {
                 width: 100%;
+                height: auto;
+                min-width: 100%;
+                overflow: visible;
             }
 
             .right-panel {
-                height: 50vh;
+                height: auto;
+                min-height: calc(100vh - 60px - 1rem);
+                display: flex;
+                flex-direction: column;
+            }
+
+            #three-container {
+                height: 200px;
+                margin-bottom: 1rem;
+            }
+
+            .server-log {
+                flex: 1;
+                min-height: 300px;
+                margin-bottom: 1rem;
+            }
+
+            #log-container {
+                height: 100%;
+                min-height: 200px;
+                overflow-y: auto;
+            }
+
+            .header {
+                height: 60px;
+                padding: 0.5rem;
+            }
+
+            .header .logo {
+                font-size: 1.8rem;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .header p {
+                font-size: 0.8rem;
             }
         }
     </style>
