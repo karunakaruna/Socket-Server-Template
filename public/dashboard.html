@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon-16x16.png">
     <title>WorldTree Seed - Server Monitor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="/node_modules/three/examples/js/renderers/CSS2DRenderer.js"></script>
+    <!-- <script src="/node_modules/three/examples/js/renderers/CSS2DRenderer.js"></script> -->
     <style>
         :root {
             --bg-primary: #1a1b26;
@@ -16,13 +17,14 @@
             --accent: #7dcfff;
             --error: #f7768e;
             --success: #9ece6a;
+            --waiting: #0cffdf;
             --warning: #e0af68;
             --info: #7dcfff;
             --update: #bb9af7;
             --card-bg: rgba(36, 40, 59, 0.8);
             --base-font-size: 16px;
             --header-height: 60px;
-        }
+        }   
 
         * {
             margin: 0;
@@ -334,6 +336,98 @@
             word-break: break-all;
         }
 
+        /* Debug Panel Styles */
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            width: 250px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            color: var(--text-primary);
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--accent);
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+        }
+
+        .toggle-debug {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .debug-content {
+            padding: 12px;
+        }
+
+        .debug-section {
+            margin-bottom: 12px;
+        }
+
+        .debug-section h4 {
+            margin: 0 0 8px 0;
+            color: var(--text-secondary);
+        }
+
+        .debug-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--accent);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            margin: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .debug-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .debug-panel.minimized .debug-content {
+            display: none;
+        }
+
+        .ping-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            margin-left: 8px;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+        }
+
+        .ping-indicator.active {
+            transform: scale(1.5);
+            opacity: 1;
+            background-color: var(--success);
+        }
+
+        .ping-indicator.inactive {
+            background-color: var(--waiting);
+            transform: scale(1);
+            opacity: 0.5;
+        }
+
         @media (max-width: 768px) {
             body {
                 overflow-y: auto;
@@ -402,7 +496,7 @@
         <div class="logo-container">
             <span id="logo" class="logo">🌱</span>
             <span class="title">WorldTree Seed</span>
-            <span class="version">v0.1 - Server Monitor</span>
+            <span class="version">v0.11 - Server Monitor</span>
         </div>
     </div>
     <div class="dashboard-container">
@@ -497,6 +591,27 @@
             this.classList.add('animate');
         });
     </script>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" class="debug-panel card">
+        <div class="debug-header">
+            <div class="debug-title">Debug Panel</div>
+            <div class="connection-status">
+                <span id="status-dot" class="status-dot offline"></span>
+                <div id="ping-indicator" class="ping-indicator inactive"></div>
+            </div>
+            <button id="toggle-debug" class="icon-button">−</button>
+        </div>
+        <div class="debug-content">
+            <div class="debug-section">
+                <h4>WebSocket Controls</h4>
+                <button id="debug-connect" class="debug-btn">Connect</button>
+                <button id="debug-disconnect" class="debug-btn">Disconnect</button>
+                <button id="debug-crash" class="debug-btn">Simulate Crash</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/dashboard.js"></script>
 </body>
 </html>

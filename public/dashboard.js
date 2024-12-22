@@ -483,43 +483,312 @@ function updateCsvInfo(info) {
     updateLastSaveInfo();
 }
 
-// Request CSV info periodically
-setInterval(() => {
-    ws.send(JSON.stringify({ type: 'requestCsvInfo' }));
-}, 5000);
+// Connection and ping state
+let ws = null;
+let isReconnecting = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 2000;
 
-// WebSocket connection
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-// For local development, use the port. For deployed version, use the host directly
-const wsUrl = window.location.port 
-    ? `${protocol}//${window.location.hostname}:${window.location.port}`
-    : `${protocol}//${window.location.hostname}`;
-const ws = new WebSocket(wsUrl);
+function updatePingIndicator(active = true) {
+    const indicator = document.getElementById('ping-indicator');
+    if (indicator) {
+        indicator.className = `ping-indicator ${active ? 'active' : 'inactive'}`;
+        if (active) {
+            // Reset after animation
+            setTimeout(() => {
+                indicator.className = 'ping-indicator inactive';
+            }, 300);
+        }
+    }
+}
 
-// Add connection status indicator
-ws.onopen = function() {
-    console.log('WebSocket Connected to:', wsUrl);
-    addLogEntry('Connected to server', 'connection');
-    document.getElementById('connection-status').className = 'status-online';
-};
+function initWebSocket() {
+    if (ws) {
+        console.log('Closing existing WebSocket connection');
+        ws.close();
+    }
 
-ws.onclose = function() {
-    console.log('WebSocket Disconnected from:', wsUrl);
-    document.getElementById('dashboard-uuid').textContent = 'Disconnected';
-    document.getElementById('connection-status').className = 'status-offline';
-    addLogEntry('WebSocket disconnected - attempting to reconnect...', 'error');
-    // Try to reconnect after a delay
+    const wsUrl = `ws://${window.location.hostname}:3000`;
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = function() {
+        console.log('WebSocket Connected to:', wsUrl);
+        addLogEntry('Connected to server', 'connection');
+        document.getElementById('status-dot').className = 'status-dot online';
+        reconnectAttempts = 0;
+    };
+
+    ws.onclose = function(event) {
+        console.log('WebSocket Disconnected');
+        addLogEntry('Disconnected from server', 'error');
+        document.getElementById('status-dot').className = 'status-dot offline';
+        updatePingIndicator(false);
+        
+        // Only reconnect if the connection was lost due to an error (not manual disconnect)
+        if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS && event.code !== 1000) {
+            handleReconnection();
+        }
+    };
+
+    ws.onerror = function(error) {
+        console.error('WebSocket Error:', error);
+        addLogEntry('WebSocket error occurred', 'error');
+    };
+
+    // Rest of the WebSocket event handlers...
+    ws.onmessage = function(event) {
+        try {
+            const message = JSON.parse(event.data);
+
+            switch (message.type) {
+                case 'ping':
+                    updatePingIndicator(true);
+                    break;
+                    
+                case 'welcome':
+                    const dashboardUuid = document.getElementById('dashboard-uuid');
+                    if (dashboardUuid) {
+                        dashboardUuid.textContent = message.id;
+                        // Add self to dashboard viewers with device type
+                        dashboardViewers.set(message.id, {
+                            id: message.id,
+                            username: 'Dashboard Viewer',
+                            type: 'viewer',
+                            deviceType: isMobileDevice() ? 'mobile' : 'desktop'
+                        });
+                        updateUsersTable();
+                    }
+                    // Add welcome message
+                    addLogEntry(createWelcomeMessage(message.id), 'connection');
+                    break;
+
+                case 'connect':
+                    addLogEntry(message.message, 'connection');
+                    if (message.userType === 'viewer') {
+                        dashboardViewers.set(message.userId, {
+                            id: message.userId,
+                            username: 'Dashboard Viewer',
+                            type: 'viewer',
+                            deviceType: message.deviceType || 'desktop'
+                        });
+                        updateUsersTable();
+                    }
+                    break;
+
+                case 'csvinfo':
+                    if (message.info) {
+                        lastCsvInfo = {
+                            saveTime: message.info.modifiedTime ? new Date(message.info.modifiedTime) : null,
+                            fileSize: message.info.size,
+                            rowCount: message.info.rows,
+                            exists: message.info.exists
+                        };
+                        updateLastSaveInfo();
+                    }
+                    break;
+
+                case 'serverlog':
+                    // Only show non-coordinate messages
+                    if (!document.getElementById('filter-coordinates')?.checked || 
+                        (!message.message.includes('coordinate') && 
+                         !message.message.includes('position'))) {
+                        addLogEntry(message.message, message.logType || 'info');
+                    }
+                    break;
+
+                case 'userupdate':
+                    if (message.users) {
+                        // Clear existing users first
+                        activeUsers.clear();
+                        
+                        // Update active users (excluding dashboard viewers)
+                        message.users.forEach(user => {
+                            if (!isDashboardUser(user)) {
+                                activeUsers.set(user.id, user);
+                            }
+                        });
+                        
+                        // Update 3D viewer
+                        const existingSphereIds = new Set(userSpheres.keys());
+                        Array.from(activeUsers.values()).forEach(user => {
+                            let sphere = userSpheres.get(user.id);
+                            if (!sphere) {
+                                sphere = createUserSphere(Math.random() * 0xffffff);
+                                userSpheres.set(user.id, sphere);
+                                scene.add(sphere);
+                            }
+                            sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
+                            existingSphereIds.delete(user.id);
+                        });
+                        
+                        // Remove spheres for disconnected users
+                        existingSphereIds.forEach(id => {
+                            const sphere = userSpheres.get(id);
+                            if (sphere) {
+                                scene.remove(sphere);
+                                userSpheres.delete(id);
+                            }
+                        });
+                        
+                        updateUsersTable();
+                    }
+                    break;
+
+                case 'usercoordinateupdate':
+                    if (message.from && message.coordinates) {
+                        const user = activeUsers.get(message.from);
+                        if (user) {
+                            // Update user position
+                            user.tx = message.coordinates.tx ?? user.tx;
+                            user.ty = message.coordinates.ty ?? user.ty;
+                            user.tz = message.coordinates.tz ?? user.tz;
+ 　 　 　 　 　 　 　 　 // Update sphere position
+                            const sphere = userSpheres.get(message.from);
+                            if (sphere) {
+                                sphere.position.set(user.tx, user.ty, user.tz);
+                            }
+
+                            // Update position in table
+                            updateUsersTable();
+                        }
+                    }
+                    break;
+
+                case 'disconnect':
+                    const userId = message.userId;
+                    if (activeUsers.has(userId)) {
+                        activeUsers.delete(userId);
+                    }
+                    if (dashboardViewers.has(userId)) {
+                        dashboardViewers.delete(userId);
+                    }
+                    updateUsersTable();
+                    addLogEntry(message.message, 'connection');
+                    break;
+
+                case 'metadata':
+                    if (!document.getElementById('filter-metadata')?.checked) {
+                        addLogEntry(message.message, 'metadata', {
+                            userId: message.userId,
+                            changes: message.changes
+                        });
+                    }
+                    break;
+
+                default:
+                    console.log('Unknown message type:', message.type);
+                    break;
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+            addLogEntry('Error processing message: ' + error.message, 'error');
+        }
+    };
+}
+
+function handleReconnection() {
+    isReconnecting = true;
+    reconnectAttempts++;
+    
+    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+    addLogEntry(`Reconnection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`, 'warning');
+    
     setTimeout(() => {
-        window.location.reload();
-    }, 5000);
-};
+        initWebSocket();
+        isReconnecting = false;
+    }, RECONNECT_DELAY);
+}
 
-ws.onerror = function(error) {
-    console.error('WebSocket Error for:', wsUrl, error);
-    document.getElementById('dashboard-uuid').textContent = 'Connection Error';
-    document.getElementById('connection-status').className = 'status-error';
-    addLogEntry('WebSocket connection error', 'error');
-};
+// Add disconnect function
+function disconnectWebSocket() {
+    if (ws) {
+        isReconnecting = false; // Prevent auto-reconnect
+        ws.close(1000); // Use 1000 code to indicate normal closure
+    }
+}
+
+// Update the disconnect button handler
+document.addEventListener('DOMContentLoaded', function() {
+    const disconnectBtn = document.getElementById('disconnect-btn');
+    if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', disconnectWebSocket);
+    }
+
+    // Make debug panel draggable
+    const debugPanel = document.getElementById('debug-panel');
+    const debugHeader = debugPanel.querySelector('.debug-header');
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    debugHeader.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    function dragStart(e) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        if (e.target === debugHeader) {
+            isDragging = true;
+        }
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            xOffset = currentX;
+            yOffset = currentY;
+            debugPanel.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        }
+    }
+
+    function dragEnd() {
+        isDragging = false;
+    }
+
+    // Debug panel minimize/maximize
+    const toggleDebug = document.getElementById('toggle-debug');
+    toggleDebug.addEventListener('click', () => {
+        debugPanel.classList.toggle('minimized');
+        toggleDebug.textContent = debugPanel.classList.contains('minimized') ? '+' : '_';
+    });
+
+    // Debug buttons functionality
+    document.getElementById('debug-connect').addEventListener('click', () => {
+        if (!ws || ws.readyState === WebSocket.CLOSED) {
+            initWebSocket();
+        } else {
+            addLogEntry('WebSocket is already connected', 'warning');
+        }
+    });
+
+    document.getElementById('debug-disconnect').addEventListener('click', () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.close();
+        } else {
+            addLogEntry('WebSocket is not connected', 'warning');
+        }
+    });
+
+    document.getElementById('debug-crash').addEventListener('click', () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            // Simulate a connection crash by closing the socket without proper handshake
+            ws._socket.close();
+        } else {
+            addLogEntry('WebSocket is not connected', 'warning');
+        }
+    });
+});
+
+// Initialize WebSocket connection
+initWebSocket();
 
 // Add style for purple messages
 const style = document.createElement('style');
@@ -545,157 +814,6 @@ document.getElementById('logo').addEventListener('click', function() {
         logType: 'worldtree'
     }));
 });
-
-// WebSocket message handling
-ws.onmessage = function(event) {
-    try {
-        const message = JSON.parse(event.data);
-
-        switch (message.type) {
-            case 'welcome':
-                const dashboardUuid = document.getElementById('dashboard-uuid');
-                if (dashboardUuid) {
-                    dashboardUuid.textContent = message.id;
-                    // Add self to dashboard viewers with device type
-                    dashboardViewers.set(message.id, {
-                        id: message.id,
-                        username: 'Dashboard Viewer',
-                        type: 'viewer',
-                        deviceType: isMobileDevice() ? 'mobile' : 'desktop'
-                    });
-                    updateUsersTable();
-                }
-                // Add welcome message
-                addLogEntry(createWelcomeMessage(message.id), 'connection');
-                break;
-
-            case 'connect':
-                addLogEntry(message.message, 'connection');
-                if (message.userType === 'viewer') {
-                    dashboardViewers.set(message.userId, {
-                        id: message.userId,
-                        username: 'Dashboard Viewer',
-                        type: 'viewer',
-                        deviceType: message.deviceType || 'desktop'
-                    });
-                    updateUsersTable();
-                }
-                break;
-
-            case 'csvinfo':
-                if (message.info) {
-                    lastCsvInfo = {
-                        saveTime: message.info.modifiedTime ? new Date(message.info.modifiedTime) : null,
-                        fileSize: message.info.size,
-                        rowCount: message.info.rows,
-                        exists: message.info.exists
-                    };
-                    updateLastSaveInfo();
-                }
-                break;
-
-            case 'serverlog':
-                // Only show non-coordinate messages
-                if (!document.getElementById('filter-coordinates')?.checked || 
-                    (!message.message.includes('coordinate') && 
-                     !message.message.includes('position'))) {
-                    addLogEntry(message.message, message.logType || 'info');
-                }
-                break;
-
-            case 'userupdate':
-                if (message.users) {
-                    // Clear existing users first
-                    activeUsers.clear();
-                    
-                    // Update active users (excluding dashboard viewers)
-                    message.users.forEach(user => {
-                        if (!isDashboardUser(user)) {
-                            activeUsers.set(user.id, user);
-                        }
-                    });
-                    
-                    // Update 3D viewer
-                    const existingSphereIds = new Set(userSpheres.keys());
-                    Array.from(activeUsers.values()).forEach(user => {
-                        let sphere = userSpheres.get(user.id);
-                        if (!sphere) {
-                            sphere = createUserSphere(Math.random() * 0xffffff);
-                            userSpheres.set(user.id, sphere);
-                            scene.add(sphere);
-                        }
-                        sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
-                        existingSphereIds.delete(user.id);
-                    });
-                    
-                    // Remove spheres for disconnected users
-                    existingSphereIds.forEach(id => {
-                        const sphere = userSpheres.get(id);
-                        if (sphere) {
-                            scene.remove(sphere);
-                            userSpheres.delete(id);
-                        }
-                    });
-                    
-                    updateUsersTable();
-                }
-                break;
-
-            case 'usercoordinateupdate':
-                if (message.from && message.coordinates) {
-                    const user = activeUsers.get(message.from);
-                    if (user) {
-                        // Update user position
-                        user.tx = message.coordinates.tx ?? user.tx;
-                        user.ty = message.coordinates.ty ?? user.ty;
-                        user.tz = message.coordinates.tz ?? user.tz;
-                        
-                        // Update sphere position
-                        const sphere = userSpheres.get(message.from);
-                        if (sphere) {
-                            sphere.position.set(user.tx, user.ty, user.tz);
-                        }
-
-                        // Update position in table
-                        updateUsersTable();
-                    }
-                }
-                break;
-
-            case 'disconnect':
-                const userId = message.userId;
-                if (activeUsers.has(userId)) {
-                    activeUsers.delete(userId);
-                }
-                if (dashboardViewers.has(userId)) {
-                    dashboardViewers.delete(userId);
-                }
-                updateUsersTable();
-                addLogEntry(message.message, 'connection');
-                break;
-
-            case 'metadata':
-                if (!document.getElementById('filter-metadata')?.checked) {
-                    addLogEntry(message.message, 'metadata', {
-                        userId: message.userId,
-                        changes: message.changes
-                    });
-                }
-                break;
-
-            case 'ping':
-                // Silent ping handling
-                break;
-
-            default:
-                console.log('Unknown message type:', message.type);
-                break;
-        }
-    } catch (error) {
-        console.error('Error processing message:', error);
-        addLogEntry('Error processing message: ' + error.message, 'error');
-    }
-};
 
 function isDashboardUser(user) {
     return user.username?.toLowerCase().includes('dashboard') || 
@@ -723,7 +841,7 @@ function createWelcomeMessage(userId) {
     const natureEmojis = ['🌱', '🌳', '🌲', '🌿', '🍃', '🌸', '🦋', '🐝', '🌺', '🍄'];
     const randomEmojis = Array.from({ length: 5 }, () => 
         natureEmojis[Math.floor(Math.random() * natureEmojis.length)]
-    ).join(' ');
+    ).join('');
     
     return `Welcome to WorldTree! ${randomEmojis} New connection: ${userId}`;
 }
