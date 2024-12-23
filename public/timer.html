@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Widget</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .timer-widget {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: #333;
+        }
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: visible;
+        }
+        .progress-ring__circle {
+            stroke: #4caf50;
+            stroke-width: 10;
+            fill: transparent;
+            transition: stroke-dashoffset 0.1s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .time-text {
+            position: absolute;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .controls input {
+            margin: 5px 0;
+        }
+        .controls button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .debug-mode .controls {
+            display: flex;
+        }
+        .readme {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .readme pre {
+            background-color: #eee;
+            padding: 10px;
+        }
+        .small-progress-ring__circle {
+            stroke: #4caf50;
+            stroke-width: 5;
+            fill: transparent;
+            transition: stroke-dashoffset 0.1s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .small-timer-widget {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-widget">
+        <svg class="progress-ring" width="200" height="200">
+            <circle class="progress-ring__circle" r="90" cx="100" cy="100" />
+        </svg>
+        <div class="time-text"></div>
+    </div>
+    <div class="small-timer-widget">
+        <svg class="small-progress-ring" width="64" height="64">
+            <circle class="small-progress-ring__circle" r="30" cx="32" cy="32" />
+        </svg>
+    </div>
+    <div class="controls">
+        <label for="timer-duration">Set Timer Duration (seconds):</label>
+        <input type="number" id="timer-duration" value="10" onchange="timer.setDuration(this.value)">
+        <button onclick="timer.start()">Start</button>
+        <button onclick="timer.stop()">Stop</button>
+        <button onclick="timer.reset()">Reset</button>
+    </div>
+    <div class="readme">
+        <h3>Timer Widget Usage</h3>
+        <p>This widget provides a visual countdown timer. You can specify a callback function to execute when the timer finishes.</p>
+        <pre><code>
+// Example Usage
+function reconnect() {
+    console.log('Reconnecting...');
+    // Add reconnection logic here
+}
+
+const timer = new TimerWidget(10, reconnect);
+timer.start();
+        </code></pre>
+    </div>
+
+    <script>
+        class TimerWidget {
+            constructor(duration, onFinish) {
+                console.log('State: Init');
+                this.duration = duration * 1000; // Convert to milliseconds
+                this.circle = document.querySelector('.progress-ring__circle');
+                this.radius = this.circle.r.baseVal.value;
+                this.circumference = 2 * Math.PI * this.radius;
+                this.circle.style.strokeDasharray = `${this.circumference} ${this.circumference}`;
+                this.circle.style.strokeDashoffset = this.circumference;
+                this.onFinish = onFinish; // Store the callback
+            }
+
+            setDuration(seconds) {
+                this.duration = seconds * 1000; // Convert to milliseconds
+                this.reset(); // Apply new duration immediately
+            }
+
+            start() {
+                console.log('State: Start');
+                const startTime = Date.now();
+                this.stop(); // Ensure no previous timer is running
+                this.interval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const remaining = Math.max(this.duration - elapsed, 0);
+                    const offset = this.circumference * (remaining / this.duration);
+                    this.circle.style.strokeDashoffset = offset;
+                    document.querySelector('.time-text').textContent = `${(this.duration - remaining) / 1000}s / ${this.duration / 1000}s`;
+                    if (remaining <= 0) {
+                        clearInterval(this.interval);
+                        this.circle.style.stroke = '#ff9800'; // Change color to orange
+                        console.log('State: Finished');
+                        if (this.onFinish) {
+                            this.onFinish(); // Call the callback
+                        }
+                    }
+                }, 100); // Update every 100 milliseconds for smoother animation
+            }
+
+            stop() {
+                clearInterval(this.interval);
+            }
+
+            reset() {
+                clearInterval(this.interval);
+                this.circle.style.strokeDashoffset = this.circumference;
+                document.querySelector('.time-text').textContent = `${this.duration / 1000}s / ${this.duration / 1000}s`;
+            }
+        }
+
+        class SmallTimerWidget {
+            constructor(duration) {
+                this.duration = duration * 1000; // Convert to milliseconds
+                this.circle = document.querySelector('.small-progress-ring__circle');
+                this.radius = this.circle.r.baseVal.value;
+                this.circumference = 2 * Math.PI * this.radius;
+                this.circle.style.strokeDasharray = `${this.circumference} ${this.circumference}`;
+                this.circle.style.strokeDashoffset = this.circumference;
+            }
+
+            start() {
+                const startTime = Date.now();
+                this.stop(); // Ensure no previous timer is running
+                this.interval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const remaining = Math.max(this.duration - elapsed, 0);
+                    const offset = this.circumference * (remaining / this.duration);
+                    this.circle.style.strokeDashoffset = offset;
+                    if (remaining <= 0) {
+                        clearInterval(this.interval);
+                    }
+                }, 100); // Update every 100 milliseconds for smoother animation
+            }
+
+            stop() {
+                clearInterval(this.interval);
+            }
+        }
+
+        const timer = new TimerWidget(10);
+        timer.start();
+        const smallTimer = new SmallTimerWidget(10);
+        smallTimer.start();
+    </script>
+</body>
+</html>
