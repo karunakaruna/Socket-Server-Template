@@ -258,6 +258,7 @@ wss.on("connection", (ws) => {
   const userId = uuidv4();
   const userSecret = generateUserSecret();
   console.log(`User connected: ${userId}`);
+  console.log(`Generated secret for ${userId}: ${userSecret}`);
   numUsers++;
 
   users[userId] = {

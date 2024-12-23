@@ -579,9 +579,15 @@ function initWebSocket() {
                             if (message.secret) {
                                 userSecret = message.secret;
                                 localStorage.setItem('userSecret', message.secret);
-                                // Add secret to debug panel
+                                // Add secret to debug panel - first remove any existing secret display
                                 const debugPanel = document.getElementById('debug-panel');
                                 if (debugPanel) {
+                                    // Remove existing secret display if any
+                                    const existingSecret = debugPanel.querySelector('.debug-item .user-secret');
+                                    if (existingSecret) {
+                                        existingSecret.closest('.debug-item').remove();
+                                    }
+                                    // Add new secret display
                                     const secretDiv = document.createElement('div');
                                     secretDiv.className = 'debug-item';
                                     secretDiv.innerHTML = `<strong>Secret:</strong> <span class="user-secret">${message.secret}</span>`;
