@@ -3,6 +3,7 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require("ws");
 const fs = require("fs");
+const crypto = require('crypto'); // Add crypto for secure random generation
 
 const app = express();
 app.use(express.static("public"));
@@ -45,6 +46,12 @@ let numUsers = 0;
 
 // Efficient client lookup using a Map
 const clientMap = new Map();
+const userSecrets = new Map(); // Store user secrets and their associated UUIDs
+const uuidBySecret = new Map(); // Reverse lookup: secret -> UUID
+const secretTimestamps = new Map(); // Track when secrets were last used
+
+// Secret expiration time (24 hours in milliseconds)
+const SECRET_EXPIRATION_TIME = 24 * 60 * 60 * 1000;
 
 // Function to get CSV file info
 function getCsvInfo() {
@@ -133,6 +140,31 @@ function broadcastCsvUpdate() {
         }
     });
 }
+
+// Function to generate a shorter, readable secret
+function generateUserSecret() {
+  // Generate an 8-character secret using only alphanumeric characters
+  return crypto.randomBytes(4).toString('hex');
+}
+
+// Function to clean up expired secrets
+function cleanupExpiredSecrets() {
+  const now = Date.now();
+  for (const [secret, lastUsed] of secretTimestamps.entries()) {
+    if (now - lastUsed > SECRET_EXPIRATION_TIME) {
+      const userId = uuidBySecret.get(secret);
+      if (userId) {
+        userSecrets.delete(userId);
+        uuidBySecret.delete(secret);
+        secretTimestamps.delete(secret);
+        console.log(`Cleaned up expired secret for user: ${userId}`);
+      }
+    }
+  }
+}
+
+// Run secret cleanup every hour
+setInterval(cleanupExpiredSecrets, 60 * 60 * 1000);
 
 // Start the server
 server.listen(serverPort, '0.0.0.0', () => {
@@ -224,6 +256,7 @@ const startHeartbeat = () => {
 // WebSocket connection handler
 wss.on("connection", (ws) => {
   const userId = uuidv4();
+  const userSecret = generateUserSecret();
   console.log(`User connected: ${userId}`);
   numUsers++;
 
@@ -239,15 +272,18 @@ wss.on("connection", (ws) => {
     textstream: "",
   };
 
-  ws.userId = userId;
+  // Store the WebSocket connection
   clientMap.set(userId, ws);
+  userSecrets.set(userId, userSecret);
+  uuidBySecret.set(userSecret, userId);
+  secretTimestamps.set(userSecret, Date.now());
 
-  ws.send(
-    JSON.stringify({
-      type: "welcome",
-      id: userId,
-    })
-  );
+  // Send welcome message with user ID and secret
+  ws.send(JSON.stringify({
+    type: "welcome",
+    id: userId,
+    secret: userSecret
+  }));
 
   // Send initial CSV info
   const csvInfo = getCsvInfo();
@@ -413,12 +449,18 @@ wss.on("connection", (ws) => {
     }
   });
 
+  // Handle disconnection
   ws.on("close", () => {
     console.log(`User disconnected: ${ws.userId}`);
-    if (users[ws.userId]) {
+    if (ws.userId in users) {
       delete users[ws.userId];
     }
     clientMap.delete(ws.userId);
+    // Update last used timestamp on disconnect
+    const secret = userSecrets.get(ws.userId);
+    if (secret) {
+      secretTimestamps.set(secret, Date.now());
+    }
     numUsers = Math.max(0, numUsers - 1);
     broadcastUserUpdate();
   });

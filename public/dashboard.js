@@ -178,6 +178,7 @@ const settings = {
     textSize: 16,
     theme: 'system'
 };
+let userSecret = localStorage.getItem('userSecret'); // Try to load existing secret
 
 // Load settings from localStorage
 function loadSettings() {
@@ -574,6 +575,21 @@ function initWebSocket() {
                         const dashboardUuid = document.getElementById('dashboard-uuid');
                         if (dashboardUuid) {
                             dashboardUuid.textContent = message.id;
+                            // Store secret in localStorage
+                            if (message.secret) {
+                                userSecret = message.secret;
+                                localStorage.setItem('userSecret', message.secret);
+                                // Add secret to debug panel
+                                const debugPanel = document.getElementById('debug-panel');
+                                if (debugPanel) {
+                                    const secretDiv = document.createElement('div');
+                                    secretDiv.className = 'debug-item';
+                                    secretDiv.innerHTML = `<strong>Secret:</strong> <span class="user-secret">${message.secret}</span>`;
+                                    debugPanel.appendChild(secretDiv);
+                                }
+                            }
+                            // Add welcome message
+                            addLogEntry(createWelcomeMessage(message.id), 'connection');
                             // Add self to dashboard viewers with device type
                             dashboardViewers.set(message.id, {
                                 id: message.id,
@@ -583,8 +599,6 @@ function initWebSocket() {
                             });
                             updateUsersTable();
                         }
-                        // Add welcome message
-                        addLogEntry(createWelcomeMessage(message.id), 'connection');
                         break;
 
                     case 'connect':
