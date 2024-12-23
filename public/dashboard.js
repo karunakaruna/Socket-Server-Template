@@ -509,7 +509,9 @@ function initWebSocket() {
         ws.close();
     }
 
-    const wsUrl = `ws://${window.location.hostname}:3000`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.hostname}:3000`;
+    console.log('Connecting to WebSocket at:', wsUrl);
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
@@ -643,7 +645,7 @@ function initWebSocket() {
                             user.tx = message.coordinates.tx ?? user.tx;
                             user.ty = message.coordinates.ty ?? user.ty;
                             user.tz = message.coordinates.tz ?? user.tz;
- 　 　 　 　 　 　 　 　 // Update sphere position
+ 　 　 　 　 　 　 　 // Update sphere position
                             const sphere = userSpheres.get(message.from);
                             if (sphere) {
                                 sphere.position.set(user.tx, user.ty, user.tz);
