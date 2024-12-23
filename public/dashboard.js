@@ -411,6 +411,9 @@ function animate() {
 // Initialize Three.js when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initThreeJS, 100);
+    if (window.debugTimer) {
+        window.debugTimer.setCallback(handleReconnection);
+    }
 });
 
 // CSV file info
@@ -505,14 +508,10 @@ function updatePingIndicator(active = true) {
 }
 
 function handlePingMessage() {
-    if (pingTimer) {
-        clearTimeout(pingTimer);
-        console.log('Timer reset');
+    if (window.debugTimer) {
+        window.debugTimer.reset();
+        window.debugTimer.start();
     }
-    pingTimer = setTimeout(() => {
-        console.log('Timer end reached');
-        handleReconnection(); // Trigger reconnection when timer ends
-    }, 10000);
 }
 
 function initWebSocket() {
