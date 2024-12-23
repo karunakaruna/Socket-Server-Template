@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <!-- <script src="/node_modules/three/examples/js/renderers/CSS2DRenderer.js"></script> -->
+    <link rel="stylesheet" href="timer.css">
     <style>
         :root {
             --bg-primary: #1a1b26;
@@ -378,7 +379,7 @@
         }
 
         .debug-section {
-            margin-bottom: 12px;
+            margin-bottom: 1rem;
         }
 
         .debug-section h4 {
@@ -406,28 +407,63 @@
             display: none;
         }
 
+        .connection-status {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .indicator-container {
+            position: relative;
+            width: 24px;
+            height: 24px;
+        }
+
         .ping-indicator {
-            width: 10px;
-            height: 10px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            z-index: 2;
             border-radius: 50%;
             background-color: var(--text-secondary);
-            margin-left: 8px;
             transition: all 0.3s ease;
             opacity: 0.5;
         }
 
         .ping-indicator.active {
-            transform: scale(1.5);
+            transform: translate(-50%, -50%) scale(1.5);
             opacity: 1;
             background-color: var(--success);
         }
 
         .ping-indicator.inactive {
             background-color: var(--waiting);
-            transform: scale(1);
+            transform: translate(-50%, -50%) scale(1);
             opacity: 0.5;
         }
 
+        .small-progress-ring {
+            width: 24px;
+            height: 24px;
+        }
+
+        .small-progress-ring__circle {
+            stroke-width: 3;
+            stroke: #4caf50;
+        }
+
+        .small-timer-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 24px;
+            height: 24px;
+            z-index: 1;
+        }
+        
         @media (max-width: 768px) {
             body {
                 overflow-y: auto;
@@ -597,8 +633,14 @@
         <div class="debug-header">
             <div class="debug-title">Debug Panel</div>
             <div class="connection-status">
-                <span id="status-dot" class="status-dot offline"></span>
-                <div id="ping-indicator" class="ping-indicator inactive"></div>
+                <div class="indicator-container">
+                    <div id="ping-indicator" class="ping-indicator inactive"></div>
+                    <div class="small-timer-container">
+                        <svg class="small-progress-ring" width="24" height="24">
+                            <circle class="small-progress-ring__circle" r="10" cx="12" cy="12" />
+                        </svg>
+                    </div>
+                </div>
             </div>
             <button id="toggle-debug" class="icon-button">−</button>
         </div>
@@ -608,10 +650,19 @@
                 <button id="debug-connect" class="debug-btn">Connect</button>
                 <button id="debug-disconnect" class="debug-btn">Disconnect</button>
                 <button id="debug-crash" class="debug-btn">Simulate Crash</button>
+                <div style="margin-top: 10px;">
+                    <button id="timer-start" class="debug-btn">Start Timer</button>
+                    <button id="timer-stop" class="debug-btn">Stop Timer</button>
+                    <button id="timer-reset" class="debug-btn">Reset Timer</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <script type="module">
+        import { SmallTimerWidget } from './timer.js';
+        window.debugTimer = new SmallTimerWidget(10);
+    </script>
     <script src="/dashboard.js"></script>
 </body>
 </html>

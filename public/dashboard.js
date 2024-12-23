@@ -818,6 +818,11 @@ document.addEventListener('DOMContentLoaded', function() {
             addLogEntry('WebSocket is not connected', 'warning');
         }
     });
+
+    // Timer controls
+    document.getElementById('timer-start').addEventListener('click', () => window.debugTimer.start());
+    document.getElementById('timer-stop').addEventListener('click', () => window.debugTimer.stop());
+    document.getElementById('timer-reset').addEventListener('click', () => window.debugTimer.reset());
 });
 
 // Initialize WebSocket connection
