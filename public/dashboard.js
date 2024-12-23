@@ -509,184 +509,201 @@ function initWebSocket() {
         ws.close();
     }
 
+    // For remote server, we might need to use the host without the port
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:3000`;
-    console.log('Connecting to WebSocket at:', wsUrl);
-    ws = new WebSocket(wsUrl);
+    const host = window.location.hostname;
+    const port = window.location.port || (protocol === 'wss:' ? '443' : '80');
+    const wsUrl = `${protocol}//${host}:${port}`;
+    
+    console.log('Attempting WebSocket connection to:', wsUrl);
+    console.log('Page URL:', window.location.href);
+    console.log('Protocol:', protocol);
+    console.log('Hostname:', host);
+    console.log('Port:', port);
 
-    ws.onopen = function() {
-        console.log('WebSocket Connected to:', wsUrl);
-        addLogEntry('Connected to server', 'connection');
-        document.getElementById('status-dot').className = 'status-dot online';
-        reconnectAttempts = 0;
-    };
+    try {
+        ws = new WebSocket(wsUrl);
 
-    ws.onclose = function(event) {
-        console.log('WebSocket Disconnected');
-        addLogEntry('Disconnected from server', 'error');
-        document.getElementById('status-dot').className = 'status-dot offline';
-        updatePingIndicator(false);
-        
-        // Only reconnect if the connection was lost due to an error (not manual disconnect)
-        if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS && event.code !== 1000) {
-            handleReconnection();
-        }
-    };
+        ws.onopen = function() {
+            console.log('WebSocket Connected Successfully to:', wsUrl);
+            addLogEntry('Connected to server', 'connection');
+            document.getElementById('status-dot').className = 'status-dot online';
+            reconnectAttempts = 0;
+        };
 
-    ws.onerror = function(error) {
-        console.error('WebSocket Error:', error);
-        addLogEntry('WebSocket error occurred', 'error');
-    };
+        ws.onclose = function(event) {
+            console.log('WebSocket Disconnected - Code:', event.code, 'Reason:', event.reason);
+            console.log('Was clean?', event.wasClean);
+            addLogEntry(`Disconnected from server (Code: ${event.code})`, 'error');
+            document.getElementById('status-dot').className = 'status-dot offline';
+            updatePingIndicator(false);
+            
+            // Only reconnect if the connection was lost due to an error (not manual disconnect)
+            if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS && event.code !== 1000) {
+                handleReconnection();
+            }
+        };
 
-    // Rest of the WebSocket event handlers...
-    ws.onmessage = function(event) {
-        try {
-            const message = JSON.parse(event.data);
+        ws.onerror = function(error) {
+            console.error('WebSocket Error:', error);
+            console.log('WebSocket readyState:', ws.readyState);
+            addLogEntry('WebSocket error occurred', 'error');
+        };
 
-            switch (message.type) {
-                case 'ping':
-                    updatePingIndicator(true);
-                    break;
-                    
-                case 'welcome':
-                    const dashboardUuid = document.getElementById('dashboard-uuid');
-                    if (dashboardUuid) {
-                        dashboardUuid.textContent = message.id;
-                        // Add self to dashboard viewers with device type
-                        dashboardViewers.set(message.id, {
-                            id: message.id,
-                            username: 'Dashboard Viewer',
-                            type: 'viewer',
-                            deviceType: isMobileDevice() ? 'mobile' : 'desktop'
-                        });
-                        updateUsersTable();
-                    }
-                    // Add welcome message
-                    addLogEntry(createWelcomeMessage(message.id), 'connection');
-                    break;
+        ws.onmessage = function(event) {
+            try {
+                const message = JSON.parse(event.data);
+                console.log('Received message type:', message.type);
 
-                case 'connect':
-                    addLogEntry(message.message, 'connection');
-                    if (message.userType === 'viewer') {
-                        dashboardViewers.set(message.userId, {
-                            id: message.userId,
-                            username: 'Dashboard Viewer',
-                            type: 'viewer',
-                            deviceType: message.deviceType || 'desktop'
-                        });
-                        updateUsersTable();
-                    }
-                    break;
-
-                case 'csvinfo':
-                    if (message.info) {
-                        lastCsvInfo = {
-                            saveTime: message.info.modifiedTime ? new Date(message.info.modifiedTime) : null,
-                            fileSize: message.info.size,
-                            rowCount: message.info.rows,
-                            exists: message.info.exists
-                        };
-                        updateLastSaveInfo();
-                    }
-                    break;
-
-                case 'serverlog':
-                    // Only show non-coordinate messages
-                    if (!document.getElementById('filter-coordinates')?.checked || 
-                        (!message.message.includes('coordinate') && 
-                         !message.message.includes('position'))) {
-                        addLogEntry(message.message, message.logType || 'info');
-                    }
-                    break;
-
-                case 'userupdate':
-                    if (message.users) {
-                        // Clear existing users first
-                        activeUsers.clear();
+                switch (message.type) {
+                    case 'ping':
+                        updatePingIndicator(true);
+                        break;
                         
-                        // Update active users (excluding dashboard viewers)
-                        message.users.forEach(user => {
-                            if (!isDashboardUser(user)) {
-                                activeUsers.set(user.id, user);
-                            }
-                        });
-                        
-                        // Update 3D viewer
-                        const existingSphereIds = new Set(userSpheres.keys());
-                        Array.from(activeUsers.values()).forEach(user => {
-                            let sphere = userSpheres.get(user.id);
-                            if (!sphere) {
-                                sphere = createUserSphere(Math.random() * 0xffffff);
-                                userSpheres.set(user.id, sphere);
-                                scene.add(sphere);
-                            }
-                            sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
-                            existingSphereIds.delete(user.id);
-                        });
-                        
-                        // Remove spheres for disconnected users
-                        existingSphereIds.forEach(id => {
-                            const sphere = userSpheres.get(id);
-                            if (sphere) {
-                                scene.remove(sphere);
-                                userSpheres.delete(id);
-                            }
-                        });
-                        
-                        updateUsersTable();
-                    }
-                    break;
-
-                case 'usercoordinateupdate':
-                    if (message.from && message.coordinates) {
-                        const user = activeUsers.get(message.from);
-                        if (user) {
-                            // Update user position
-                            user.tx = message.coordinates.tx ?? user.tx;
-                            user.ty = message.coordinates.ty ?? user.ty;
-                            user.tz = message.coordinates.tz ?? user.tz;
- 　 　 　 　 　 　 　 // Update sphere position
-                            const sphere = userSpheres.get(message.from);
-                            if (sphere) {
-                                sphere.position.set(user.tx, user.ty, user.tz);
-                            }
-
-                            // Update position in table
+                    case 'welcome':
+                        const dashboardUuid = document.getElementById('dashboard-uuid');
+                        if (dashboardUuid) {
+                            dashboardUuid.textContent = message.id;
+                            // Add self to dashboard viewers with device type
+                            dashboardViewers.set(message.id, {
+                                id: message.id,
+                                username: 'Dashboard Viewer',
+                                type: 'viewer',
+                                deviceType: isMobileDevice() ? 'mobile' : 'desktop'
+                            });
                             updateUsersTable();
                         }
-                    }
-                    break;
+                        // Add welcome message
+                        addLogEntry(createWelcomeMessage(message.id), 'connection');
+                        break;
 
-                case 'disconnect':
-                    const userId = message.userId;
-                    if (activeUsers.has(userId)) {
-                        activeUsers.delete(userId);
-                    }
-                    if (dashboardViewers.has(userId)) {
-                        dashboardViewers.delete(userId);
-                    }
-                    updateUsersTable();
-                    addLogEntry(message.message, 'connection');
-                    break;
+                    case 'connect':
+                        addLogEntry(message.message, 'connection');
+                        if (message.userType === 'viewer') {
+                            dashboardViewers.set(message.userId, {
+                                id: message.userId,
+                                username: 'Dashboard Viewer',
+                                type: 'viewer',
+                                deviceType: message.deviceType || 'desktop'
+                            });
+                            updateUsersTable();
+                        }
+                        break;
 
-                case 'metadata':
-                    if (!document.getElementById('filter-metadata')?.checked) {
-                        addLogEntry(message.message, 'metadata', {
-                            userId: message.userId,
-                            changes: message.changes
-                        });
-                    }
-                    break;
+                    case 'csvinfo':
+                        if (message.info) {
+                            lastCsvInfo = {
+                                saveTime: message.info.modifiedTime ? new Date(message.info.modifiedTime) : null,
+                                fileSize: message.info.size,
+                                rowCount: message.info.rows,
+                                exists: message.info.exists
+                            };
+                            updateLastSaveInfo();
+                        }
+                        break;
 
-                default:
-                    console.log('Unknown message type:', message.type);
-                    break;
+                    case 'serverlog':
+                        // Only show non-coordinate messages
+                        if (!document.getElementById('filter-coordinates')?.checked || 
+                            (!message.message.includes('coordinate') && 
+                             !message.message.includes('position'))) {
+                            addLogEntry(message.message, message.logType || 'info');
+                        }
+                        break;
+
+                    case 'userupdate':
+                        if (message.users) {
+                            // Clear existing users first
+                            activeUsers.clear();
+                            
+                            // Update active users (excluding dashboard viewers)
+                            message.users.forEach(user => {
+                                if (!isDashboardUser(user)) {
+                                    activeUsers.set(user.id, user);
+                                }
+                            });
+                            
+                            // Update 3D viewer
+                            const existingSphereIds = new Set(userSpheres.keys());
+                            Array.from(activeUsers.values()).forEach(user => {
+                                let sphere = userSpheres.get(user.id);
+                                if (!sphere) {
+                                    sphere = createUserSphere(Math.random() * 0xffffff);
+                                    userSpheres.set(user.id, sphere);
+                                    scene.add(sphere);
+                                }
+                                sphere.position.set(user.tx || 0, user.ty || 0, user.tz || 0);
+                                existingSphereIds.delete(user.id);
+                            });
+                            
+                            // Remove spheres for disconnected users
+                            existingSphereIds.forEach(id => {
+                                const sphere = userSpheres.get(id);
+                                if (sphere) {
+                                    scene.remove(sphere);
+                                    userSpheres.delete(id);
+                                }
+                            });
+                            
+                            updateUsersTable();
+                        }
+                        break;
+
+                    case 'usercoordinateupdate':
+                        if (message.from && message.coordinates) {
+                            const user = activeUsers.get(message.from);
+                            if (user) {
+                                // Update user position
+                                user.tx = message.coordinates.tx ?? user.tx;
+                                user.ty = message.coordinates.ty ?? user.ty;
+                                user.tz = message.coordinates.tz ?? user.tz;
+ 　 　 　 　 　 　 // Update sphere position
+                                const sphere = userSpheres.get(message.from);
+                                if (sphere) {
+                                    sphere.position.set(user.tx, user.ty, user.tz);
+                                }
+
+                                // Update position in table
+                                updateUsersTable();
+                            }
+                        }
+                        break;
+
+                    case 'disconnect':
+                        const userId = message.userId;
+                        if (activeUsers.has(userId)) {
+                            activeUsers.delete(userId);
+                        }
+                        if (dashboardViewers.has(userId)) {
+                            dashboardViewers.delete(userId);
+                        }
+                        updateUsersTable();
+                        addLogEntry(message.message, 'connection');
+                        break;
+
+                    case 'metadata':
+                        if (!document.getElementById('filter-metadata')?.checked) {
+                            addLogEntry(message.message, 'metadata', {
+                                userId: message.userId,
+                                changes: message.changes
+                            });
+                        }
+                        break;
+
+                    default:
+                        console.log('Unknown message type:', message.type);
+                        break;
+                }
+            } catch (error) {
+                console.error('Error processing message:', error);
+                console.error('Raw message data:', event.data);
+                addLogEntry('Error processing message: ' + error.message, 'error');
             }
-        } catch (error) {
-            console.error('Error processing message:', error);
-            addLogEntry('Error processing message: ' + error.message, 'error');
-        }
-    };
+        };
+    } catch (error) {
+        console.error('Error creating WebSocket:', error);
+        addLogEntry('Failed to create WebSocket connection: ' + error.message, 'error');
+    }
 }
 
 function handleReconnection() {
