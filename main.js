@@ -172,19 +172,20 @@ server.listen(serverPort, '0.0.0.0', () => {
   console.log(`WebSocket server is running at ws://0.0.0.0:${serverPort}`);
 });
 
-// Function to broadcast user updates
-const broadcastUserUpdate = () => {
-  const userList = Object.values(users).map((user) => ({
-    id: user.id,
-    username: user.username || "",
-    description: user.description || "",
-    tx: user.tx || 0,
-    ty: user.ty || 0,
-    tz: user.tz || 0,
-    afk: user.afk || false,
-    textstream: user.textstream || "",
-    listeningTo: user.listeningTo ? [...user.listeningTo] : [], // Shallow copy for safety
-  }));
+// Function to broadcast user updates to all connected clients
+function broadcastUserUpdate() {
+  const userList = Object.values(users)
+    .filter(user => clientMap.has(user.id)) // Only include users with active connections
+    .map((user) => ({
+      id: user.id,
+      username: user.username || "Unnamed",
+      description: user.description || "",
+      tx: user.tx || 0,
+      ty: user.ty || 0,
+      tz: user.tz || 0,
+      afk: user.afk || false,
+      textstream: user.textstream || "",
+    }));
 
   const message = JSON.stringify({
     type: "userupdate",
@@ -255,60 +256,110 @@ const startHeartbeat = () => {
 
 // WebSocket connection handler
 wss.on("connection", (ws) => {
-  const userId = uuidv4();
-  const userSecret = generateUserSecret();
-  console.log(`User connected: ${userId}`);
-  console.log(`Generated secret for ${userId}: ${userSecret}`);
+  console.log("New WebSocket connection established");
   numUsers++;
 
-  users[userId] = {
-    id: userId,
-    username: `User_${userId.slice(0, 5)}`,
-    listeningTo: [],
-    description: "",
-    tx: 0,
-    ty: 0,
-    tz: 0,
-    afk: false,
-    textstream: "",
-  };
-
-  // Store the WebSocket connection
-  clientMap.set(userId, ws);
-  userSecrets.set(userId, userSecret);
-  uuidBySecret.set(userSecret, userId);
-  secretTimestamps.set(userSecret, Date.now());
-
-  // Send welcome message with user ID and secret
-  ws.send(JSON.stringify({
-    type: "welcome",
-    id: userId,
-    secret: userSecret
-  }));
-
-  // Send initial CSV info
-  const csvInfo = getCsvInfo();
-  if (csvInfo) {
-    ws.send(JSON.stringify({
-      type: 'csvinfo',
-      info: csvInfo
-    }));
-  }
-
-  broadcastUserUpdate();
-
+  // Handle messages
   ws.on("message", (data) => {
     let message;
     try {
       message = JSON.parse(data);
     } catch (err) {
-      console.error("Invalid JSON received:", data);
+      console.error("Error parsing message:", err);
       return;
     }
 
-    const { type } = message;
+    console.log("Received message type:", message.type);
 
-    switch (type) {
+    switch (message.type) {
+      case "reconnect":
+        console.log("=== Reconnection Attempt ===");
+        console.log("Received secret:", message.secret);
+        console.log("Current secrets in system:", Array.from(uuidBySecret.keys()));
+        
+        const secret = message.secret;
+        if (secret && uuidBySecret.has(secret)) {
+          const existingUserId = uuidBySecret.get(secret);
+          console.log(`Valid reconnection: Secret ${secret} matches user ${existingUserId}`);
+          console.log(`Previous user data:`, users[existingUserId]);
+          
+          // Update the secret's last used timestamp
+          secretTimestamps.set(secret, Date.now());
+          
+          // Update the WebSocket connection for this user
+          ws.userId = existingUserId;
+          clientMap.set(existingUserId, ws);
+          
+          // Send welcome message with existing ID
+          ws.send(JSON.stringify({
+            type: "welcome",
+            id: existingUserId,
+            secret: secret
+          }));
+          
+          // If user data exists, restore it
+          if (users[existingUserId]) {
+            console.log(`Restoring existing user data for ${existingUserId}`);
+          } else {
+            // Initialize new user data if none exists
+            users[existingUserId] = {
+              id: existingUserId,
+              username: `User_${existingUserId.slice(0, 5)}`,
+              listeningTo: [],
+              description: "",
+              tx: 0,
+              ty: 0,
+              tz: 0,
+              afk: false,
+              textstream: "",
+            };
+          }
+        } else {
+          // If no secret or invalid, create new user
+          const newUserId = uuidv4();
+          const newSecret = generateUserSecret();
+          console.log(`Invalid reconnection attempt, creating new user: ${newUserId}`);
+          console.log(`Generated new secret for ${newUserId}: ${newSecret}`);
+          
+          ws.userId = newUserId;
+          users[newUserId] = {
+            id: newUserId,
+            username: `User_${newUserId.slice(0, 5)}`,
+            listeningTo: [],
+            description: "",
+            tx: 0,
+            ty: 0,
+            tz: 0,
+            afk: false,
+            textstream: "",
+          };
+
+          // Store the WebSocket connection and secret info
+          clientMap.set(newUserId, ws);
+          userSecrets.set(newUserId, newSecret);
+          uuidBySecret.set(newSecret, newUserId);
+          secretTimestamps.set(newSecret, Date.now());
+          
+          ws.send(JSON.stringify({
+            type: "welcome",
+            id: newUserId,
+            secret: newSecret
+          }));
+        }
+
+        // Send initial CSV info in both cases
+        const initialCsvInfo = getCsvInfo();
+        if (initialCsvInfo) {
+          ws.send(JSON.stringify({
+            type: 'csvinfo',
+            info: initialCsvInfo
+          }));
+        }
+
+        // Broadcast user update in both cases
+        broadcastUserUpdate();
+        break;
+
       case "requestCsvInfo":
         // Silently handle CSV info requests
         const csvInfo = getCsvInfo();
@@ -446,7 +497,7 @@ wss.on("connection", (ws) => {
           break;
 
       default:
-        console.error(`Unhandled message type "${type}" from user ${ws.userId}:`, message);
+        console.error(`Unhandled message type "${message.type}" from user ${ws.userId}:`, message);
     }
   });
 
@@ -463,7 +514,7 @@ wss.on("connection", (ws) => {
       secretTimestamps.set(secret, Date.now());
     }
     numUsers = Math.max(0, numUsers - 1);
-    broadcastUserUpdate();
+    broadcastUserUpdate(); // This will now only show connected users
   });
 });
 

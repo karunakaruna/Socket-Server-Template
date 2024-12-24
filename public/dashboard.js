@@ -178,7 +178,7 @@ const settings = {
     textSize: 16,
     theme: 'system'
 };
-let userSecret = localStorage.getItem('userSecret'); // Try to load existing secret
+let userSecret = null; // Store secret in memory instead of localStorage
 
 // Load settings from localStorage
 function loadSettings() {
@@ -538,6 +538,19 @@ function initWebSocket() {
 
         ws.onopen = function() {
             console.log('WebSocket Connected Successfully to:', wsUrl);
+            // If we have a stored secret, attempt to reconnect with it
+            if (userSecret) {
+                console.log('Attempting to reconnect with stored secret');
+                ws.send(JSON.stringify({
+                    type: 'reconnect',
+                    secret: userSecret
+                }));
+            } else {
+                console.log('No stored secret, will receive new one from server');
+                ws.send(JSON.stringify({
+                    type: 'reconnect'
+                }));
+            }
             addLogEntry('Connected to server', 'connection');
             document.getElementById('status-dot').className = 'status-dot online';
             reconnectAttempts = 0;
@@ -575,10 +588,9 @@ function initWebSocket() {
                         const dashboardUuid = document.getElementById('dashboard-uuid');
                         if (dashboardUuid) {
                             dashboardUuid.textContent = message.id;
-                            // Store secret in localStorage
+                            // Store secret in memory
                             if (message.secret) {
                                 userSecret = message.secret;
-                                localStorage.setItem('userSecret', message.secret);
                                 // Add secret to debug panel - first remove any existing secret display
                                 const debugPanel = document.getElementById('debug-panel');
                                 if (debugPanel) {
