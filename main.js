@@ -53,7 +53,9 @@ const secretTimestamps = new Map(); // Track when secrets were last used
 // Secret expiration time (24 hours in milliseconds)
 const SECRET_EXPIRATION_TIME = 24 * 60 * 60 * 1000;
 
-// Function to get CSV file info
+
+
+// Function to get CSV file info // Not used currently
 function getCsvInfo() {
     // Default CSV paths to check
     const csvPaths = ['data.csv', 'output.csv', 'coordinates.csv'].filter(path => {
