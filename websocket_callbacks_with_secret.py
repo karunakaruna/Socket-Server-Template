@@ -1,5 +1,4 @@
 import json
-from websocket_reconnection import send_reconnect, store_welcome_data
 
 # Cache for userlist table row indices
 row_index_cache = {}
@@ -13,16 +12,20 @@ secret_table = op('secret_table')  # You'll need to create this to store the sec
 
 def onConnect(dat):
     """Handles WebSocket connection event."""
-    # Get any stored secret from a table/storage
-    secret_table = op('secret_table')  # You'll need to create this to store the secret
+    # Get stored secret and username from table
+    secret_table = op('secret_table')
     secret = None
+    username = None
     if secret_table and secret_table.numRows > 1:  # Assuming row 0 is header
         secret = secret_table[1, 0].val
+        if secret_table.numCols > 1:  # If we have a username column
+            username = secret_table[1, 1].val
     
-    # Send reconnect message
+    # Send reconnect message with username if available
     reconnect_msg = {
         "type": "reconnect",
-        "secret": secret
+        "secret": secret,
+        "username": username
     }
     dat.sendText(json.dumps(reconnect_msg))
     print("Sent reconnect message to server")
@@ -130,19 +133,28 @@ def onReceiveText(dat, rowIndex, message):
         if msg_type == 'welcome':
             uuid = data.get('id', None)
             secret = data.get('secret', None)
+            username = None
+            
+            # Try to get username from userlist for this UUID
+            if userlist_table:
+                for row in range(1, userlist_table.numRows):
+                    if userlist_table[row, 1].val == uuid:  # UUID is in column 1
+                        username = userlist_table[row, 2].val  # Username is in column 2
+                        break
+            
+            # Store UUID
             if uuid and userid_table:
                 if userid_table.numRows != 2 or userid_table[1, 0].val != uuid:
                     userid_table.clear()
                     userid_table.appendRow(['UUID'])
                     userid_table.appendRow([uuid])
                 print(f"User UUID received and updated: {uuid}")
-                
-                # Store the secret for future reconnections
-                secret_table = op('secret_table')
-                if secret_table:
-                    secret_table.clear()
-                    secret_table.appendRow(['Secret'])
-                    secret_table.appendRow([secret])
+            
+            # Store secret and username
+            if secret and secret_table:
+                secret_table.clear()
+                secret_table.appendRow(['Secret', 'Username'])  # Two column header
+                secret_table.appendRow([secret, username if username else ''])
 
         # User update message handler
         elif msg_type == 'userupdate':

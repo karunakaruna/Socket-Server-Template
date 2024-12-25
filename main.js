@@ -285,6 +285,8 @@ wss.on("connection", (ws) => {
         console.log("Current secrets in system:", Array.from(uuidBySecret.keys()));
         
         const secret = message.secret;
+        const username = message.username;
+        
         if (secret && uuidBySecret.has(secret)) {
           const existingUserId = uuidBySecret.get(secret);
           console.log(`Valid reconnection: Secret ${secret} matches user ${existingUserId}`);
@@ -307,11 +309,15 @@ wss.on("connection", (ws) => {
           // If user data exists, restore it
           if (users[existingUserId]) {
             console.log(`Restoring existing user data for ${existingUserId}`);
+            // Update username if provided in reconnect
+            if (username) {
+              users[existingUserId].username = username;
+            }
           } else {
             // Initialize new user data if none exists
             users[existingUserId] = {
               id: existingUserId,
-              username: `User_${existingUserId.slice(0, 5)}`,
+              username: username || `User_${existingUserId.slice(0, 5)}`,
               listeningTo: [],
               description: "",
               tx: 0,
@@ -321,6 +327,9 @@ wss.on("connection", (ws) => {
               textstream: "",
             };
           }
+          
+          // Broadcast updated user list
+          broadcastUserUpdate();
         } else {
           // If no secret or invalid, create new user
           const newUserId = uuidv4();
@@ -331,7 +340,7 @@ wss.on("connection", (ws) => {
           ws.userId = newUserId;
           users[newUserId] = {
             id: newUserId,
-            username: `User_${newUserId.slice(0, 5)}`,
+            username: username || `User_${newUserId.slice(0, 5)}`,
             listeningTo: [],
             description: "",
             tx: 0,
