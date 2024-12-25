@@ -3,7 +3,6 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require("ws");
 const fs = require("fs");
-const crypto = require('crypto'); // Add crypto for secure random generation
 
 const app = express();
 app.use(express.static("public"));
@@ -46,16 +45,8 @@ let numUsers = 0;
 
 // Efficient client lookup using a Map
 const clientMap = new Map();
-const userSecrets = new Map(); // Store user secrets and their associated UUIDs
-const uuidBySecret = new Map(); // Reverse lookup: secret -> UUID
-const secretTimestamps = new Map(); // Track when secrets were last used
 
-// Secret expiration time (24 hours in milliseconds)
-const SECRET_EXPIRATION_TIME = 24 * 60 * 60 * 1000;
-
-
-
-// Function to get CSV file info // Not used currently
+// Function to get CSV file info
 function getCsvInfo() {
     // Default CSV paths to check
     const csvPaths = ['data.csv', 'output.csv', 'coordinates.csv'].filter(path => {
@@ -143,51 +134,25 @@ function broadcastCsvUpdate() {
     });
 }
 
-// Function to generate a shorter, readable secret
-function generateUserSecret() {
-  // Generate an 8-character secret using only alphanumeric characters
-  return crypto.randomBytes(4).toString('hex');
-}
-
-// Function to clean up expired secrets
-function cleanupExpiredSecrets() {
-  const now = Date.now();
-  for (const [secret, lastUsed] of secretTimestamps.entries()) {
-    if (now - lastUsed > SECRET_EXPIRATION_TIME) {
-      const userId = uuidBySecret.get(secret);
-      if (userId) {
-        userSecrets.delete(userId);
-        uuidBySecret.delete(secret);
-        secretTimestamps.delete(secret);
-        console.log(`Cleaned up expired secret for user: ${userId}`);
-      }
-    }
-  }
-}
-
-// Run secret cleanup every hour
-setInterval(cleanupExpiredSecrets, 60 * 60 * 1000);
-
 // Start the server
 server.listen(serverPort, '0.0.0.0', () => {
   console.log(`Server started on port ${serverPort}`);
   console.log(`WebSocket server is running at ws://0.0.0.0:${serverPort}`);
 });
 
-// Function to broadcast user updates to all connected clients
-function broadcastUserUpdate() {
-  const userList = Object.values(users)
-    .filter(user => clientMap.has(user.id)) // Only include users with active connections
-    .map((user) => ({
-      id: user.id,
-      username: user.username || "Unnamed",
-      description: user.description || "",
-      tx: user.tx || 0,
-      ty: user.ty || 0,
-      tz: user.tz || 0,
-      afk: user.afk || false,
-      textstream: user.textstream || "",
-    }));
+// Function to broadcast user updates
+const broadcastUserUpdate = () => {
+  const userList = Object.values(users).map((user) => ({
+    id: user.id,
+    username: user.username || "",
+    description: user.description || "",
+    tx: user.tx || 0,
+    ty: user.ty || 0,
+    tz: user.tz || 0,
+    afk: user.afk || false,
+    textstream: user.textstream || "",
+    listeningTo: user.listeningTo ? [...user.listeningTo] : [], // Shallow copy for safety
+  }));
 
   const message = JSON.stringify({
     type: "userupdate",
@@ -258,115 +223,55 @@ const startHeartbeat = () => {
 
 // WebSocket connection handler
 wss.on("connection", (ws) => {
-  console.log("New WebSocket connection established");
+  const userId = uuidv4();
+  console.log(`User connected: ${userId}`);
   numUsers++;
-  
-  // We don't initialize the user immediately anymore
-  // Instead, we wait for either:
-  // 1. A reconnect message with a valid secret (restores existing user)
-  // 2. A reconnect message with invalid/no secret (creates new user)
-  
-  // Handle messages
+
+  users[userId] = {
+    id: userId,
+    username: `User_${userId.slice(0, 5)}`,
+    listeningTo: [],
+    description: "",
+    tx: 0,
+    ty: 0,
+    tz: 0,
+    afk: false,
+    textstream: "",
+  };
+
+  ws.userId = userId;
+  clientMap.set(userId, ws);
+
+  ws.send(
+    JSON.stringify({
+      type: "welcome",
+      id: userId,
+    })
+  );
+
+  // Send initial CSV info
+  const csvInfo = getCsvInfo();
+  if (csvInfo) {
+    ws.send(JSON.stringify({
+      type: 'csvinfo',
+      info: csvInfo
+    }));
+  }
+
+  broadcastUserUpdate();
+
   ws.on("message", (data) => {
     let message;
     try {
       message = JSON.parse(data);
     } catch (err) {
-      console.error("Error parsing message:", err);
+      console.error("Invalid JSON received:", data);
       return;
     }
 
-    // console.log("Received message type:", message.type);
+    const { type } = message;
 
-    switch (message.type) {
-      case "reconnect":
-        console.log("=== Reconnection Attempt ===");
-        console.log("Received secret:", message.secret);
-        console.log("Current secrets in system:", Array.from(uuidBySecret.keys()));
-        
-        const secret = message.secret;
-        if (secret && uuidBySecret.has(secret)) {
-          const existingUserId = uuidBySecret.get(secret);
-          console.log(`Valid reconnection: Secret ${secret} matches user ${existingUserId}`);
-          console.log(`Previous user data:`, users[existingUserId]);
-          
-          // Update the secret's last used timestamp
-          secretTimestamps.set(secret, Date.now());
-          
-          // Update the WebSocket connection for this user
-          ws.userId = existingUserId;
-          clientMap.set(existingUserId, ws);
-          
-          // Send welcome message with existing ID
-          ws.send(JSON.stringify({
-            type: "welcome",
-            id: existingUserId,
-            secret: secret
-          }));
-          
-          // If user data exists, restore it
-          if (users[existingUserId]) {
-            console.log(`Restoring existing user data for ${existingUserId}`);
-          } else {
-            // Initialize new user data if none exists
-            users[existingUserId] = {
-              id: existingUserId,
-              username: `User_${existingUserId.slice(0, 5)}`,
-              listeningTo: [],
-              description: "",
-              tx: 0,
-              ty: 0,
-              tz: 0,
-              afk: false,
-              textstream: "",
-            };
-          }
-        } else {
-          // If no secret or invalid, create new user
-          const newUserId = uuidv4();
-          const newSecret = generateUserSecret();
-          console.log(`Invalid reconnection attempt, creating new user: ${newUserId}`);
-          console.log(`Generated new secret for ${newUserId}: ${newSecret}`);
-          
-          ws.userId = newUserId;
-          users[newUserId] = {
-            id: newUserId,
-            username: `User_${newUserId.slice(0, 5)}`,
-            listeningTo: [],
-            description: "",
-            tx: 0,
-            ty: 0,
-            tz: 0,
-            afk: false,
-            textstream: "",
-          };
-
-          // Store the WebSocket connection and secret info
-          clientMap.set(newUserId, ws);
-          userSecrets.set(newUserId, newSecret);
-          uuidBySecret.set(newSecret, newUserId);
-          secretTimestamps.set(newSecret, Date.now());
-          
-          ws.send(JSON.stringify({
-            type: "welcome",
-            id: newUserId,
-            secret: newSecret
-          }));
-        }
-
-        // Send initial CSV info in both cases
-        const initialCsvInfo = getCsvInfo();
-        if (initialCsvInfo) {
-          ws.send(JSON.stringify({
-            type: 'csvinfo',
-            info: initialCsvInfo
-          }));
-        }
-
-        // Broadcast user update in both cases
-        broadcastUserUpdate();
-        break;
-
+    switch (type) {
       case "requestCsvInfo":
         // Silently handle CSV info requests
         const csvInfo = getCsvInfo();
@@ -445,11 +350,6 @@ wss.on("connection", (ws) => {
         break;
 
       case "usercoordinate":
-        // Only process coordinates if we have a valid userId and user data
-        if (!ws.userId) {
-          console.log("Received coordinates before user initialization - waiting for reconnect");
-          return;
-        }
         const { coordinates } = message;
         if (coordinates && users[ws.userId]) {
           updateUserData(ws.userId, coordinates);
@@ -509,24 +409,18 @@ wss.on("connection", (ws) => {
           break;
 
       default:
-        console.error(`Unhandled message type "${message.type}" from user ${ws.userId}:`, message);
+        console.error(`Unhandled message type "${type}" from user ${ws.userId}:`, message);
     }
   });
 
-  // Handle disconnection
   ws.on("close", () => {
     console.log(`User disconnected: ${ws.userId}`);
-    if (ws.userId in users) {
+    if (users[ws.userId]) {
       delete users[ws.userId];
     }
     clientMap.delete(ws.userId);
-    // Update last used timestamp on disconnect
-    const secret = userSecrets.get(ws.userId);
-    if (secret) {
-      secretTimestamps.set(secret, Date.now());
-    }
     numUsers = Math.max(0, numUsers - 1);
-    broadcastUserUpdate(); // This will now only show connected users
+    broadcastUserUpdate();
   });
 });
 
