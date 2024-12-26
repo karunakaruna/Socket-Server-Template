@@ -1,0 +1,25 @@
+{
+  "users": {
+    "b5a06a33-086e-444a-824a-e3b0b82672e0": {
+      "id": "b5a06a33-086e-444a-824a-e3b0b82672e0",
+      "username": "User_b5a06",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735176260482
+    }
+  },
+  "secrets": [
+    [
+      "07e3bcfe",
+      "b5a06a33-086e-444a-824a-e3b0b82672e0"
+    ]
+  ],
+  "timestamps": {
+    "07e3bcfe": 1735176250098
+  }
+}

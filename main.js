@@ -49,130 +49,108 @@ const clientMap = new Map();
 const userSecrets = new Map(); // Store user secrets and their associated UUIDs
 const uuidBySecret = new Map(); // Reverse lookup: secret -> UUID
 const secretTimestamps = new Map(); // Track when secrets were last used
+const userLastActivity = new Map(); // Track last activity time for each user
 
 // Secret expiration time (24 hours in milliseconds)
 const SECRET_EXPIRATION_TIME = 24 * 60 * 60 * 1000;
+// User data expiration (7 days in milliseconds)
+const USER_DATA_EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000;
 
+// File path for persistent storage
+const USER_DATA_FILE = 'user_data.json';
 
-
-// Function to get CSV file info // Not used currently
-function getCsvInfo() {
-    // Default CSV paths to check
-    const csvPaths = ['data.csv', 'output.csv', 'coordinates.csv'].filter(path => {
-        try {
-            return fs.existsSync(path);
-        } catch (error) {
-            return false;
-        }
-    });
-
-    if (csvPaths.length === 0) {
-        return {
-            modifiedTime: null,
-            size: 0,
-            rows: 0,
-            exists: false
-        };
+// Load persisted user data on startup
+try {
+    if (fs.existsSync(USER_DATA_FILE)) {
+        const savedData = JSON.parse(fs.readFileSync(USER_DATA_FILE, 'utf8'));
+        // Only load non-expired users
+        const now = Date.now();
+        Object.entries(savedData.users).forEach(([uuid, userData]) => {
+            if (userData.lastActivity && (now - userData.lastActivity) < USER_DATA_EXPIRATION_TIME) {
+                users[uuid] = userData;
+                userLastActivity.set(uuid, userData.lastActivity);
+            }
+        });
+        // Only load non-expired secrets
+        savedData.secrets.forEach(([secret, uuid]) => {
+            const timestamp = savedData.timestamps?.[secret] || now;
+            if ((now - timestamp) < SECRET_EXPIRATION_TIME) {
+                uuidBySecret.set(secret, uuid);
+                userSecrets.set(uuid, secret);
+                secretTimestamps.set(secret, timestamp);
+            }
+        });
+        console.log('Loaded persisted user data');
     }
+} catch (err) {
+    console.error('Error loading persisted data:', err);
+}
 
-    // Get the most recently modified CSV
-    const mostRecentCsv = csvPaths.reduce((latest, current) => {
-        const currentStats = fs.statSync(current);
-        if (!latest || currentStats.mtime > fs.statSync(latest).mtime) {
-            return current;
-        }
-        return latest;
-    }, null);
-
+// Function to save user data
+function persistUserData() {
     try {
-        const stats = fs.statSync(mostRecentCsv);
-        
-        // Only read file content if it's not too large (e.g., < 10MB)
-        let rowCount = 0;
-        if (stats.size < 10 * 1024 * 1024) {
-            const fileContent = fs.readFileSync(mostRecentCsv, 'utf8');
-            rowCount = fileContent.split('\n').length - 1; // -1 for header
-        }
-        
-        return {
-            modifiedTime: stats.mtime,
-            size: stats.size,
-            rows: rowCount,
-            exists: true,
-            path: mostRecentCsv
+        const dataToSave = {
+            users: users,
+            secrets: Array.from(uuidBySecret.entries()),
+            timestamps: Object.fromEntries(secretTimestamps)
         };
-    } catch (error) {
-        console.error('Error reading CSV file:', error);
-        return {
-            modifiedTime: null,
-            size: 0,
-            rows: 0,
-            exists: false
-        };
+        // Add lastActivity to each user before saving
+        Object.keys(dataToSave.users).forEach(uuid => {
+            dataToSave.users[uuid].lastActivity = userLastActivity.get(uuid) || Date.now();
+        });
+        fs.writeFileSync(USER_DATA_FILE, JSON.stringify(dataToSave, null, 2));
+        console.log('User data persisted successfully');
+    } catch (err) {
+        console.error('Error persisting user data:', err);
     }
 }
 
-// Track CSV state
-let lastCsvState = getCsvInfo();
-
-// Check for CSV updates periodically
-setInterval(() => {
-    const currentState = getCsvInfo();
-    if (currentState.exists && 
-        (!lastCsvState.exists || 
-         currentState.modifiedTime?.getTime() !== lastCsvState.modifiedTime?.getTime() ||
-         currentState.size !== lastCsvState.size)) {
-        
-        lastCsvState = currentState;
-        broadcastCsvUpdate();
-    }
-}, 5000); // Check every 5 seconds
-
-// Broadcast CSV update to all clients
-function broadcastCsvUpdate() {
-    const csvInfo = getCsvInfo();
-    const message = JSON.stringify({
-        type: 'csvinfo',
-        info: csvInfo
-    });
+// Function to clean up expired users and secrets
+function cleanupExpiredData() {
+    const now = Date.now();
     
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(message);
+    // Clean up expired secrets
+    for (const [secret, timestamp] of secretTimestamps.entries()) {
+        if ((now - timestamp) >= SECRET_EXPIRATION_TIME) {
+            const uuid = uuidBySecret.get(secret);
+            uuidBySecret.delete(secret);
+            userSecrets.delete(uuid);
+            secretTimestamps.delete(secret);
+            console.log(`Cleaned up expired secret for user ${uuid}`);
         }
-    });
+    }
+    
+    // Clean up expired users
+    for (const [uuid, lastActivity] of userLastActivity.entries()) {
+        if ((now - lastActivity) >= USER_DATA_EXPIRATION_TIME) {
+            delete users[uuid];
+            userLastActivity.delete(uuid);
+            // Also clean up any associated secret
+            const secret = userSecrets.get(uuid);
+            if (secret) {
+                uuidBySecret.delete(secret);
+                userSecrets.delete(uuid);
+                secretTimestamps.delete(secret);
+            }
+            console.log(`Cleaned up expired user ${uuid}`);
+        }
+    }
+    
+    // Persist changes after cleanup
+    persistUserData();
 }
+
+// Save data periodically (every 5 minutes)
+setInterval(persistUserData, 5 * 60 * 1000);
+
+// Run cleanup every hour
+setInterval(cleanupExpiredData, 60 * 60 * 1000);
 
 // Function to generate a shorter, readable secret
 function generateUserSecret() {
   // Generate an 8-character secret using only alphanumeric characters
   return crypto.randomBytes(4).toString('hex');
 }
-
-// Function to clean up expired secrets
-function cleanupExpiredSecrets() {
-  const now = Date.now();
-  for (const [secret, lastUsed] of secretTimestamps.entries()) {
-    if (now - lastUsed > SECRET_EXPIRATION_TIME) {
-      const userId = uuidBySecret.get(secret);
-      if (userId) {
-        userSecrets.delete(userId);
-        uuidBySecret.delete(secret);
-        secretTimestamps.delete(secret);
-        console.log(`Cleaned up expired secret for user: ${userId}`);
-      }
-    }
-  }
-}
-
-// Run secret cleanup every hour
-setInterval(cleanupExpiredSecrets, 60 * 60 * 1000);
-
-// Start the server
-server.listen(serverPort, '0.0.0.0', () => {
-  console.log(`Server started on port ${serverPort}`);
-  console.log(`WebSocket server is running at ws://0.0.0.0:${serverPort}`);
-});
 
 // Function to broadcast user updates to all connected clients
 function broadcastUserUpdate() {
@@ -281,40 +259,43 @@ wss.on("connection", (ws) => {
     switch (message.type) {
       case "reconnect":
         console.log("=== Reconnection Attempt ===");
-        console.log("Received secret:", message.secret);
-        console.log("Current secrets in system:", Array.from(uuidBySecret.keys()));
         
         const secret = message.secret;
         const username = message.username;
         
         if (secret && uuidBySecret.has(secret)) {
           const existingUserId = uuidBySecret.get(secret);
-          console.log(`Valid reconnection: Secret ${secret} matches user ${existingUserId}`);
-          console.log(`Previous user data:`, users[existingUserId]);
           
-          // Update the secret's last used timestamp
+          // Validate secret matches stored secret for this user
+          if (userSecrets.get(existingUserId) !== secret) {
+            console.log(`Security warning: Secret mismatch for user ${existingUserId}`);
+            ws.close();
+            return;
+          }
+          
+          console.log(`Valid reconnection: Secret ${secret} matches user ${existingUserId}`);
+          
+          // Update activity timestamp
+          userLastActivity.set(existingUserId, Date.now());
           secretTimestamps.set(secret, Date.now());
           
-          // Update the WebSocket connection for this user
+          // Update the WebSocket connection
           ws.userId = existingUserId;
           clientMap.set(existingUserId, ws);
           
-          // Send welcome message with existing ID
+          // Send welcome message
           ws.send(JSON.stringify({
             type: "welcome",
             id: existingUserId,
             secret: secret
           }));
           
-          // If user data exists, restore it
+          // Restore user data
           if (users[existingUserId]) {
-            console.log(`Restoring existing user data for ${existingUserId}`);
-            // Update username if provided in reconnect
             if (username) {
               users[existingUserId].username = username;
             }
           } else {
-            // Initialize new user data if none exists
             users[existingUserId] = {
               id: existingUserId,
               username: username || `User_${existingUserId.slice(0, 5)}`,
@@ -325,10 +306,10 @@ wss.on("connection", (ws) => {
               tz: 0,
               afk: false,
               textstream: "",
+              lastActivity: Date.now()
             };
           }
           
-          // Broadcast updated user list
           broadcastUserUpdate();
         } else {
           // If no secret or invalid, create new user
@@ -348,6 +329,7 @@ wss.on("connection", (ws) => {
             tz: 0,
             afk: false,
             textstream: "",
+            lastActivity: Date.now()
           };
 
           // Store the WebSocket connection and secret info
@@ -355,6 +337,7 @@ wss.on("connection", (ws) => {
           userSecrets.set(newUserId, newSecret);
           uuidBySecret.set(newSecret, newUserId);
           secretTimestamps.set(newSecret, Date.now());
+          userLastActivity.set(newUserId, Date.now());
           
           ws.send(JSON.stringify({
             type: "welcome",
@@ -525,17 +508,23 @@ wss.on("connection", (ws) => {
   // Handle disconnection
   ws.on("close", () => {
     console.log(`User disconnected: ${ws.userId}`);
-    if (ws.userId in users) {
-      delete users[ws.userId];
+    
+    // Remove from client map but keep user data
+    if (ws.userId) {
+      clientMap.delete(ws.userId);
+      
+      // Update last activity time
+      userLastActivity.set(ws.userId, Date.now());
+      
+      // Only update the broadcast if we had a valid user
+      broadcastUserUpdate();
+      
+      // Persist data on disconnect
+      persistUserData();
     }
-    clientMap.delete(ws.userId);
-    // Update last used timestamp on disconnect
-    const secret = userSecrets.get(ws.userId);
-    if (secret) {
-      secretTimestamps.set(secret, Date.now());
-    }
-    numUsers = Math.max(0, numUsers - 1);
-    broadcastUserUpdate(); // This will now only show connected users
+    
+    numUsers--;
+    console.log(`Active connections: ${numUsers}`);
   });
 });
 
@@ -555,3 +544,97 @@ app.get("/", (req, res) => {
     </html>
   `);
 });
+
+// Start the server
+server.listen(serverPort, '0.0.0.0', () => {
+  console.log(`Server started on port ${serverPort}`);
+  console.log(`WebSocket server is running at ws://0.0.0.0:${serverPort}`);
+});
+
+// Function to get CSV file info // Not used currently
+function getCsvInfo() {
+    // Default CSV paths to check
+    const csvPaths = ['data.csv', 'output.csv', 'coordinates.csv'].filter(path => {
+        try {
+            return fs.existsSync(path);
+        } catch (error) {
+            return false;
+        }
+    });
+
+    if (csvPaths.length === 0) {
+        return {
+            modifiedTime: null,
+            size: 0,
+            rows: 0,
+            exists: false
+        };
+    }
+
+    // Get the most recently modified CSV
+    const mostRecentCsv = csvPaths.reduce((latest, current) => {
+        const currentStats = fs.statSync(current);
+        if (!latest || currentStats.mtime > fs.statSync(latest).mtime) {
+            return current;
+        }
+        return latest;
+    }, null);
+
+    try {
+        const stats = fs.statSync(mostRecentCsv);
+        
+        // Only read file content if it's not too large (e.g., < 10MB)
+        let rowCount = 0;
+        if (stats.size < 10 * 1024 * 1024) {
+            const fileContent = fs.readFileSync(mostRecentCsv, 'utf8');
+            rowCount = fileContent.split('\n').length - 1; // -1 for header
+        }
+        
+        return {
+            modifiedTime: stats.mtime,
+            size: stats.size,
+            rows: rowCount,
+            exists: true,
+            path: mostRecentCsv
+        };
+    } catch (error) {
+        console.error('Error reading CSV file:', error);
+        return {
+            modifiedTime: null,
+            size: 0,
+            rows: 0,
+            exists: false
+        };
+    }
+}
+
+// Track CSV state
+let lastCsvState = getCsvInfo();
+
+// Check for CSV updates periodically
+setInterval(() => {
+    const currentState = getCsvInfo();
+    if (currentState.exists && 
+        (!lastCsvState.exists || 
+         currentState.modifiedTime?.getTime() !== lastCsvState.modifiedTime?.getTime() ||
+         currentState.size !== lastCsvState.size)) {
+        
+        lastCsvState = currentState;
+        broadcastCsvUpdate();
+    }
+}, 5000); // Check every 5 seconds
+
+// Broadcast CSV update to all clients
+function broadcastCsvUpdate() {
+    const csvInfo = getCsvInfo();
+    const message = JSON.stringify({
+        type: 'csvinfo',
+        info: csvInfo
+    });
+    
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
