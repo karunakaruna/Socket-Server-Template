@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Adaptive Canvas</title>
+    <style>
+        body { margin: 0; }
+        canvas { 
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+        }
+        #ui-container, #bio-container {
+            position: absolute;
+            width: 200px;
+            padding: 10px;
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            user-select: none;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .title-bar, button, input, #bio-content {
+            pointer-events: auto;
+        }
+        #ui-container {
+            top: 20px;
+            left: 20px;
+            display: block;
+        }
+        #bio-container {
+            top: 100px;
+            left: 100px;
+            display: none;
+        }
+        .title-bar {
+            background-color: #007bff;
+            height: 20px;
+            margin: -10px -10px 10px -10px;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+        }
+        #ui-container button {
+            width: 100%;
+            margin: 5px 0;
+            padding: 6px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #ui-container button:hover {
+            background-color: #555;
+        }
+        #ui-container input {
+            width: calc(100% - 10px);
+            margin: 5px 0;
+            padding: 4px;
+            background-color: #222;
+            color: white;
+            border-radius: 4px;
+            border: 1px solid #444;
+            user-select: text;
+        }
+        #label-bar {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="three-canvas"></canvas>
+    <div id="ui-container">
+        <div class="title-bar">Controls</div>
+        <button id="toggle-orbit">Toggle Orbit Cam</button>
+        <button id="center-camera">Center Camera</button>
+        <button id="toggle-grid">Toggle Grid</button>
+        <button id="info">Info</button>
+        <div id="label-bar"></div>
+        <input type="text" id="name" placeholder="Name">
+        <input type="text" id="currently" placeholder="Currently">
+        <input type="text" id="where" placeholder="Where">
+        <input type="text" id="mood" placeholder="Mood">
+    </div>
+    <div id="bio-container">
+        <div class="title-bar"></div>
+        <div id="bio-content">
+            <strong>Name:</strong> <span id="bio-name"></span><br>
+            <strong>Currently:</strong> <span id="bio-currently"></span><br>
+            <strong>Where:</strong> <span id="bio-where"></span><br>
+            <strong>Mood:</strong> <span id="bio-mood"></span><br>
+        </div>
+    </div>
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/controls/OrbitControls';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('three-canvas'), 
+            antialias: true,
+            alpha: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 1);
+        renderer.outputEncoding = THREE.LinearEncoding;
+        renderer.toneMapping = THREE.NoToneMapping;
+        
+        // Set initial camera position
+        camera.position.z = 5;
+
+        // Orbit Controls setup
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 1;
+        controls.maxDistance = 50;
+        controls.maxPolarAngle = Math.PI;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5; // Rotation speed
+        
+        // Auto-rotation setup
+        let isUserInteracting = false;
+        controls.addEventListener('start', () => {
+            isUserInteracting = true;
+        });
+        controls.addEventListener('end', () => {
+            isUserInteracting = false;
+        });
+
+        // Add a cube
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshPhongMaterial({ color: 0x808080, shininess: 100 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        // Add light
+        const light = new THREE.AmbientLight(0x404040); // soft white light
+        scene.add(light);
+
+        // Add directional light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // Create a parent object
+        const parent = new THREE.Object3D();
+        scene.add(parent);
+
+        // Add a sphere
+        const sphereGeometry = new THREE.SphereGeometry(0.25, 32, 32);
+        const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0x808080, shininess: 100 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.x = 2; // Translate sphere on the x-axis
+        parent.add(sphere);
+
+        // Add an arc
+        const arcGeometry = new THREE.RingGeometry(1, 1.01, 32);
+        const arcMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        const arc = new THREE.Mesh(arcGeometry, arcMaterial);
+        arc.rotation.x = Math.PI / 2;
+        arc.scale.set(2,2,2);
+        scene.add(arc);
+
+        // Cameras
+        const stationaryCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        stationaryCamera.position.set(0, 0, 10);
+        const cameraPivot = new THREE.Object3D();
+        cameraPivot.rotation.x = 45;
+        cameraPivot.add(stationaryCamera);
+        scene.add(cameraPivot);
+
+        let useOrbitCamera = true;
+
+        // Responsive canvas
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            stationaryCamera.aspect = width / height;
+            stationaryCamera.updateProjectionMatrix();
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+            parent.rotation.y += 0.005; // Rotate the parent object
+            controls.update();
+            renderer.render(scene, useOrbitCamera ? camera : stationaryCamera);
+        }
+        animate();
+
+        // Draggable UI
+        function makeDraggable(element) {
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            element.querySelector('.title-bar').addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - element.offsetLeft;
+                offsetY = e.clientY - element.offsetTop;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    element.style.left = `${e.clientX - offsetX}px`;
+                    element.style.top = `${e.clientY - offsetY}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        }
+
+        makeDraggable(document.getElementById('ui-container'));
+        makeDraggable(document.getElementById('bio-container'));
+
+        // Reactive bio update
+        const updateBio = () => {
+            document.getElementById('bio-name').textContent = document.getElementById('name').value;
+            document.getElementById('bio-currently').textContent = document.getElementById('currently').value;
+            document.getElementById('bio-where').textContent = document.getElementById('where').value;
+            document.getElementById('bio-mood').textContent = document.getElementById('mood').value;
+        };
+
+        document.getElementById('name').addEventListener('input', updateBio);
+        document.getElementById('currently').addEventListener('input', updateBio);
+        document.getElementById('where').addEventListener('input', updateBio);
+        document.getElementById('mood').addEventListener('input', updateBio);
+
+        // Create large grid
+        const gridGeometry = new THREE.PlaneGeometry(500, 500, 100, 100);
+        const gridMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.1
+        });
+        const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+        grid.rotation.x = -Math.PI / 2;
+        grid.visible = false;
+        scene.add(grid);
+
+        // Button actions
+        document.getElementById('toggle-orbit').addEventListener('click', () => {
+            useOrbitCamera = !useOrbitCamera;
+            if (useOrbitCamera) {
+                controls.enabled = true;
+            } else {
+                controls.enabled = false;
+            }
+        });
+
+        document.getElementById('center-camera').addEventListener('click', () => {
+            camera.position.set(0, 0, 5);
+            camera.lookAt(0, 0, 0);
+        });
+
+        document.getElementById('toggle-grid').addEventListener('click', () => {
+            grid.visible = !grid.visible;
+        });
+
+        document.getElementById('info').addEventListener('click', () => {
+            const bioContainer = document.getElementById('bio-container');
+            bioContainer.style.display = bioContainer.style.display === 'block' ? 'none' : 'block';
+        });
+    </script>
+</body>
+</html>
