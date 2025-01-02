@@ -297,13 +297,21 @@ function onWindowResize() {
 // Audio context and sound setup
 let audioContext = null;
 let heartbeatSound = null;
+let eventSound = null;
 
 async function initAudio() {
     try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const response = await fetch('/sound/466554__danieldouch__little-pop.wav');
-        const arrayBuffer = await response.arrayBuffer();
-        heartbeatSound = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Load heartbeat sound
+        const heartbeatResponse = await fetch('/sound/466554__danieldouch__little-pop.wav');
+        const heartbeatBuffer = await heartbeatResponse.arrayBuffer();
+        heartbeatSound = await audioContext.decodeAudioData(heartbeatBuffer);
+        
+        // Load event sound
+        const eventResponse = await fetch('/sound/193259__b_lamerichs__eventsounds4-m.mp3');
+        const eventBuffer = await eventResponse.arrayBuffer();
+        eventSound = await audioContext.decodeAudioData(eventBuffer);
     } catch (error) {
         console.error('Error initializing audio:', error);
     }
@@ -329,6 +337,38 @@ function playHeartbeatSound() {
     source.start(0);
 }
 
+function playEventSound() {
+    if (!audioContext || !eventSound) return;
+    
+    const source = audioContext.createBufferSource();
+    const gainNode = audioContext.createGain();
+    
+    source.buffer = eventSound;
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Higher pitch for events
+    source.playbackRate.value = 1.2 + Math.random() * 0.2;
+    gainNode.gain.value = 0.035; // Slightly louder
+    source.start(0);
+}
+
+// Add ping counter
+let pingCount = 0;
+
+function updatePingCount() {
+    pingCount++;
+    const pingCountElement = document.getElementById('ping-count');
+    if (pingCountElement) {
+        pingCountElement.textContent = pingCount;
+    }
+    
+    // Play event sound every 5 pings
+    if (pingCount % 100 === 0) {
+        playEventSound();
+    }
+}
+
 function flashZSpaceLabel() {
     const labels = document.getElementsByClassName('label');
     for (let label of labels) {
@@ -351,100 +391,6 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 2000;
 let pingTimer = null;
-
-// Add ping counter
-let pingCount = 0;
-
-function updatePingCount() {
-    pingCount++;
-    const pingCountElement = document.getElementById('ping-count');
-    if (pingCountElement) {
-        pingCountElement.textContent = pingCount;
-    }
-}
-
-// Connected users table handling
-let activeUsers = new Map();
-let dashboardViewers = new Map();
-
-function formatTimestamp(timestamp) {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString();
-}
-
-function updateLastSave(timestamp) {
-    document.getElementById('last-save').textContent = formatTimestamp(timestamp);
-}
-
-function addLogEntry(message, type = 'info') {
-    const log = document.getElementById('log-container');
-    if (!log) return;
-
-    const entry = document.createElement('div');
-    entry.className = `log-entry message-type-${type}`;
-    
-    const timestamp = new Date().toLocaleTimeString();
-    entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
-    
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-
-    // Keep only last 1000 entries
-    while (log.children.length > 1000) {
-        log.removeChild(log.firstChild);
-    }
-}
-
-function updateUsersTable() {
-    const tableBody = document.querySelector('#users-table tbody');
-    if (!tableBody) return;
-
-    // Clear existing rows
-    tableBody.innerHTML = '';
-
-    // Sort users by ID
-    const sortedUsers = Array.from(activeUsers.values()).sort((a, b) => a.id.localeCompare(b.id));
-
-    // Add rows for each user
-    sortedUsers.forEach(user => {
-        const row = document.createElement('tr');
-        
-        // Create name cell with star for client user
-        const nameCell = document.createElement('td');
-        nameCell.textContent = user.id === clientId ? `⭐ ${user.username || `User_${user.id.slice(0, 5)}`}` : user.username || `User_${user.id.slice(0, 5)}`;
-        row.appendChild(nameCell);
-
-        const typeCell = document.createElement('td');
-        const typeSpan = document.createElement('span');
-        typeSpan.className = 'user-type';
-        typeSpan.textContent = 'USER';
-        typeCell.appendChild(typeSpan);
-        row.appendChild(typeCell);
-
-        const statusCell = document.createElement('td');
-        statusCell.textContent = 'Online';
-        row.appendChild(statusCell);
-
-        const positionCell = document.createElement('td');
-        positionCell.textContent = '(0.00, 0.00, 0.00)';
-        row.appendChild(positionCell);
-
-        const infoCell = document.createElement('td');
-        infoCell.textContent = '';
-        row.appendChild(infoCell);
-
-        tableBody.appendChild(row);
-    });
-
-    // Update stats
-    const userCountEl = document.getElementById('user-count');
-    const viewerCountEl = document.getElementById('viewer-count');
-    const clientIdEl = document.getElementById('client-id');
-    
-    if (userCountEl) userCountEl.textContent = activeUsers.size;
-    if (viewerCountEl) viewerCountEl.textContent = 0;  // We don't track viewers yet
-    if (clientIdEl) clientIdEl.textContent = clientId || '-';
-}
 
 function updatePingIndicator(active = true) {
     const indicator = document.getElementById('ping-indicator');
@@ -773,3 +719,86 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Connected users table handling
+let activeUsers = new Map();
+let dashboardViewers = new Map();
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString();
+}
+
+function updateLastSave(timestamp) {
+    document.getElementById('last-save').textContent = formatTimestamp(timestamp);
+}
+
+function addLogEntry(message, type = 'info') {
+    const log = document.getElementById('log-container');
+    if (!log) return;
+
+    const entry = document.createElement('div');
+    entry.className = `log-entry message-type-${type}`;
+    
+    const timestamp = new Date().toLocaleTimeString();
+    entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+    
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+
+    // Keep only last 1000 entries
+    while (log.children.length > 1000) {
+        log.removeChild(log.firstChild);
+    }
+}
+
+function updateUsersTable() {
+    const tableBody = document.querySelector('#users-table tbody');
+    if (!tableBody) return;
+
+    // Clear existing rows
+    tableBody.innerHTML = '';
+
+    // Sort users by ID
+    const sortedUsers = Array.from(activeUsers.values()).sort((a, b) => a.id.localeCompare(b.id));
+
+    // Add rows for each user
+    sortedUsers.forEach(user => {
+        const row = document.createElement('tr');
+        
+        // Create name cell with star for client user
+        const nameCell = document.createElement('td');
+        nameCell.textContent = user.id === clientId ? `⭐ ${user.username || `User_${user.id.slice(0, 5)}`}` : user.username || `User_${user.id.slice(0, 5)}`;
+        row.appendChild(nameCell);
+
+        const typeCell = document.createElement('td');
+        const typeSpan = document.createElement('span');
+        typeSpan.className = 'user-type';
+        typeSpan.textContent = 'USER';
+        typeCell.appendChild(typeSpan);
+        row.appendChild(typeCell);
+
+        const statusCell = document.createElement('td');
+        statusCell.textContent = 'Online';
+        row.appendChild(statusCell);
+
+        const positionCell = document.createElement('td');
+        positionCell.textContent = '(0.00, 0.00, 0.00)';
+        row.appendChild(positionCell);
+
+        const infoCell = document.createElement('td');
+        infoCell.textContent = '';
+        row.appendChild(infoCell);
+
+        tableBody.appendChild(row);
+    });
+
+    // Update stats
+    const userCountEl = document.getElementById('user-count');
+    const viewerCountEl = document.getElementById('viewer-count');
+    const clientIdEl = document.getElementById('client-id');
+    
+    if (userCountEl) userCountEl.textContent = activeUsers.size;
+    if (viewerCountEl) viewerCountEl.textContent = 0;  // We don't track viewers yet
+    if (clientIdEl) clientIdEl.textContent = clientId || '-';
+}
