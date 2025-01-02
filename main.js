@@ -31,6 +31,11 @@ app.get('/dashboard.html', (req, res) => {
   res.sendFile(__dirname + '/public/dashboard.html');
 });
 
+// Add route for dashmerge
+app.get('/dashmerge.html', (req, res) => {
+  res.sendFile(__dirname + '/public/dashmerge.html');
+});
+
 // Create HTTP server
 const server = http.createServer(app);
 

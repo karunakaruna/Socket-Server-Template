@@ -28,6 +28,7 @@
             position: absolute;
             min-width: 300px;
             z-index: 1000;
+            margin-top: 70px;
         }
 
         .title-bar {
@@ -215,34 +216,53 @@
         .badge.desktop { background: #6c757d; }
 
         /* Navigation Menu */
-        #nav-menu {
+        #nav-bar {
             position: fixed;
             top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(30, 30, 30, 0.95);
-            padding: 10px;
-            border-radius: 0 0 8px 8px;
-            z-index: 2000;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid #666;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            padding: 0 1rem;
+            z-index: 1000;
         }
 
-        #nav-menu a {
-            color: white;
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 2rem;
             text-decoration: none;
-            padding: 5px 15px;
+            color: #fff;
+        }
+
+        .nav-logo span {
+            font-size: 1.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
             border-radius: 4px;
-            background: #333;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
         }
 
-        #nav-menu a:hover {
-            background: #444;
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        #nav-menu a.active {
-            background: #007bff;
+        .nav-links a.active {
+            background: #666;
         }
 
         /* Add dashboard-style classes */
@@ -369,6 +389,18 @@
     </style>
 </head>
 <body>
+    <nav id="nav-bar">
+        <a href="/" class="nav-logo">
+            <span>🌱</span>
+            <span>WorldTree Seed</span>
+        </a>
+        <div class="nav-links">
+            <a href="/dashmerge.html">Dashboard</a>
+            <a href="/dashboard.html">Classic</a>
+            <a href="/merged.html" class="active">3D View</a>
+            <a href="/index.html">Original</a>
+        </div>
+    </nav>
     <canvas id="three-canvas"></canvas>
 
     <!-- Navigation Menu -->
