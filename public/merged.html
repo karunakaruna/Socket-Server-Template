@@ -19,62 +19,115 @@
             outline: none;
         }
 
-        /* Common Window Styles */
+        /* Window styling */
         .window {
-            position: fixed;
-            background: rgba(30, 30, 30, 0.95);
+            background: rgba(26, 27, 38, 0.95);
             border: 1px solid #444;
-            border-radius: 8px;
-            padding: 10px;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: absolute;
+            min-width: 300px;
             z-index: 1000;
-            min-width: 250px;
-            user-select: none;
         }
 
         .title-bar {
-            background: #007bff;
-            padding: 8px;
-            margin: -10px -10px 10px -10px;
-            border-radius: 8px 8px 0 0;
-            cursor: move;
-            font-weight: bold;
+            background: #24283b;
+            color: #7aa2f7;
+            padding: 8px 12px;
+            font-weight: 500;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Controls Window */
+        .minimize-btn {
+            cursor: pointer;
+            padding: 0 4px;
+            color: #a9b1d6;
+        }
+
+        .minimize-btn:hover {
+            color: #7aa2f7;
+        }
+
+        /* Controls styling */
         #controls-window {
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
+            width: 300px;
         }
 
-        /* Users Window */
-        #users-window {
-            top: 20px;
-            right: 20px;
-            max-height: 80vh;
-            overflow-y: auto;
+        .control-group {
+            padding: 12px;
+            border-bottom: 1px solid #444;
         }
 
-        /* Stats Window */
+        .control-group:last-child {
+            border-bottom: none;
+        }
+
+        .control-label {
+            display: block;
+            color: #7aa2f7;
+            margin-bottom: 6px;
+            font-size: 0.9em;
+        }
+
+        .control-button {
+            width: 100%;
+            padding: 8px;
+            margin: 4px 0;
+            background: #24283b;
+            border: 1px solid #444;
+            color: #a9b1d6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-button:hover {
+            background: #2f354d;
+            border-color: #7aa2f7;
+        }
+
+        .control-slider {
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .color-picker {
+            width: 100%;
+            padding: 4px;
+            background: #24283b;
+            border: 1px solid #444;
+            margin: 4px 0;
+        }
+
+        /* Window positioning */
         #stats-window {
-            bottom: 20px;
-            left: 20px;
+            top: 10px;
+            right: 10px;
+            width: 350px;
         }
 
-        /* Log Window */
+        #users-window {
+            top: 250px;
+            right: 10px;
+            width: 350px;
+        }
+
         #log-window {
-            bottom: 20px;
-            right: 20px;
-            width: 400px;
+            bottom: 10px;
+            right: 10px;
+            width: 350px;
             max-height: 300px;
-            overflow-y: auto;
         }
 
+        /* Table styling */
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .data-table th,
@@ -85,33 +138,32 @@
         }
 
         .data-table th {
-            background: rgba(0, 123, 255, 0.2);
+            background: #24283b;
+            color: #7aa2f7;
+            font-weight: 500;
         }
 
-        /* Controls */
-        .control-group {
-            margin: 10px 0;
+        .data-table tr:hover {
+            background: rgba(36, 40, 59, 0.5);
         }
 
-        button {
+        /* Grid and light controls */
+        .grid-controls {
+            padding: 12px;
+        }
+
+        .grid-controls input[type="range"] {
             width: 100%;
-            padding: 8px;
-            margin: 4px 0;
-            background: #333;
+            margin: 8px 0;
+        }
+
+        .grid-controls input[type="color"] {
+            width: 100%;
+            height: 30px;
+            padding: 2px;
+            background: #24283b;
             border: 1px solid #444;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #444;
-        }
-
-        input[type="color"],
-        input[type="range"] {
-            width: 100%;
-            margin: 5px 0;
+            margin: 4px 0;
         }
 
         /* Status Indicators */
@@ -147,12 +199,6 @@
         .window.minimized {
             height: 40px;
             overflow: hidden;
-        }
-
-        .minimize-btn {
-            float: right;
-            cursor: pointer;
-            padding: 0 5px;
         }
 
         /* Badges */
@@ -198,6 +244,73 @@
         #nav-menu a.active {
             background: #007bff;
         }
+
+        /* Add dashboard-style classes */
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-dot.online { background: #28a745; }
+        .status-dot.offline { background: #dc3545; }
+        .status-dot.connecting { background: #ffc107; }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .server-info {
+            margin: 10px 0;
+            padding: 5px 0;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .info-label {
+            color: #7aa2f7;
+        }
+
+        .users-table-container {
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-table th {
+            position: sticky;
+            top: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-right: 4px;
+        }
+
+        .badge.user { background: #007bff; }
+        .badge.viewer { background: #28a745; }
+        .badge.mobile { background: #dc3545; }
+        .badge.desktop { background: #6c757d; }
+
+        .status-cell {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
     </style>
 </head>
 <body>
@@ -217,16 +330,19 @@
             <span class="minimize-btn">−</span>
         </div>
         <div class="control-group">
-            <button id="toggle-orbit">Toggle Orbit Camera</button>
-            <button id="center-camera">Center Camera</button>
-            <button id="toggle-grid">Toggle Grid</button>
+            <button class="control-button" onclick="toggleOrbitCamera()">Toggle Orbit Camera</button>
+            <button class="control-button" onclick="centerCamera()">Center Camera</button>
+            <button class="control-button" onclick="toggleGrid()">Toggle Grid</button>
         </div>
         <div class="control-group">
-            <label>Light Color: <input type="color" id="light-color" value="#ffffff"></label>
-            <label>Light Intensity: <input type="range" id="light-intensity" min="0" max="10" step="0.1" value="4"></label>
-        </div>
-        <div class="control-group">
-            <label>Grid Color: <input type="color" id="grid-color" value="#444444"></label>
+            <label class="control-label">Light Color</label>
+            <input type="color" class="color-picker" id="light-color" value="#ff0000">
+            
+            <label class="control-label">Light Intensity</label>
+            <input type="range" class="control-slider" id="light-intensity" min="0" max="2" step="0.1" value="0.5">
+            
+            <label class="control-label">Grid Color</label>
+            <input type="color" class="color-picker" id="grid-color" value="#ff0000">
         </div>
     </div>
 
@@ -236,33 +352,58 @@
             Connected Users
             <span class="minimize-btn">−</span>
         </div>
-        <div class="stats">
-            Users Online: <span id="user-count">0</span>
-            Viewers: <span id="viewer-count">0</span>
+        <div class="users-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Position</th>
+                        <th>Info</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body"></tbody>
+            </table>
         </div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Position</th>
-                    <th>Info</th>
-                </tr>
-            </thead>
-            <tbody id="users-table-body"></tbody>
-        </table>
     </div>
 
     <!-- Stats Window -->
     <div id="stats-window" class="window">
         <div class="title-bar">
-            Statistics
+            Server Statistics
             <span class="minimize-btn">−</span>
         </div>
-        <div>Last Save: <span id="last-save">Never</span></div>
-        <div>Connection Status: <span id="connection-status">Disconnected</span></div>
-        <div>Ping: <span id="ping-status">--</span></div>
+        <div class="status-container">
+            <div class="status-dot online" id="connection-dot"></div>
+            <span id="connection-status">Connecting...</span>
+        </div>
+        <div class="server-info">
+            <div class="info-row">
+                <span class="info-label">Server:</span>
+                <span>ws://localhost:3001</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Client ID:</span>
+                <span id="client-uuid">Connecting...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Connected Users:</span>
+                <span id="user-count">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Dashboard Viewers:</span>
+                <span id="viewer-count">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Last Save:</span>
+                <span id="last-save">Never</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Ping:</span>
+                <span id="ping-status">--</span>
+            </div>
+        </div>
     </div>
 
     <!-- Log Window -->
@@ -292,7 +433,9 @@
         let grid;
         const userSpheres = new Map();
         const userLabels = new Map();
-        let ws = null;
+        let ws;
+        let userId;
+        let userSecret;
         let lastSaveTime = null;
         let activeUsers = new Map();
         let dashboardViewers = new Map();
@@ -507,15 +650,26 @@
         // WebSocket connection
         function initWebSocket() {
             ws = new WebSocket('ws://localhost:3001');
+            document.getElementById('connection-dot').className = 'status-dot connecting';
+            document.getElementById('connection-status').textContent = 'Connecting...';
 
             ws.onopen = () => {
                 addLogEntry('Connected to server', 'success');
+                document.getElementById('connection-dot').className = 'status-dot online';
                 document.getElementById('connection-status').textContent = 'Connected';
                 document.getElementById('connection-status').style.color = '#28a745';
+
+                // Send reconnect message
+                ws.send(JSON.stringify({
+                    type: 'reconnect',
+                    secret: localStorage.getItem('userSecret'),
+                    username: 'Merged Interface User'
+                }));
             };
 
             ws.onclose = () => {
                 addLogEntry('Disconnected from server', 'error');
+                document.getElementById('connection-dot').className = 'status-dot offline';
                 document.getElementById('connection-status').textContent = 'Disconnected';
                 document.getElementById('connection-status').style.color = '#dc3545';
                 setTimeout(initWebSocket, 5000);
@@ -529,49 +683,65 @@
 
         function handleWebSocketMessage(data) {
             switch (data.type) {
+                case 'welcome':
+                    userId = data.id;
+                    userSecret = data.secret;
+                    localStorage.setItem('userSecret', userSecret);
+                    document.getElementById('client-uuid').textContent = userId;
+                    addLogEntry(`Initialized with ID: ${userId}`, 'info');
+                    break;
+                    
+                case 'userupdate':
+                    updateUserList(data.users);
+                    document.getElementById('user-count').textContent = 
+                        data.users.filter(u => !u.description.includes('Viewer')).length;
+                    document.getElementById('viewer-count').textContent = 
+                        data.users.filter(u => u.description.includes('Viewer')).length;
+                    break;
+
                 case 'position':
                     updateUserPosition(data.userId, data.coordinates, data.username);
                     break;
-                case 'users':
-                    updateUserList(data.users);
-                    break;
+
                 case 'ping':
                     handlePing(data);
                     break;
+
                 case 'save':
                     updateLastSave(data.timestamp);
                     break;
+
                 default:
                     addLogEntry(`Received: ${JSON.stringify(data)}`, 'info');
             }
         }
 
-        function handlePing(data) {
-            const pingStatus = document.getElementById('ping-status');
-            if (pingStatus) {
-                pingStatus.textContent = `${data.latency}ms`;
-                pingStatus.style.color = data.latency < 100 ? '#28a745' : '#ffc107';
-            }
-
-            // Make cube blink white
-            if (window.cube) {
-                window.cube.material.color.set(0xffffff);
-                setTimeout(() => {
-                    window.cube.material.color.copy(window.cube.userData.originalColor);
-                }, 200); // Reset after 200ms
-            }
-
-            ws.send(JSON.stringify({ type: 'pong' }));
-            addLogEntry(`Heartbeat received: ${data.time}`, 'info');
-        }
-
-        function updateLastSave(timestamp) {
-            lastSaveTime = timestamp;
-            const lastSaveElement = document.getElementById('last-save');
-            if (lastSaveElement) {
-                lastSaveElement.textContent = new Date(timestamp).toLocaleTimeString();
-            }
-            addLogEntry(`Last save: ${new Date(timestamp).toLocaleTimeString()}`, 'info');
+        function updateUserList(users) {
+            const userTableBody = document.getElementById('users-table-body');
+            userTableBody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                const displayName = user.username || `User_${user.id.slice(0, 5)}`;
+                const position = `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})`;
+                
+                row.innerHTML = `
+                    <td>${displayName}</td>
+                    <td>
+                        ${user.description === 'Dashboard Viewer' 
+                            ? '<span class="badge viewer">Viewer</span>' 
+                            : '<span class="badge user">User</span>'}
+                    </td>
+                    <td class="status-cell">
+                        <div class="status-dot ${user.afk ? 'connecting' : 'online'}"></div>
+                        ${user.afk ? 'AFK' : 'Online'}
+                    </td>
+                    <td>${position}</td>
+                    <td>${user.description || ''}</td>
+                `;
+                
+                userTableBody.appendChild(row);
+            });
         }
 
         function updateUserPositionInTable(userId, coordinates) {
@@ -594,29 +764,6 @@
         }
 
         // UI Updates
-        function updateUserList(users) {
-            const userTableBody = document.getElementById('users-table-body');
-            userTableBody.innerHTML = '';
-            
-            users.forEach(user => {
-                const row = document.createElement('tr');
-                const displayName = user.username || `User_${user.id.slice(0, 5)}`;
-                const position = `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})`;
-                
-                row.innerHTML = `
-                    <td>${displayName}</td>
-                    <td><span class="badge user">User</span></td>
-                    <td><span class="status status-${user.afk ? 'afk' : 'online'}"></span>${user.afk ? 'AFK' : 'Online'}</td>
-                    <td>${position}</td>
-                    <td>${user.description || ''}</td>
-                `;
-                
-                userTableBody.appendChild(row);
-            });
-
-            document.getElementById('user-count').textContent = users.length;
-        }
-
         function addLogEntry(message, type = 'info') {
             const log = document.getElementById('log-container');
             const entry = document.createElement('div');
