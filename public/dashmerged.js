@@ -294,6 +294,56 @@ function onWindowResize() {
     labelRenderer.setSize(width, height);
 }
 
+// Audio context and sound setup
+let audioContext = null;
+let heartbeatSound = null;
+
+async function initAudio() {
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const response = await fetch('/sound/466554__danieldouch__little-pop.wav');
+        const arrayBuffer = await response.arrayBuffer();
+        heartbeatSound = await audioContext.decodeAudioData(arrayBuffer);
+    } catch (error) {
+        console.error('Error initializing audio:', error);
+    }
+}
+
+function playHeartbeatSound() {
+    if (!audioContext || !heartbeatSound) return;
+    
+    // Create source and gain nodes
+    const source = audioContext.createBufferSource();
+    const gainNode = audioContext.createGain();
+    
+    // Connect nodes
+    source.buffer = heartbeatSound;
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Random pitch modulation between 0.7 and 1.0
+    source.playbackRate.value = 0.7 + Math.random() * 0.3;
+    
+    // Set volume and play
+    gainNode.gain.value = 0.2; // Reduce volume to 20%
+    source.start(0);
+}
+
+function flashZSpaceLabel() {
+    const labels = document.getElementsByClassName('label');
+    for (let label of labels) {
+        if (label.textContent === 'Z Space') {
+            // Remove existing flash class to reset animation
+            label.classList.remove('flash');
+            // Force reflow
+            void label.offsetWidth;
+            // Add flash class back
+            label.classList.add('flash');
+            break;
+        }
+    }
+}
+
 // Connection and ping state
 let ws = null;
 let isReconnecting = false;
@@ -301,6 +351,17 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 2000;
 let pingTimer = null;
+
+// Add ping counter
+let pingCount = 0;
+
+function updatePingCount() {
+    pingCount++;
+    const pingCountElement = document.getElementById('ping-count');
+    if (pingCountElement) {
+        pingCountElement.textContent = pingCount;
+    }
+}
 
 // Connected users table handling
 let activeUsers = new Map();
@@ -433,7 +494,6 @@ function initWebSocket() {
             document.getElementById('status-dot').className = 'status-dot online';
             reconnectAttempts = 0;
 
-            
             // Start ping timer
             if (pingTimer) clearInterval(pingTimer);
             pingTimer = setInterval(() => {
@@ -478,6 +538,9 @@ function initWebSocket() {
                 switch(data.type) {
                     case 'ping':
                         handlePingMessage();
+                        playHeartbeatSound();
+                        flashZSpaceLabel();
+                        updatePingCount();
                         addLogEntry('Ping received', 'info');
                         break;
 
@@ -634,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('load', () => {
         initThreeJS();
         initWebSocket();
+        initAudio();
 
         // Add event listeners for controls
         document.getElementById('center-camera').addEventListener('click', () => {
@@ -696,6 +760,16 @@ style.textContent = `
 
     .stat-row span:first-child {
         color: #8899aa;
+    }
+
+    @keyframes flash {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+
+    .flash {
+        animation: flash 0.3s ease-out;
     }
 `;
 document.head.appendChild(style);
