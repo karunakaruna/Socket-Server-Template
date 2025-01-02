@@ -236,9 +236,9 @@ const startHeartbeat = () => {
     const currentTime = new Date().toISOString();
     console.log(`[PING HEARTBEAT] Time: ${currentTime}, Connected Users: ${numUsers}`);
     
-    Object.entries(users).forEach(([userId, user]) => {
-      console.log(`User ${user.username} (${userId}) is listening to:`, user.listeningTo);
-    });
+    // Object.entries(users).forEach(([userId, user]) => {
+    //   console.log(`User ${user.username} (${userId}) is listening to:`, user.listeningTo);
+    // });
 
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
