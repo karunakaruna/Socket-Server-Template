@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Tree - Merged Interface</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        canvas { 
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+        }
+
+        /* Common Window Styles */
+        .window {
+            position: fixed;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            min-width: 250px;
+            user-select: none;
+        }
+
+        .title-bar {
+            background: #007bff;
+            padding: 8px;
+            margin: -10px -10px 10px -10px;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+            font-weight: bold;
+        }
+
+        /* Controls Window */
+        #controls-window {
+            top: 20px;
+            left: 20px;
+        }
+
+        /* Users Window */
+        #users-window {
+            top: 20px;
+            right: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* Stats Window */
+        #stats-window {
+            bottom: 20px;
+            left: 20px;
+        }
+
+        /* Log Window */
+        #log-window {
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+
+        .data-table th {
+            background: rgba(0, 123, 255, 0.2);
+        }
+
+        /* Controls */
+        .control-group {
+            margin: 10px 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            margin: 4px 0;
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        input[type="color"],
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        /* Status Indicators */
+        .status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-online {
+            background: #28a745;
+        }
+
+        .status-afk {
+            background: #ffc107;
+        }
+
+        /* Log Entries */
+        .log-entry {
+            padding: 4px 8px;
+            border-bottom: 1px solid #333;
+            font-family: monospace;
+        }
+
+        .log-entry .timestamp {
+            color: #007bff;
+            margin-right: 8px;
+        }
+
+        /* Minimize/Maximize */
+        .window.minimized {
+            height: 40px;
+            overflow: hidden;
+        }
+
+        .minimize-btn {
+            float: right;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-right: 4px;
+        }
+
+        .badge.user { background: #007bff; }
+        .badge.viewer { background: #28a745; }
+        .badge.mobile { background: #dc3545; }
+        .badge.desktop { background: #6c757d; }
+    </style>
+</head>
+<body>
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Controls Window -->
+    <div id="controls-window" class="window">
+        <div class="title-bar">
+            Controls
+            <span class="minimize-btn">−</span>
+        </div>
+        <div class="control-group">
+            <button id="toggle-orbit">Toggle Orbit Camera</button>
+            <button id="center-camera">Center Camera</button>
+            <button id="toggle-grid">Toggle Grid</button>
+        </div>
+        <div class="control-group">
+            <label>Light Color: <input type="color" id="light-color" value="#ffffff"></label>
+            <label>Light Intensity: <input type="range" id="light-intensity" min="0" max="10" step="0.1" value="4"></label>
+        </div>
+        <div class="control-group">
+            <label>Grid Color: <input type="color" id="grid-color" value="#444444"></label>
+        </div>
+    </div>
+
+    <!-- Users Window -->
+    <div id="users-window" class="window">
+        <div class="title-bar">
+            Connected Users
+            <span class="minimize-btn">−</span>
+        </div>
+        <div class="stats">
+            Users Online: <span id="user-count">0</span>
+            Viewers: <span id="viewer-count">0</span>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Position</th>
+                    <th>Info</th>
+                </tr>
+            </thead>
+            <tbody id="users-table-body"></tbody>
+        </table>
+    </div>
+
+    <!-- Stats Window -->
+    <div id="stats-window" class="window">
+        <div class="title-bar">
+            Statistics
+            <span class="minimize-btn">−</span>
+        </div>
+        <div>Last Save: <span id="last-save">Never</span></div>
+        <div>Connection Status: <span id="connection-status">Disconnected</span></div>
+        <div>Ping: <span id="ping-status">--</span></div>
+    </div>
+
+    <!-- Log Window -->
+    <div id="log-window" class="window">
+        <div class="title-bar">
+            Event Log
+            <span class="minimize-btn">−</span>
+        </div>
+        <div id="log-container"></div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // Scene setup and global variables
+        let scene, camera, renderer, controls, labelRenderer;
+        let grid;
+        const userSpheres = new Map();
+        const userLabels = new Map();
+        let ws = null;
+        let lastSaveTime = null;
+        let activeUsers = new Map();
+        let dashboardViewers = new Map();
+
+        // Initialize Three.js scene
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('three-canvas'),
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            // Label renderer for user names
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0';
+            labelRenderer.domElement.style.pointerEvents = 'none';
+            document.body.appendChild(labelRenderer.domElement);
+
+            // Orbit controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(20, 20);
+            scene.add(gridHelper);
+            grid = gridHelper;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(10, 10, 10);
+            scene.add(directionalLight);
+
+            camera.position.set(5, 5, 5);
+            camera.lookAt(0, 0, 0);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // Window resize handler
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // User visualization
+        function createUserSphere(color = 0x7aa2f7) {
+            const geometry = new THREE.SphereGeometry(0.2, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ color });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        function createUserLabel(text) {
+            const div = document.createElement('div');
+            div.className = 'label';
+            div.textContent = text;
+            div.style.color = 'white';
+            div.style.fontSize = '12px';
+            return new CSS2DObject(div);
+        }
+
+        function updateUserPosition(userId, coordinates, username) {
+            let userSphere = userSpheres.get(userId);
+            let userLabel = userLabels.get(userId);
+
+            if (!userSphere) {
+                userSphere = createUserSphere();
+                scene.add(userSphere);
+                userSpheres.set(userId, userSphere);
+
+                userLabel = createUserLabel(username || `User_${userId.slice(0, 5)}`);
+                userSphere.add(userLabel);
+                userLabel.position.set(0, 0.3, 0);
+                userLabels.set(userId, userLabel);
+            }
+
+            // Update position with smooth transition
+            const targetPosition = new THREE.Vector3(coordinates.tx, coordinates.ty, coordinates.tz);
+            const currentPosition = userSphere.position;
+            
+            // Smoothly interpolate to new position
+            currentPosition.lerp(targetPosition, 0.1);
+
+            // Update position in users table
+            updateUserPositionInTable(userId, coordinates);
+        }
+
+        // WebSocket connection
+        function initWebSocket() {
+            ws = new WebSocket('ws://localhost:3000');
+
+            ws.onopen = () => {
+                addLogEntry('Connected to server', 'success');
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('connection-status').style.color = '#28a745';
+            };
+
+            ws.onclose = () => {
+                addLogEntry('Disconnected from server', 'error');
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('connection-status').style.color = '#dc3545';
+                setTimeout(initWebSocket, 5000);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'position':
+                    updateUserPosition(data.userId, data.coordinates, data.username);
+                    break;
+                case 'users':
+                    updateUserList(data.users);
+                    break;
+                case 'ping':
+                    handlePing(data);
+                    break;
+                case 'save':
+                    updateLastSave(data.timestamp);
+                    break;
+                default:
+                    addLogEntry(`Received: ${JSON.stringify(data)}`, 'info');
+            }
+        }
+
+        // UI Updates
+        function updateUserList(users) {
+            const userTableBody = document.getElementById('users-table-body');
+            userTableBody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                const displayName = user.username || `User_${user.id.slice(0, 5)}`;
+                const position = `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})`;
+                
+                row.innerHTML = `
+                    <td>${displayName}</td>
+                    <td><span class="badge user">User</span></td>
+                    <td><span class="status status-${user.afk ? 'afk' : 'online'}"></span>${user.afk ? 'AFK' : 'Online'}</td>
+                    <td>${position}</td>
+                    <td>${user.description || ''}</td>
+                `;
+                
+                userTableBody.appendChild(row);
+            });
+
+            document.getElementById('user-count').textContent = users.length;
+        }
+
+        function addLogEntry(message, type = 'info') {
+            const log = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry type-${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+
+            // Keep only last 1000 entries
+            while (log.children.length > 1000) {
+                log.removeChild(log.firstChild);
+            }
+        }
+
+        // Make windows draggable
+        function makeWindowsDraggable() {
+            document.querySelectorAll('.window').forEach(window => {
+                const titleBar = window.querySelector('.title-bar');
+                let isDragging = false;
+                let currentX;
+                let currentY;
+                let initialX;
+                let initialY;
+
+                titleBar.addEventListener('mousedown', e => {
+                    isDragging = true;
+                    initialX = e.clientX - window.offsetLeft;
+                    initialY = e.clientY - window.offsetTop;
+                });
+
+                document.addEventListener('mousemove', e => {
+                    if (isDragging) {
+                        e.preventDefault();
+                        currentX = e.clientX - initialX;
+                        currentY = e.clientY - initialY;
+                        
+                        window.style.left = `${currentX}px`;
+                        window.style.top = `${currentY}px`;
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            });
+        }
+
+        // Window minimize/maximize
+        function initializeMinimizeButtons() {
+            document.querySelectorAll('.minimize-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const window = btn.closest('.window');
+                    window.classList.toggle('minimized');
+                    btn.textContent = window.classList.contains('minimized') ? '+' : '−';
+                });
+            });
+        }
+
+        // Initialize everything when the page loads
+        window.addEventListener('load', () => {
+            initScene();
+            initWebSocket();
+            makeWindowsDraggable();
+            initializeMinimizeButtons();
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            
+            document.getElementById('toggle-orbit').addEventListener('click', () => {
+                controls.enabled = !controls.enabled;
+            });
+
+            document.getElementById('center-camera').addEventListener('click', () => {
+                camera.position.set(5, 5, 5);
+                camera.lookAt(0, 0, 0);
+            });
+
+            document.getElementById('toggle-grid').addEventListener('click', () => {
+                grid.visible = !grid.visible;
+            });
+
+            document.getElementById('light-color').addEventListener('input', (e) => {
+                scene.children.forEach(child => {
+                    if (child instanceof THREE.DirectionalLight) {
+                        child.color.set(e.target.value);
+                    }
+                });
+            });
+
+            document.getElementById('light-intensity').addEventListener('input', (e) => {
+                scene.children.forEach(child => {
+                    if (child instanceof THREE.DirectionalLight) {
+                        child.intensity = parseFloat(e.target.value);
+                    }
+                });
+            });
+
+            document.getElementById('grid-color').addEventListener('input', (e) => {
+                grid.material.color.set(e.target.value);
+            });
+        });
+    </script>
+</body>
+</html>

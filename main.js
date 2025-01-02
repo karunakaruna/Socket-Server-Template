@@ -9,11 +9,26 @@ const app = express();
 app.use(express.static("public"));
 
 // Get port from environment variable
-const serverPort = process.env.PORT || 3000;
+const serverPort = process.env.PORT || 3001;
 
 // Add a health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
+});
+
+// Add route for merged interface
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/merged.html');
+});
+
+// Add route for original interface
+app.get('/index.html', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
+
+// Add route for dashboard
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(__dirname + '/public/dashboard.html');
 });
 
 // Create HTTP server
@@ -532,7 +547,7 @@ wss.on("connection", (ws) => {
 startHeartbeat();
 
 // Express route for debugging
-app.get("/", (req, res) => {
+app.get("/debug", (req, res) => {
   res.send(`
     <html>
       <head><title>Server Status</title></head>

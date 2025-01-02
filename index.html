@@ -78,29 +78,107 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
+
+        /* Common window styles */
+        .window {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: white;
+            padding: 10px;
+            min-width: 200px;
+            user-select: none;
+            z-index: 1000;
+        }
+        .window .title-bar {
+            background: #333;
+            padding: 5px 10px;
+            margin: -10px -10px 10px -10px;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            cursor: move;
+        }
+        /* Controls window */
+        #controls-window {
+            top: 20px;
+            left: 20px;
+        }
+        /* Info window */
+        #info-window {
+            top: 20px;
+            right: 20px;
+        }
+        /* Button styles */
+        .window button {
+            margin: 2px;
+            padding: 5px 10px;
+            background: #444;
+            border: none;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+        .window button:hover {
+            background: #555;
+        }
+        /* Control inputs */
+        .control-group {
+            margin: 10px 0;
+        }
+        .control-group label {
+            display: block;
+            margin: 5px 0;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 25px;
+            vertical-align: middle;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        /* Bio info styles */
+        .bio-info {
+            margin: 5px 0;
+        }
+        .bio-info strong {
+            color: #aaa;
+        }
     </style>
 </head>
 <body>
     <canvas id="three-canvas"></canvas>
-    <div id="ui-container">
+    <div id="controls-window" class="window">
         <div class="title-bar">Controls</div>
-        <button id="toggle-orbit">Toggle Orbit Cam</button>
-        <button id="center-camera">Center Camera</button>
-        <button id="toggle-grid">Toggle Grid</button>
-        <button id="info">Info</button>
-        <div id="label-bar"></div>
-        <input type="text" id="name" placeholder="Name">
-        <input type="text" id="currently" placeholder="Currently">
-        <input type="text" id="where" placeholder="Where">
-        <input type="text" id="mood" placeholder="Mood">
+        <div class="control-group">
+            <button id="toggle-orbit">Toggle Orbit Cam</button>
+            <button id="center-camera">Center Camera</button>
+            <button id="toggle-grid">Toggle Grid</button>
+        </div>
+        <div class="control-group">
+            <label>Light Color: <input type="color" id="light-color" value="#ff0000"></label>
+            <label>Light Intensity: <input type="range" id="light-intensity" min="0" max="10" step="0.1" value="4"></label>
+        </div>
+        <div class="control-group">
+            <label>Grid Color: <input type="color" id="grid-color" value="#ff0000"></label>
+        </div>
     </div>
-    <div id="bio-container">
-        <div class="title-bar"></div>
-        <div id="bio-content">
+
+    <div id="info-window" class="window">
+        <div class="title-bar">Info</div>
+        <div class="bio-info">
             <strong>Name:</strong> <span id="bio-name"></span><br>
-            <strong>Currently:</strong> <span id="bio-currently"></span><br>
-            <strong>Where:</strong> <span id="bio-where"></span><br>
+            <strong>Age:</strong> <span id="bio-age"></span><br>
             <strong>Mood:</strong> <span id="bio-mood"></span><br>
+        </div>
+        <div class="control-group">
+            <input type="text" id="name" placeholder="Name">
+            <input type="text" id="age" placeholder="Age">
+            <input type="text" id="mood" placeholder="Mood">
         </div>
     </div>
     <script type="importmap">
@@ -295,20 +373,18 @@
             });
         }
 
-        makeDraggable(document.getElementById('ui-container'));
-        makeDraggable(document.getElementById('bio-container'));
+        makeDraggable(document.getElementById('controls-window'));
+        makeDraggable(document.getElementById('info-window'));
 
         // Reactive bio update
         const updateBio = () => {
             document.getElementById('bio-name').textContent = document.getElementById('name').value;
-            document.getElementById('bio-currently').textContent = document.getElementById('currently').value;
-            document.getElementById('bio-where').textContent = document.getElementById('where').value;
+            document.getElementById('bio-age').textContent = document.getElementById('age').value;
             document.getElementById('bio-mood').textContent = document.getElementById('mood').value;
         };
 
         document.getElementById('name').addEventListener('input', updateBio);
-        document.getElementById('currently').addEventListener('input', updateBio);
-        document.getElementById('where').addEventListener('input', updateBio);
+        document.getElementById('age').addEventListener('input', updateBio);
         document.getElementById('mood').addEventListener('input', updateBio);
 
         // Button actions
@@ -330,10 +406,62 @@
             grid.visible = !grid.visible;
         });
 
-        document.getElementById('info').addEventListener('click', () => {
-            const bioContainer = document.getElementById('bio-container');
-            bioContainer.style.display = bioContainer.style.display === 'block' ? 'none' : 'block';
+        // Add light controls
+        const lightColorPicker = document.getElementById('light-color');
+        const lightIntensitySlider = document.getElementById('light-intensity');
+        const gridColorPicker = document.getElementById('grid-color');
+
+        lightColorPicker.addEventListener('input', (e) => {
+            const color = new THREE.Color(e.target.value);
+            light.color.copy(color);
+            directionalLight.color.copy(color);
         });
+
+        lightIntensitySlider.addEventListener('input', (e) => {
+            const intensity = parseFloat(e.target.value);
+            directionalLight.intensity = intensity;
+        });
+
+        gridColorPicker.addEventListener('input', (e) => {
+            const color = new THREE.Color(e.target.value);
+            gridMaterial.color.copy(color);
+        });
+
+        // Make windows draggable
+        const windows = document.querySelectorAll('.window');
+        windows.forEach(makeWindowDraggable);
+
+        function makeWindowDraggable(element) {
+            const titleBar = element.querySelector('.title-bar');
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+
+            titleBar.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+
+            function dragStart(e) {
+                initialX = e.clientX - element.offsetLeft;
+                initialY = e.clientY - element.offsetTop;
+                isDragging = true;
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                element.style.left = currentX + 'px';
+                element.style.top = currentY + 'px';
+            }
+
+            function dragEnd() {
+                isDragging = false;
+            }
+        }
     </script>
 </body>
 </html>

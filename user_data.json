@@ -1,5 +1,42 @@
 {
-  "users": {},
-  "secrets": [],
-  "timestamps": {}
+  "users": {
+    "4953416e-528f-414e-a8a9-3b2938700a2d": {
+      "id": "4953416e-528f-414e-a8a9-3b2938700a2d",
+      "username": "User_49534",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735804199030
+    },
+    "06498722-10fe-40bb-8eb1-5d4c4f482d82": {
+      "id": "06498722-10fe-40bb-8eb1-5d4c4f482d82",
+      "username": "User_06498",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735804208628
+    }
+  },
+  "secrets": [
+    [
+      "c85648a1",
+      "4953416e-528f-414e-a8a9-3b2938700a2d"
+    ],
+    [
+      "b662a380",
+      "06498722-10fe-40bb-8eb1-5d4c4f482d82"
+    ]
+  ],
+  "timestamps": {
+    "c85648a1": 1735804196418,
+    "b662a380": 1735804206500
+  }
 }
