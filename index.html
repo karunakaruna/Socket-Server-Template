@@ -27,6 +27,12 @@
         .title-bar, button, input, #bio-content {
             pointer-events: auto;
         }
+        .label {
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            pointer-events: none;
+            user-select: none;
+        }
         #ui-container {
             top: 20px;
             left: 20px;
@@ -97,9 +103,18 @@
             <strong>Mood:</strong> <span id="bio-mood"></span><br>
         </div>
     </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
     <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
-        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/controls/OrbitControls';
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -115,7 +130,8 @@
         renderer.toneMapping = THREE.NoToneMapping;
         
         // Set initial camera position
-        camera.position.z = 5;
+        camera.position.set(5, 3, 5);
+        camera.lookAt(0, 0, 0);
 
         // Orbit Controls setup
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -144,11 +160,11 @@
         scene.add(cube);
 
         // Add light
-        const light = new THREE.AmbientLight(0x404040); // soft white light
+        const light = new THREE.AmbientLight(0xff0000); // soft white light
         scene.add(light);
 
         // Add directional light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        const directionalLight = new THREE.DirectionalLight(0xff0000, 4);
         directionalLight.position.set(5, 5, 5);
         scene.add(directionalLight);
 
@@ -181,11 +197,63 @@
 
         let useOrbitCamera = true;
 
+        // CSS2D Renderer setup
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // Add labels to objects
+        function createLabel(name) {
+            const div = document.createElement('div');
+            div.className = 'label';
+            div.textContent = name;
+            div.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            div.style.color = 'white';
+            div.style.padding = '2px 5px';
+            div.style.borderRadius = '3px';
+            div.style.fontSize = '12px';
+            return new CSS2DObject(div);
+        }
+
+        // Add labels to objects
+        const cubeLabel = createLabel('Cube');
+        cube.add(cubeLabel);
+        cubeLabel.position.set(0, 1.2, 0);
+
+        const sphereLabel = createLabel('Sphere');
+        sphere.add(sphereLabel);
+        sphereLabel.position.set(0, 0.6, 0);
+
+        const arcLabel = createLabel('Ring');
+        arc.add(arcLabel);
+        arcLabel.position.set(0, 0.2, 0);
+
+        // Create large grid
+        const gridGeometry = new THREE.PlaneGeometry(500, 500, 100, 100);
+        const gridMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.1
+        });
+        const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+        grid.rotation.x = -Math.PI / 2;
+        grid.visible = true;  // Grid visible by default
+        scene.add(grid);
+
+        const gridLabel = createLabel('Grid');
+        grid.add(gridLabel);
+        gridLabel.position.set(0, 0.5, 0);
+
         // Responsive canvas
         window.addEventListener('resize', () => {
             const width = window.innerWidth;
             const height = window.innerHeight;
             renderer.setSize(width, height);
+            labelRenderer.setSize(width, height);
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             stationaryCamera.aspect = width / height;
@@ -200,6 +268,7 @@
             parent.rotation.y += 0.005; // Rotate the parent object
             controls.update();
             renderer.render(scene, useOrbitCamera ? camera : stationaryCamera);
+            labelRenderer.render(scene, useOrbitCamera ? camera : stationaryCamera);
         }
         animate();
 
@@ -242,19 +311,6 @@
         document.getElementById('where').addEventListener('input', updateBio);
         document.getElementById('mood').addEventListener('input', updateBio);
 
-        // Create large grid
-        const gridGeometry = new THREE.PlaneGeometry(500, 500, 100, 100);
-        const gridMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.1
-        });
-        const grid = new THREE.Mesh(gridGeometry, gridMaterial);
-        grid.rotation.x = -Math.PI / 2;
-        grid.visible = false;
-        scene.add(grid);
-
         // Button actions
         document.getElementById('toggle-orbit').addEventListener('click', () => {
             useOrbitCamera = !useOrbitCamera;
@@ -266,7 +322,7 @@
         });
 
         document.getElementById('center-camera').addEventListener('click', () => {
-            camera.position.set(0, 0, 5);
+            camera.position.set(5, 3, 5);
             camera.lookAt(0, 0, 0);
         });
 
