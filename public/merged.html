@@ -310,7 +310,7 @@
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setClearColor(0x000000, 1);
-            renderer.outputEncoding = THREE.LinearEncoding;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
             renderer.toneMapping = THREE.NoToneMapping;
 
             // Label renderer for user names
@@ -346,6 +346,10 @@
             const material = new THREE.MeshPhongMaterial({ color: 0x808080, shininess: 100 });
             const cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
+
+            // Store cube's original color
+            cube.userData.originalColor = new THREE.Color(0x808080);
+            window.cube = cube;
 
             // Add light
             const ambientLight = new THREE.AmbientLight(0xff0000, 0.5);
@@ -542,6 +546,53 @@
             }
         }
 
+        function handlePing(data) {
+            const pingStatus = document.getElementById('ping-status');
+            if (pingStatus) {
+                pingStatus.textContent = `${data.latency}ms`;
+                pingStatus.style.color = data.latency < 100 ? '#28a745' : '#ffc107';
+            }
+
+            // Make cube blink white
+            if (window.cube) {
+                window.cube.material.color.set(0xffffff);
+                setTimeout(() => {
+                    window.cube.material.color.copy(window.cube.userData.originalColor);
+                }, 200); // Reset after 200ms
+            }
+
+            ws.send(JSON.stringify({ type: 'pong' }));
+            addLogEntry(`Heartbeat received: ${data.time}`, 'info');
+        }
+
+        function updateLastSave(timestamp) {
+            lastSaveTime = timestamp;
+            const lastSaveElement = document.getElementById('last-save');
+            if (lastSaveElement) {
+                lastSaveElement.textContent = new Date(timestamp).toLocaleTimeString();
+            }
+            addLogEntry(`Last save: ${new Date(timestamp).toLocaleTimeString()}`, 'info');
+        }
+
+        function updateUserPositionInTable(userId, coordinates) {
+            const userTableBody = document.getElementById('users-table-body');
+            if (!userTableBody) return;
+
+            const rows = userTableBody.getElementsByTagName('tr');
+            for (let row of rows) {
+                const cells = row.getElementsByTagName('td');
+                if (cells[0].textContent.includes(userId)) {
+                    cells[3].textContent = `(${coordinates.tx.toFixed(2)}, ${coordinates.ty.toFixed(2)}, ${coordinates.tz.toFixed(2)})`;
+                    cells[3].style.transition = 'color 0.3s ease';
+                    cells[3].style.color = '#ffc107';
+                    setTimeout(() => {
+                        cells[3].style.color = '#ffffff';
+                    }, 300);
+                    break;
+                }
+            }
+        }
+
         // UI Updates
         function updateUserList(users) {
             const userTableBody = document.getElementById('users-table-body');
@@ -638,16 +689,20 @@
             window.addEventListener('resize', onWindowResize);
             
             document.getElementById('toggle-orbit').addEventListener('click', () => {
-                controls.enabled = !controls.enabled;
+                useOrbitCamera = !useOrbitCamera;
+                controls.enabled = useOrbitCamera;
+                addLogEntry(`Switched to ${useOrbitCamera ? 'orbit' : 'stationary'} camera`, 'info');
             });
 
             document.getElementById('center-camera').addEventListener('click', () => {
-                camera.position.set(5, 5, 5);
+                camera.position.set(5, 3, 5);
                 camera.lookAt(0, 0, 0);
+                addLogEntry('Camera centered', 'info');
             });
 
             document.getElementById('toggle-grid').addEventListener('click', () => {
                 grid.visible = !grid.visible;
+                addLogEntry(`Grid ${grid.visible ? 'shown' : 'hidden'}`, 'info');
             });
 
             document.getElementById('light-color').addEventListener('input', (e) => {
@@ -656,6 +711,7 @@
                         child.color.set(e.target.value);
                     }
                 });
+                addLogEntry(`Light color changed to ${e.target.value}`, 'info');
             });
 
             document.getElementById('light-intensity').addEventListener('input', (e) => {
@@ -664,10 +720,12 @@
                         child.intensity = parseFloat(e.target.value);
                     }
                 });
+                addLogEntry(`Light intensity changed to ${e.target.value}`, 'info');
             });
 
             document.getElementById('grid-color').addEventListener('input', (e) => {
                 grid.material.color.set(e.target.value);
+                addLogEntry(`Grid color changed to ${e.target.value}`, 'info');
             });
         });
     </script>
