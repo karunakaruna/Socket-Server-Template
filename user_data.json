@@ -1259,6 +1259,66 @@
       "afk": false,
       "textstream": "",
       "lastActivity": 1735817096882
+    },
+    "d9af07c3-aa25-449d-9613-817ecb2ab537": {
+      "id": "d9af07c3-aa25-449d-9613-817ecb2ab537",
+      "username": "User_d9af0",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735817282323
+    },
+    "b3d1e3e4-f402-44bb-a239-0a52bd05afbf": {
+      "id": "b3d1e3e4-f402-44bb-a239-0a52bd05afbf",
+      "username": "User_b3d1e",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735817371184
+    },
+    "2dd6973e-540d-4031-b45b-a01daa64a59d": {
+      "id": "2dd6973e-540d-4031-b45b-a01daa64a59d",
+      "username": "User_2dd69",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735817310756
+    },
+    "f4350431-b045-4c6f-b111-7b7f574ae40b": {
+      "id": "f4350431-b045-4c6f-b111-7b7f574ae40b",
+      "username": "User_f4350",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735817442737
+    },
+    "93111f61-dc4a-4912-9d88-071457ecc738": {
+      "id": "93111f61-dc4a-4912-9d88-071457ecc738",
+      "username": "User_93111",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735817444034
     }
   },
   "secrets": [
@@ -1681,6 +1741,26 @@
     [
       "d09363b2",
       "581efb94-4b68-4367-b4e1-b6eb51fcd78a"
+    ],
+    [
+      "ef842cee",
+      "d9af07c3-aa25-449d-9613-817ecb2ab537"
+    ],
+    [
+      "21ef80f7",
+      "b3d1e3e4-f402-44bb-a239-0a52bd05afbf"
+    ],
+    [
+      "b2b132d6",
+      "2dd6973e-540d-4031-b45b-a01daa64a59d"
+    ],
+    [
+      "b8779129",
+      "f4350431-b045-4c6f-b111-7b7f574ae40b"
+    ],
+    [
+      "6c36798d",
+      "93111f61-dc4a-4912-9d88-071457ecc738"
     ]
   ],
   "timestamps": {
@@ -1788,6 +1868,11 @@
     "f5e9147a": 1735817008157,
     "f57f0772": 1735817027215,
     "45d92177": 1735817033981,
-    "d09363b2": 1735817043317
+    "d09363b2": 1735817043317,
+    "ef842cee": 1735817098170,
+    "21ef80f7": 1735817283667,
+    "b2b132d6": 1735817293182,
+    "b8779129": 1735817372491,
+    "6c36798d": 1735817444034
   }
 }

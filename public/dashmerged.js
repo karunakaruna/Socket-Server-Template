@@ -10,6 +10,7 @@ const userLabels = new Map();
 const userOrbits = new Map(); // Store orbit parameters for each user
 let userId = null;
 let userSecret = null;
+let clientId = null;
 
 function createUserSphere() {
     const geometry = new THREE.SphereGeometry(0.2, 32, 32);
@@ -334,66 +335,54 @@ function addLogEntry(message, type = 'info') {
 }
 
 function updateUsersTable() {
-    const tableBody = document.getElementById('users-table-body');
-    const userCountEl = document.getElementById('user-count');
-    const viewerCountEl = document.getElementById('viewer-count');
-
-    if (!tableBody || !userCountEl || !viewerCountEl) {
-        console.error('Required elements not found:', {
-            tableBody: !!tableBody,
-            userCountEl: !!userCountEl,
-            viewerCountEl: !!viewerCountEl
-        });
-        return;
-    }
+    const tableBody = document.querySelector('#users-table tbody');
+    if (!tableBody) return;
 
     // Clear existing rows
     tableBody.innerHTML = '';
-    
-    // Track counts
-    let userCount = 0;
-    let viewerCount = 0;
 
-    // Add active users
-    for (const [id, user] of activeUsers) {
-        userCount++;
+    // Sort users by ID
+    const sortedUsers = Array.from(activeUsers.values()).sort((a, b) => a.id.localeCompare(b.id));
+
+    // Add rows for each user
+    sortedUsers.forEach(user => {
         const row = document.createElement('tr');
-        row.setAttribute('data-userid', id);
         
-        const position = user.tx !== undefined ? 
-            `(${user.tx.toFixed(2)}, ${user.ty.toFixed(2)}, ${user.tz.toFixed(2)})` : 
-            '(0.00, 0.00, 0.00)';
+        // Create name cell with star for client user
+        const nameCell = document.createElement('td');
+        nameCell.textContent = user.id === clientId ? `⭐ ${user.username || `User_${user.id.slice(0, 5)}`}` : user.username || `User_${user.id.slice(0, 5)}`;
+        row.appendChild(nameCell);
 
-        row.innerHTML = `
-            <td>${user.username || `User_${id.slice(0, 5)}`}${id === userId ? ' (You)' : ''}</td>
-            <td><span class="badge user">User</span></td>
-            <td class="status-online">Online</td>
-            <td>${position}</td>
-            <td>${user.description || ''}</td>
-        `;
+        const typeCell = document.createElement('td');
+        const typeSpan = document.createElement('span');
+        typeSpan.className = 'user-type';
+        typeSpan.textContent = 'USER';
+        typeCell.appendChild(typeSpan);
+        row.appendChild(typeCell);
+
+        const statusCell = document.createElement('td');
+        statusCell.textContent = 'Online';
+        row.appendChild(statusCell);
+
+        const positionCell = document.createElement('td');
+        positionCell.textContent = '(0.00, 0.00, 0.00)';
+        row.appendChild(positionCell);
+
+        const infoCell = document.createElement('td');
+        infoCell.textContent = '';
+        row.appendChild(infoCell);
+
         tableBody.appendChild(row);
-    }
+    });
 
-    // Add viewers
-    for (const [id, viewer] of dashboardViewers) {
-        if (!activeUsers.has(id)) {
-            viewerCount++;
-            const row = document.createElement('tr');
-            row.setAttribute('data-userid', id);
-            row.innerHTML = `
-                <td>${viewer.username || 'Anonymous'}</td>
-                <td><span class="badge viewer">Viewer</span></td>
-                <td class="status-online">Online</td>
-                <td>N/A</td>
-                <td>Dashboard Viewer</td>
-            `;
-            tableBody.appendChild(row);
-        }
-    }
-
-    // Update counts
-    userCountEl.textContent = userCount;
-    viewerCountEl.textContent = viewerCount;
+    // Update stats
+    const userCountEl = document.getElementById('user-count');
+    const viewerCountEl = document.getElementById('viewer-count');
+    const clientIdEl = document.getElementById('client-id');
+    
+    if (userCountEl) userCountEl.textContent = activeUsers.size;
+    if (viewerCountEl) viewerCountEl.textContent = 0;  // We don't track viewers yet
+    if (clientIdEl) clientIdEl.textContent = clientId || '-';
 }
 
 function updatePingIndicator(active = true) {
@@ -492,41 +481,23 @@ function initWebSocket() {
                         addLogEntry('Ping received', 'info');
                         break;
 
-                        case 'welcome':
-                            const dashboardUuid = document.getElementById('dashboard-uuid');
-                            if (dashboardUuid) {
-                                dashboardUuid.textContent = message.id;
-                                // Store secret in memory
-                                if (message.secret) {
-                                    userSecret = message.secret;
-                                    // Add secret to debug panel - first remove any existing secret display
-                                    const debugPanel = document.getElementById('debug-panel');
-                                    if (debugPanel) {
-                                        // Remove existing secret display if any
-                                        const existingSecret = debugPanel.querySelector('.debug-item .user-secret');
-                                        if (existingSecret) {
-                                            existingSecret.closest('.debug-item').remove();
-                                        }
-                                        // Add new secret display
-                                        const secretDiv = document.createElement('div');
-                                        secretDiv.className = 'debug-item';
-                                        secretDiv.innerHTML = `<strong>Secret:</strong> <span class="user-secret">${message.secret}</span>`;
-                                        debugPanel.appendChild(secretDiv);
-                                    }
-                                }
-                                // Add welcome message
-                                addLogEntry(createWelcomeMessage(message.id), 'connection');
-                                // Add self to dashboard viewers with device type
-                                dashboardViewers.set(message.id, {
-                                    id: message.id,
-                                    username: 'Dashboard Viewer',
-                                    type: 'viewer',
-                                    deviceType: isMobileDevice() ? 'mobile' : 'desktop'
-                                });
-                                updateUsersTable();
-                            }
-                            break;
-    
+                    case 'welcome':
+                        userId = data.id;
+                        clientId = data.id;  // Store client ID
+                        userSecret = data.secret;
+                        
+                        // Update client ID in stats
+                        const clientIdElement = document.getElementById('client-id');
+                        if (clientIdElement) {
+                            clientIdElement.textContent = data.id;
+                        }
+                        
+                        const dashboardUuid = document.getElementById('dashboard-uuid');
+                        if (dashboardUuid) {
+                            dashboardUuid.textContent = data.id;
+                        }
+                        break;
+
                     case 'userupdate':
                         if (data.users) {
                             addLogEntry(`User list updated - ${data.users.length} users`, 'info');
@@ -680,3 +651,51 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('resize', onWindowResize, false);
     });
 });
+
+// Add this CSS to the existing styles
+const style = document.createElement('style');
+style.textContent = `
+    #users-window {
+        max-height: 80vh !important;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #users-table-container {
+        flex-grow: 1;
+        overflow-y: auto;
+    }
+    
+    #users-table td {
+        padding: 2px 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+        max-width: 150px;
+    }
+    
+    .user-type {
+        background-color: #4CAF50;
+        padding: 1px 4px;
+        border-radius: 2px;
+        color: white;
+        font-size: 0.8em;
+    }
+
+    .stats-container {
+        padding: 4px;
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 4px;
+        line-height: 1.2;
+    }
+
+    .stat-row span:first-child {
+        color: #8899aa;
+    }
+`;
+document.head.appendChild(style);
