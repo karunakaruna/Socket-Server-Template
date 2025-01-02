@@ -311,6 +311,61 @@
             align-items: center;
             gap: 5px;
         }
+
+        /* Event log specific styles */
+        #log-window {
+            width: 400px;
+            height: 300px;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #log-container {
+            flex: 1;
+            overflow-y: scroll;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            height: calc(100% - 30px);
+            scrollbar-width: thin;
+            scrollbar-color: #666 #333;
+        }
+
+        /* Scrollbar styles for Webkit browsers */
+        #log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #log-container::-webkit-scrollbar-track {
+            background: #333;
+        }
+
+        #log-container::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 4px;
+        }
+
+        #log-container::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+            border-bottom: 1px solid #333;
+            word-wrap: break-word;
+        }
+
+        .log-entry .timestamp {
+            color: #888;
+            margin-right: 5px;
+        }
+
+        .type-error { color: #ff4444; }
+        .type-success { color: #00cc00; }
+        .type-info { color: #4488ff; }
     </style>
 </head>
 <body>
@@ -763,9 +818,35 @@
             }
         }
 
-        // UI Updates
+        function handlePing(data) {
+            // Update ping status
+            const pingStatus = document.getElementById('ping-status');
+            if (pingStatus) {
+                const latency = data.latency || '--';
+                pingStatus.textContent = `${latency}ms`;
+                pingStatus.style.color = latency < 100 ? '#28a745' : '#ffc107';
+            }
+
+            // Log heartbeat with timestamp and user count
+            const timestamp = new Date(data.time).toLocaleTimeString();
+            addLogEntry(`[HEARTBEAT] Time: ${timestamp}, Connected users: ${data.numUsers}`, 'info');
+
+            // Make cube blink white
+            if (window.cube) {
+                window.cube.material.color.set(0xffffff);
+                setTimeout(() => {
+                    window.cube.material.color.copy(window.cube.userData.originalColor);
+                }, 200);
+            }
+
+            // Send pong response
+            ws.send(JSON.stringify({ type: 'pong' }));
+        }
+
         function addLogEntry(message, type = 'info') {
             const log = document.getElementById('log-container');
+            if (!log) return;
+
             const entry = document.createElement('div');
             entry.className = `log-entry type-${type}`;
             
@@ -773,11 +854,21 @@
             entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
             
             log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
 
             // Keep only last 1000 entries
             while (log.children.length > 1000) {
                 log.removeChild(log.firstChild);
+            }
+
+            // Always scroll to bottom
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // UI Updates
+        function updateLastSave(timestamp) {
+            const lastSave = document.getElementById('last-save');
+            if (lastSave) {
+                lastSave.textContent = new Date(timestamp).toLocaleString();
             }
         }
 
