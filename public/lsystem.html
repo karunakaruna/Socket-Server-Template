@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon-16x16.png">
+    <title>WorldTree L-System Explorer</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="lsystem.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1b26;
+            --bg-secondary: #24283b;
+            --text-primary: #a9b1d6;
+            --text-secondary: #7aa2f7;
+            --accent: #7dcfff;
+            --error: #f7768e;
+            --success: #9ece6a;
+            --card-bg: rgba(26, 27, 38, 0.95);
+        }   
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #scene-container {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #controls-panel {
+            width: 300px;
+            background: var(--bg-secondary);
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group h3 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 0.5rem;
+            font-family: monospace;
+            resize: vertical;
+            height: 100px;
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .parameter-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .parameter-control label {
+            flex: 1;
+        }
+
+        .parameter-control input {
+            width: 100px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 0.25rem;
+        }
+
+        .command-list {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .command-group {
+            margin-bottom: 0.5rem;
+        }
+
+        .command-group h4 {
+            color: var(--accent);
+            margin-bottom: 0.2rem;
+            font-size: 0.8rem;
+        }
+
+        .command-group p {
+            margin: 0.1rem 0;
+            font-family: monospace;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    <div id="controls-panel">
+        <div class="control-group">
+            <h3>L-System Rules</h3>
+            <textarea id="axiom" placeholder="Axiom (e.g. F)">F</textarea>
+            <textarea id="rules" placeholder="Rules (one per line, e.g. F=F[+F]F[-F]F)">F=F[+F]F[-F]F</textarea>
+            <div class="parameter-control">
+                <label>Iterations:</label>
+                <input type="number" id="iterations" value="3" min="1" max="7">
+            </div>
+            <div class="parameter-control">
+                <label>Angle (degrees):</label>
+                <input type="number" id="angle" value="25.7" step="0.1">
+            </div>
+            <div class="parameter-control">
+                <label>Step Length:</label>
+                <input type="number" id="length" value="1" step="0.1">
+            </div>
+        </div>
+        <div class="control-group">
+            <h3>Presets</h3>
+            <button id="preset-plant">Plant</button>
+            <button id="preset-dragon">Dragon Curve</button>
+            <button id="preset-koch">Koch Snowflake</button>
+            <button id="preset-param">Parametric Tree</button>
+        </div>
+        <div class="control-group">
+            <h3>Turtle Commands</h3>
+            <div class="command-list">
+                <div class="command-group">
+                    <h4>Movement</h4>
+                    <p>F - Move forward (creating geometry)</p>
+                    <p>H - Move forward half length (creating geometry)</p>
+                    <p>G - Move forward (no geometry)</p>
+                    <p>f - Move forward (no geometry)</p>
+                    <p>h - Move forward half length (no geometry)</p>
+                </div>
+                <div class="command-group">
+                    <h4>Rotation</h4>
+                    <p>+ - Turn right</p>
+                    <p>- - Turn left</p>
+                    <p>& - Pitch up</p>
+                    <p>^ - Pitch down</p>
+                    <p>\ - Roll clockwise</p>
+                    <p>/ - Roll counter-clockwise</p>
+                    <p>| - Turn 180 degrees</p>
+                    <p>* - Roll 180 degrees</p>
+                    <p>~ - Pitch/Roll/Turn random amount</p>
+                </div>
+                <div class="command-group">
+                    <h4>Scale</h4>
+                    <p>" - Multiply current length</p>
+                    <p>! - Multiply current thickness</p>
+                    <p>_ - Divide current length</p>
+                    <p>? - Divide current width</p>
+                    <p>; - Multiply current angle</p>
+                    <p>@ - Divide current angle</p>
+                </div>
+                <div class="command-group">
+                    <h4>Structure</h4>
+                    <p>[ - Push turtle state (start branch)</p>
+                    <p>] - Pop turtle state (end branch)</p>
+                    <p>{ - Start polygon</p>
+                    <p>. - Make polygon vertex</p>
+                    <p>} - End polygon</p>
+                    <p>% - Cut off remainder of branch</p>
+                </div>
+                <div class="command-group">
+                    <h4>Color</h4>
+                    <p>' - Increment color index U</p>
+                    <p># - Increment color index V</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
