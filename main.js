@@ -658,3 +658,16 @@ function broadcastCsvUpdate() {
         }
     });
 }
+function broadcastCsvUpdate() {
+    const csvInfo = getCsvInfo();
+    const message = JSON.stringify({
+        type: 'csvinfo',
+        info: csvInfo
+    });
+    
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
