@@ -18,7 +18,7 @@ app.get('/health', (req, res) => {
 
 // Add route for merged interface
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/merged.html');
+  res.sendFile(__dirname + '/public/dashmerge.html');
 });
 
 // Add route for original interface
