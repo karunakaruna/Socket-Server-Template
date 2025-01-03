@@ -121,7 +121,7 @@
             border: 1px solid var(--window-border);
             border-radius: 8px;
             padding: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             z-index: 10;
             overflow: hidden;
             display: flex;
@@ -133,23 +133,43 @@
         }
 
         .window-title {
-            padding: 0.5rem 1rem;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--window-border);
+            background-color: #2d2d2d;
+            padding: 8px;
             cursor: move;
             user-select: none;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: -1rem -1rem 1rem -1rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+        }
+
+        .window-title-text {
+            flex-grow: 1;
+        }
+
+        .minimize-button {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0 8px;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .minimize-button:hover {
+            color: #fff;
+        }
+
+        .window.minimized {
+            height: auto !important;
+        }
+
+        .window.minimized .window-content {
+            display: none;
         }
 
         .window-content {
-            flex: 1;
-            overflow: auto;
-            user-select: text;
+            padding: 1rem;
         }
 
         #users-window {
@@ -167,8 +187,8 @@
         }
 
         #controls-window {
-            width: 300px;
-            height: 200px;
+            width: 280px;
+            height: auto;
             top: calc(var(--header-height) + 20px);
             right: 20px;
         }
@@ -278,57 +298,117 @@
             margin-bottom: 1rem;
         }
 
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
         .control-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        input[type="color"] {
-            width: 100%;
-            height: 40px;
-            border: none;
-            border-radius: 4px;
-            background: var(--bg-primary);
-            cursor: pointer;
-            margin-bottom: 0.5rem;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            margin: 0.5rem 0;
-            background: var(--bg-primary);
-            border-radius: 4px;
-            height: 6px;
-            -webkit-appearance: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: var(--accent);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        button {
-            background: var(--bg-secondary);
+            margin-bottom: 0.4rem;
             color: var(--text-primary);
-            border: 1px solid var(--accent);
-            padding: 0.5rem 1rem;
+            font-size: 0.9em;
+        }
+
+        .control-section {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            background: var(--bg-primary);
             border-radius: 4px;
+        }
+
+        .control-section h4 {
+            color: var(--text-secondary);
+            margin-bottom: 0.8rem;
+            font-size: 0.9em;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.2rem 0;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            background: var(--bg-secondary);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 0.9rem;
-            width: 100%;
-            margin-bottom: 0.5rem;
         }
 
-        button:hover {
-            background: var(--accent);
-            color: var(--bg-primary);
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            background: var(--text-secondary);
+            transform: scale(1.2);
+        }
+
+        .slider-value {
+            min-width: 3em;
+            text-align: right;
+            color: var(--text-secondary);
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        #lsystem-controls {
+            width: 280px;
+            height: auto;
+            top: calc(var(--header-height) + 20px);
+            left: 20px;
+        }
+
+        #lsystem-info {
+            width: 280px;
+            height: auto;
+            top: calc(var(--header-height) + 380px);
+            left: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-family: monospace;
+        }
+
+        .info-description {
+            border-top: 1px solid var(--bg-secondary);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .info-description p {
+            margin-top: 0.25rem;
+            font-size: 0.9em;
+            white-space: pre-wrap;
         }
 
         /* Scrollbar styles */
@@ -385,6 +465,43 @@
             color: var(--text-secondary);
             word-break: break-all;
         }
+
+        .primary-button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+        }
+
+        .primary-button:hover {
+            background: var(--text-secondary);
+        }
+
+        .primary-button.compact {
+            padding: 0.3rem 0.8rem;
+            font-size: 0.9em;
+        }
+
+        .secondary-button {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .secondary-button:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
     </style>
 </head>
 <body>
@@ -405,17 +522,113 @@
 
     <!-- Controls Window -->
     <div id="controls-window" class="window">
-        <div class="window-title" data-window="controls">Controls</div>
+        <div class="window-title">
+            <span class="window-title-text">Scene Controls</span>
+            <button class="minimize-button">−</button>
+        </div>
         <div class="window-content">
-            <button id="center-camera">Center Camera</button>
-            <button id="toggle-grid">Toggle Grid</button>
+            <div class="control-section">
+                <h4>L-System</h4>
+                <div class="control-group">
+                    <button id="load-lsystem" class="primary-button compact">Load L-System</button>
+                    <input type="file" id="lsystem-file" accept=".json" style="display: none;">
+                </div>
+            </div>
+            <div class="control-section">
+                <h4>Scene</h4>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="autoRotate"> Auto Rotate
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="showGrid" checked> Show Grid
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="muteAudio"> Mute Audio
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label for="particle-energy">Particle Energy</label>
+                    <div class="slider-container">
+                        <input type="range" id="particle-energy" min="0" max="1" step="0.01" value="0.5">
+                        <span id="energy-value">0.5</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="static-particle-density">Static Field Density</label>
+                    <div class="slider-container">
+                        <input type="range" id="static-particle-density" min="0" max="1" step="0.01" value="0.5">
+                        <span id="density-value">0.5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lsystem-controls" class="window">
+        <div class="window-title">
+            <span class="window-title-text">L-System Controls</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="control-section">
+                <h4>Transform</h4>
+                <div class="control-group">
+                    <label>Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-scale" min="0.1" max="5" step="0.1" value="1">
+                        <span class="slider-value" id="scale-value">1.0</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Height</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-height" min="-5" max="5" step="0.1" value="0">
+                        <span class="slider-value" id="height-value">0.0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h4>Generation</h4>
+                <div class="control-group">
+                    <label>Iterations</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-iterations" min="1" max="8" step="1" value="4">
+                        <span class="slider-value" id="iterations-value">4</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Angle (deg)</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-angle" min="0" max="90" step="1" value="25">
+                        <span class="slider-value" id="angle-value">25°</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Step Length</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-step" min="0.1" max="2" step="0.1" value="1">
+                        <span class="slider-value" id="step-value">1.0</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <button id="regenerate-lsystem" class="secondary-button">Regenerate</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="three-container"></div>
 
     <div id="users-window" class="window">
-        <div class="window-title" data-window="users">Connected Users</div>
+        <div class="window-title">
+            <span class="window-title-text">Connected Users</span>
+            <button class="minimize-button">−</button>
+        </div>
         <div class="window-content">
             <div class="users-table-container">
                 <table id="users-table">
@@ -436,14 +649,20 @@
     </div>
 
     <div id="log-window" class="window">
-        <div class="window-title">Event Log</div>
+        <div class="window-title">
+            <span class="window-title-text">Log</span>
+            <button class="minimize-button">−</button>
+        </div>
         <div class="window-content">
             <div id="log-container"></div>
         </div>
     </div>
 
     <div id="stats-window" class="window">
-        <div class="window-title" data-window="stats">Stats</div>
+        <div class="window-title">
+            <span class="window-title-text">Stats</span>
+            <button class="minimize-button">−</button>
+        </div>
         <div class="window-content">
             <div class="stats-container">
                 <div class="stat-row">
@@ -458,6 +677,37 @@
                     <span>Pings:</span>
                     <span id="ping-count">0</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lsystem-info" class="window">
+        <div class="window-title">
+            <span class="window-title-text">L-System Info</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="info-grid">
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span id="info-name" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Author:</span>
+                    <span id="info-author" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Created:</span>
+                    <span id="info-created" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Iterations:</span>
+                    <span id="info-iterations" class="info-value">-</span>
+                </div>
+            </div>
+            <div class="info-description">
+                <span class="info-label">Description:</span>
+                <p id="info-description" class="info-value">-</p>
             </div>
         </div>
     </div>

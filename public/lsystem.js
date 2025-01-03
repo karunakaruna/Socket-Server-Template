@@ -352,11 +352,180 @@ function interpretLSystem(lSystemString) {
     }
 }
 
+// HUD functionality
+function colorizeText(text) {
+    let coloredText = '';
+    for (let char of text) {
+        if (AXIOM_COLORS[char]) {
+            const color = '#' + AXIOM_COLORS[char].toString(16).padStart(6, '0');
+            coloredText += `<span style="color: ${color}">${char}</span>`;
+        } else {
+            coloredText += char;
+        }
+    }
+    return coloredText;
+}
+
+function updateHUD() {
+    const axiomInput = document.getElementById('axiom');
+    const rulesInput = document.getElementById('rules');
+    const hudAxiom = document.getElementById('hud-axiom');
+    const hudRules = document.getElementById('hud-rules');
+
+    if (axiomInput && rulesInput && hudAxiom && hudRules) {
+        hudAxiom.innerHTML = colorizeText(axiomInput.value);
+        hudRules.innerHTML = colorizeText(rulesInput.value);
+    }
+}
+
+// L-System save/load functionality
+function saveLSystem() {
+    const lsystem = {
+        plantname: document.getElementById('plantname').value || 'Untitled L-System',
+        author: document.getElementById('author').value || 'Anonymous',
+        created: new Date().toISOString(),
+        axiom: document.getElementById('axiom').value,
+        rules: document.getElementById('rules').value,
+        iterations: parseInt(document.getElementById('iterations').value),
+        angle: parseFloat(document.getElementById('angle').value),
+        stepLength: parseFloat(document.getElementById('length').value),
+        description: document.getElementById('description').value || ''
+    };
+
+    // Create a JSON file
+    const blob = new Blob([JSON.stringify(lsystem, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const filename = `${lsystem.plantname.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
+
+    // Create download link
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Show save status
+    const saveStatus = document.getElementById('save-status');
+    saveStatus.textContent = 'L-System saved!';
+    setTimeout(() => {
+        saveStatus.textContent = '';
+    }, 2000);
+}
+
+function loadLSystem(json) {
+    try {
+        const lsystem = JSON.parse(json);
+        document.getElementById('plantname').value = lsystem.plantname || '';
+        document.getElementById('author').value = lsystem.author || '';
+        document.getElementById('description').value = lsystem.description || '';
+        document.getElementById('axiom').value = lsystem.axiom || '';
+        document.getElementById('rules').value = lsystem.rules || '';
+        document.getElementById('iterations').value = lsystem.iterations || 3;
+        document.getElementById('angle').value = lsystem.angle || 25.7;
+        document.getElementById('length').value = lsystem.stepLength || 1;
+        
+        updateHUD();
+        generateLSystem();
+        return true;
+    } catch (e) {
+        console.error('Error loading L-System:', e);
+        return false;
+    }
+}
+
+// Preset management
+let userPresets = [];
+
+function loadUserPresets() {
+    const savedPresets = localStorage.getItem('lsystem-user-presets');
+    if (savedPresets) {
+        userPresets = JSON.parse(savedPresets);
+        updatePresetList();
+    }
+}
+
+function saveUserPresets() {
+    localStorage.setItem('lsystem-user-presets', JSON.stringify(userPresets));
+    updatePresetList();
+}
+
+function updatePresetList() {
+    const presetList = document.getElementById('user-presets');
+    presetList.innerHTML = '';
+    
+    userPresets.forEach((preset, index) => {
+        const presetButton = document.createElement('button');
+        presetButton.innerHTML = `
+            ${preset.plantname}
+            <span class="delete-preset" data-index="${index}">×</span>
+        `;
+        presetButton.onclick = (e) => {
+            if (e.target.classList.contains('delete-preset')) {
+                userPresets.splice(parseInt(e.target.dataset.index), 1);
+                saveUserPresets();
+            } else {
+                loadLSystem(JSON.stringify(preset));
+            }
+        };
+        presetList.appendChild(presetButton);
+    });
+}
+
+function savePreset() {
+    const preset = {
+        plantname: document.getElementById('plantname').value || 'Untitled L-System',
+        author: document.getElementById('author').value || 'Anonymous',
+        created: new Date().toISOString(),
+        axiom: document.getElementById('axiom').value,
+        rules: document.getElementById('rules').value,
+        iterations: parseInt(document.getElementById('iterations').value),
+        angle: parseFloat(document.getElementById('angle').value),
+        stepLength: parseFloat(document.getElementById('length').value),
+        description: document.getElementById('description').value || ''
+    };
+
+    userPresets.push(preset);
+    saveUserPresets();
+
+    // Show save status
+    const saveStatus = document.getElementById('save-status');
+    saveStatus.textContent = 'Preset saved!';
+    setTimeout(() => {
+        saveStatus.textContent = '';
+    }, 2000);
+}
+
 function setupEventListeners() {
     // Make all inputs reactive
-    ['axiom', 'rules', 'angle', 'iterations', 'length'].forEach(id => {
-        const element = document.getElementById(id);
-        element.addEventListener('input', generateLSystem);
+    ['axiom', 'rules', 'iterations', 'length'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            if (id === 'axiom' || id === 'rules') {
+                updateHUD();
+            }
+            if (!isFirstRender) {
+                generateLSystem();
+            }
+        });
+    });
+
+    // Add angle slider event listener
+    const angleSlider = document.getElementById('angle');
+    const angleValue = document.getElementById('angleValue');
+    angleSlider.addEventListener('input', (e) => {
+        currentAngle = parseFloat(e.target.value);
+        angleValue.textContent = currentAngle + '°';
+        if (!isFirstRender) {
+            generateLSystem();
+        }
+    });
+
+    // Add camera reset functionality
+    document.getElementById('resetCamera').addEventListener('click', () => {
+        camera.position.set(0, 0, 10);
+        controls.target.set(0, 0, 0);
+        controls.update();
     });
 
     document.getElementById('preset-plant').addEventListener('click', () => {
@@ -365,6 +534,7 @@ function setupEventListeners() {
         document.getElementById('angle').value = '25';
         document.getElementById('iterations').value = '4';
         document.getElementById('length').value = '0.5';
+        updateHUD();
         generateLSystem();
     });
 
@@ -374,6 +544,7 @@ function setupEventListeners() {
         document.getElementById('angle').value = '90';
         document.getElementById('iterations').value = '10';
         document.getElementById('length').value = '0.5';
+        updateHUD();
         generateLSystem();
     });
 
@@ -383,6 +554,7 @@ function setupEventListeners() {
         document.getElementById('angle').value = '60';
         document.getElementById('iterations').value = '4';
         document.getElementById('length').value = '0.5';
+        updateHUD();
         generateLSystem();
     });
 
@@ -392,8 +564,43 @@ function setupEventListeners() {
         document.getElementById('angle').value = '35';
         document.getElementById('iterations').value = '4';
         document.getElementById('length').value = '0.5';
+        updateHUD();
         generateLSystem();
     });
+
+    // Preset management
+    document.getElementById('save-preset').addEventListener('click', savePreset);
+    
+    document.getElementById('load-preset').addEventListener('click', () => {
+        document.getElementById('preset-file').click();
+    });
+
+    document.getElementById('preset-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const preset = JSON.parse(e.target.result);
+                    userPresets.push(preset);
+                    saveUserPresets();
+                    loadLSystem(e.target.result);
+                } catch (error) {
+                    console.error('Error loading preset:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    // Save button
+    document.getElementById('save-lsystem').addEventListener('click', saveLSystem);
+
+    // Initial HUD update
+    updateHUD();
+
+    // Load saved presets
+    loadUserPresets();
 }
 
 function animate() {

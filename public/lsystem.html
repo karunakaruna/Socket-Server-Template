@@ -45,6 +45,35 @@
         #scene-container {
             flex: 1;
             overflow: hidden;
+            position: relative;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            right: 320px;  /* Aligns with the control panel */
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            text-align: right;
+            pointer-events: none;
+            z-index: 100;
+            background: rgba(26, 27, 38, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            max-width: 400px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        #hud .hud-line {
+            margin: 4px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        #hud .hud-label {
+            opacity: 0.7;
+            margin-right: 4px;
         }
 
         #controls-panel {
@@ -73,6 +102,11 @@
             font-family: monospace;
             resize: vertical;
             height: 100px;
+        }
+
+        textarea#description {
+            min-height: 60px;
+            resize: vertical;
         }
 
         button {
@@ -107,6 +141,47 @@
             padding: 0.25rem;
         }
 
+        input[type="range"] {
+            width: calc(100% - 50px);
+            margin: 0.5rem 0;
+            background: var(--bg-primary);
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #angleValue {
+            display: inline-block;
+            min-width: 45px;
+            text-align: right;
+            margin-left: 5px;
+        }
+
+        #resetCamera {
+            margin-top: 1rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            width: 100%;
+            border-radius: 4px;
+        }
+
+        #resetCamera:hover {
+            opacity: 0.9;
+        }
+
         .command-list {
             font-size: 0.75rem;
             margin-top: 0.5rem;
@@ -128,34 +203,126 @@
             font-family: monospace;
             color: var(--text-secondary);
         }
+
+        #save-status {
+            margin-top: 8px;
+            color: var(--success);
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .preset-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .preset-controls button {
+            flex: 1;
+        }
+
+        .preset-list {
+            margin: 12px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .preset-list button {
+            width: 100%;
+            margin-bottom: 4px;
+            text-align: left;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preset-list button .delete-preset {
+            color: var(--error);
+            margin-left: 8px;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .preset-list button .delete-preset:hover {
+            background: var(--error);
+            color: var(--bg-primary);
+        }
+
+        .builtin-presets {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--accent);
+        }
+
+        .builtin-presets h4 {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
-    <div id="scene-container"></div>
+    <div id="scene-container">
+        <div id="hud">
+            <div class="hud-line"><span class="hud-label">Axiom:</span><span id="hud-axiom"></span></div>
+            <div class="hud-line"><span class="hud-label">Rules:</span><span id="hud-rules"></span></div>
+        </div>
+    </div>
     <div id="controls-panel">
         <div class="control-group">
             <h3>L-System Rules</h3>
-            <textarea id="axiom" placeholder="Axiom (e.g. F)">F</textarea>
-            <textarea id="rules" placeholder="Rules (one per line, e.g. F=F[+F]F[-F]F)">F=F[+F]F[-F]F</textarea>
             <div class="parameter-control">
-                <label>Iterations:</label>
+                <label for="plantname">Name:</label>
+                <input type="text" id="plantname" placeholder="Give your L-system a name">
+            </div>
+            <div class="parameter-control">
+                <label for="author">Author:</label>
+                <input type="text" id="author" placeholder="Your name">
+            </div>
+            <div class="parameter-control">
+                <label for="description">Description:</label>
+                <textarea id="description" placeholder="Describe your L-system"></textarea>
+            </div>
+            <div class="parameter-control">
+                <label for="axiom">Axiom:</label>
+                <textarea id="axiom" placeholder="Axiom (e.g. F)">F</textarea>
+            </div>
+            <div class="parameter-control">
+                <label for="rules">Rules:</label>
+                <textarea id="rules" placeholder="Rules (one per line, e.g. F=F[+F]F[-F]F)">F=F[+F]F[-F]F</textarea>
+            </div>
+            <div class="parameter-control">
+                <label for="iterations">Iterations:</label>
                 <input type="number" id="iterations" value="3" min="1" max="7">
             </div>
             <div class="parameter-control">
-                <label>Angle (degrees):</label>
-                <input type="number" id="angle" value="25.7" step="0.1">
+                <label for="angle">Angle (0-90°):</label>
+                <input type="range" id="angle" min="0" max="90" value="25.7" step="0.1">
+                <span id="angleValue">25.7°</span>
             </div>
             <div class="parameter-control">
-                <label>Step Length:</label>
+                <label for="length">Step Length:</label>
                 <input type="number" id="length" value="1" step="0.1">
             </div>
         </div>
         <div class="control-group">
             <h3>Presets</h3>
-            <button id="preset-plant">Plant</button>
-            <button id="preset-dragon">Dragon Curve</button>
-            <button id="preset-koch">Koch Snowflake</button>
-            <button id="preset-param">Parametric Tree</button>
+            <div class="preset-controls">
+                <button id="save-preset">Save as Preset</button>
+                <button id="load-preset">Load Preset</button>
+                <input type="file" id="preset-file" accept=".json" style="display: none;">
+            </div>
+            <div id="user-presets" class="preset-list">
+                <!-- User presets will be added here -->
+            </div>
+            <div class="builtin-presets">
+                <h4>Built-in Examples</h4>
+                <button id="preset-plant">Plant</button>
+                <button id="preset-dragon">Dragon Curve</button>
+                <button id="preset-koch">Koch Snowflake</button>
+                <button id="preset-param">Parametric Tree</button>
+            </div>
         </div>
         <div class="control-group">
             <h3>Turtle Commands</h3>
@@ -205,6 +372,12 @@
                 </div>
             </div>
         </div>
+        <div class="control-group">
+            <h3>Save/Load</h3>
+            <button id="save-lsystem">Save L-System</button>
+            <div id="save-status"></div>
+        </div>
+        <button id="resetCamera">Reset Camera View</button>
     </div>
 </body>
 </html>

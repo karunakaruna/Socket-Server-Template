@@ -11,8 +11,9 @@ const userOrbits = new Map(); // Store orbit parameters for each user
 let userId = null;
 let userSecret = null;
 let clientId = null;
+let centerSphere = null; // Declare centerSphere globally
 
-function createUserSphere() {
+function createUserSphere(userId) {
     const geometry = new THREE.SphereGeometry(0.2, 32, 32);
     const material = new THREE.MeshPhongMaterial({
         color: 0x7aa2f7,
@@ -20,7 +21,9 @@ function createUserSphere() {
         emissiveIntensity: 0.2,
         shininess: 50
     });
-    return new THREE.Mesh(geometry, material);
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.userData.userId = userId; // Add this to identify spheres
+    return sphere;
 }
 
 function createUserLabel(text) {
@@ -78,7 +81,7 @@ function updateUserPosition(userId) {
         orbit.orbitGroup = orbitGroup;
         
         // Create sphere first
-        sphere = createUserSphere();
+        sphere = createUserSphere(userId);
         userSpheres.set(userId, sphere);
         orbitGroup.add(sphere);
         
@@ -161,6 +164,13 @@ function initThreeJS() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
+    // Prevent context menu on right click
+    renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+    
+    // Initialize click handler right after renderer is created
+    renderer.domElement.addEventListener('click', handleTargetClick);
+    renderer.domElement.addEventListener('mousedown', handleTargetClick);
+    
     // Label renderer
     labelRenderer = new CSS2DRenderer();
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
@@ -189,7 +199,8 @@ function initThreeJS() {
         emissive: 0xffffff,
         emissiveIntensity: 0.5
     });
-    const centerSphere = new THREE.Mesh(centerGeometry, centerMaterial);
+    centerSphere = new THREE.Mesh(centerGeometry, centerMaterial);
+    centerSphere.userData.label = 'zspace'; // Add this to identify it
     scene.add(centerSphere);
     
     const centerLabel = createCenterLabel("Z Space");
@@ -261,11 +272,378 @@ function initThreeJS() {
 
     scene.add(camera);
 
+    // Create particle systems
+    particleSystem = new ParticleSystem(scene);
+    staticParticleField = new StaticParticleField(scene);
+    
     animate();
 }
 
-function animate() {
+// Particle System
+class ParticleSystem {
+    constructor(scene, maxParticles = 1000) {
+        this.scene = scene;
+        this.maxParticles = maxParticles;
+        this.energy = 0.5; // Default energy level
+        this.particles = [];
+        this.geometry = new THREE.BufferGeometry();
+        this.positions = new Float32Array(maxParticles * 3);
+        this.velocities = [];
+        this.lifetimes = [];
+        
+        // Create particle material
+        this.material = new THREE.PointsMaterial({
+            color: 0x7dcfff,
+            size: 0.1,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        // Set up geometry
+        this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+        this.points = new THREE.Points(this.geometry, this.material);
+        this.scene.add(this.points);
+    }
+
+    addParticle() {
+        if (this.particles.length >= this.maxParticles) return;
+
+        // Random position in a sphere - reduced radius
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(Math.random() * 2 - 1);
+        const radius = Math.random() * 0.05; // Halved from 0.1
+
+        const particle = {
+            position: new THREE.Vector3(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.sin(phi) * Math.sin(theta),
+                radius * Math.cos(phi)
+            ),
+            velocity: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.02,
+                (Math.random() - 0.5) * 0.02,
+                (Math.random() - 0.5) * 0.02
+            ),
+            lifetime: Math.random() * 2 + 1, // 1-3 seconds
+            age: 0
+        };
+
+        this.particles.push(particle);
+        this.updateGeometry();
+    }
+
+    updateGeometry() {
+        for (let i = 0; i < this.particles.length; i++) {
+            const particle = this.particles[i];
+            const i3 = i * 3;
+            this.positions[i3] = particle.position.x;
+            this.positions[i3 + 1] = particle.position.y;
+            this.positions[i3 + 2] = particle.position.z;
+        }
+        this.geometry.attributes.position.needsUpdate = true;
+    }
+
+    update(deltaTime) {
+        // Add new particles based on energy
+        const particlesToAdd = Math.floor(this.energy * 5); // 0-5 particles per frame
+        for (let i = 0; i < particlesToAdd; i++) {
+            this.addParticle();
+        }
+
+        // Update existing particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i];
+            particle.age += deltaTime;
+
+            // Update position
+            particle.position.add(particle.velocity);
+
+            // Add gentle floating motion
+            particle.position.y += Math.sin(particle.age * 2) * 0.001;
+
+            // Fade out and remove old particles
+            if (particle.age >= particle.lifetime) {
+                this.particles.splice(i, 1);
+            } else {
+                // Update opacity based on age
+                const life = 1 - (particle.age / particle.lifetime);
+                particle.opacity = life;
+            }
+        }
+
+        this.updateGeometry();
+        
+        // Update material opacity for all particles
+        this.material.opacity = 0.6 * this.energy;
+    }
+
+    setEnergy(value) {
+        this.energy = Math.max(0, Math.min(1, value));
+    }
+}
+
+// Static Particle Field
+class StaticParticleField {
+    constructor(scene, maxParticles = 15000) {  // Increased max particles for larger volume
+        this.scene = scene;
+        this.maxParticles = maxParticles;
+        this.density = 0.5; // Default density level
+        this.particles = [];
+        this.geometry = new THREE.BufferGeometry();
+        this.positions = new Float32Array(maxParticles * 3);
+        this.lifetimes = [];
+        
+        // Create particle material with bright white color
+        this.material = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.1,  // Slightly larger particles for visibility at greater distances
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        // Set up geometry
+        this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+        this.points = new THREE.Points(this.geometry, this.material);
+        this.scene.add(this.points);
+    }
+
+    addParticle() {
+        if (this.particles.length >= this.maxParticles) return;
+
+        // Random position in a cube volume
+        const volume = 80; // 2x larger (was 40)
+        const particle = {
+            position: new THREE.Vector3(
+                (Math.random() - 0.5) * volume,
+                (Math.random() - 0.5) * volume,
+                (Math.random() - 0.5) * volume
+            ),
+            lifetime: 3.0, // Fixed 3-second lifetime
+            age: 0
+        };
+
+        this.particles.push(particle);
+        this.updateGeometry();
+    }
+
+    updateGeometry() {
+        for (let i = 0; i < this.particles.length; i++) {
+            const particle = this.particles[i];
+            const i3 = i * 3;
+            this.positions[i3] = particle.position.x;
+            this.positions[i3 + 1] = particle.position.y;
+            this.positions[i3 + 2] = particle.position.z;
+        }
+        this.geometry.attributes.position.needsUpdate = true;
+    }
+
+    update(deltaTime) {
+        // Add new particles based on density
+        const targetParticles = Math.floor(this.maxParticles * this.density);
+        const particlesToAdd = Math.min(
+            30, // Increased particles per frame for larger volume
+            targetParticles - this.particles.length
+        );
+        
+        for (let i = 0; i < particlesToAdd; i++) {
+            this.addParticle();
+        }
+
+        // Update existing particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i];
+            particle.age += deltaTime;
+
+            // Remove old particles
+            if (particle.age >= particle.lifetime) {
+                this.particles.splice(i, 1);
+            }
+        }
+
+        this.updateGeometry();
+        
+        // Update material opacity
+        const opacityScale = 0.6; // Slightly reduced opacity for better balance
+        this.material.opacity = opacityScale * this.density;
+    }
+
+    setDensity(value) {
+        this.density = Math.max(0, Math.min(1, value));
+    }
+}
+
+let particleSystem;
+let staticParticleField;
+let lastTime = 0;
+
+// Add after other global variables
+let targetReticle = null;
+let currentTarget = null;
+let zspaceReticle = null;
+let currentZTarget = null;
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+class TargetReticle {
+    constructor(color = 0x00ff88) {
+        // Create reticle geometry
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        
+        // Create crosshair shape
+        const size = 1.0;
+        // Horizontal line
+        vertices.push(-size, 0, 0);
+        vertices.push(size, 0, 0);
+        // Vertical line
+        vertices.push(0, -size, 0);
+        vertices.push(0, size, 0);
+        // Circle segments
+        const segments = 32;
+        for (let i = 0; i <= segments; i++) {
+            const theta = (i / segments) * Math.PI * 2;
+            vertices.push(Math.cos(theta) * size * 0.8, Math.sin(theta) * size * 0.8, 0);
+            vertices.push(Math.cos((i + 1) / segments * Math.PI * 2) * size * 0.8, 
+                         Math.sin((i + 1) / segments * Math.PI * 2) * size * 0.8, 0);
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+        // Create material with additive blending
+        const material = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            linewidth: 2
+        });
+
+        this.mesh = new THREE.LineSegments(geometry, material);
+        this.mesh.renderOrder = 999;
+        scene.add(this.mesh);
+    }
+
+    update(target) {
+        if (!target) return;
+        
+        if (target.isZSpace) {
+            // For Z-space, use the intersection point
+            this.mesh.position.copy(target.position);
+        } else if (target instanceof THREE.Object3D) {
+            // For user spheres, get world position
+            const worldPosition = new THREE.Vector3();
+            target.getWorldPosition(worldPosition);
+            this.mesh.position.copy(worldPosition);
+        }
+        
+        // Always face the camera
+        this.mesh.quaternion.copy(camera.quaternion);
+        
+        // Pulse the opacity
+        const pulse = (Math.sin(performance.now() * 0.003) + 1) * 0.5;
+        this.mesh.material.opacity = 0.6 + pulse * 0.4;
+    }
+
+    remove() {
+        scene.remove(this.mesh);
+    }
+}
+
+function handleTargetClick(event) {
+    // Handle right click for Z-space targeting
+    if (event.button === 2) {
+        event.preventDefault();
+        
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / renderer.domElement.clientWidth) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / renderer.domElement.clientHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObject(grid);
+
+        if (intersects.length > 0) {
+            if (!zspaceReticle) {
+                zspaceReticle = new TargetReticle(0x4488ff); // Blue color for Z-space
+            }
+            const target = { 
+                isZSpace: true,
+                position: intersects[0].point.clone()
+            };
+            currentZTarget = target;
+            return;
+        }
+        return;
+    }
+
+    // Left click for user targeting
+    if (event.button !== 0) return;
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / renderer.domElement.clientWidth) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / renderer.domElement.clientHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // First check for centerSphere hit
+    const centerIntersects = raycaster.intersectObject(centerSphere);
+    if (centerIntersects.length > 0) {
+        currentTarget = centerSphere;
+        if (!targetReticle) {
+            targetReticle = new TargetReticle();
+        }
+        return;
+    }
+
+    // Then check for user spheres
+    const targetObjects = [];
+    scene.traverse(object => {
+        if (object.userData && object.userData.userId) {
+            targetObjects.push(object);
+        }
+    });
+
+    const intersects = raycaster.intersectObjects(targetObjects, true);
+    let newTarget = null;
+    
+    for (const intersect of intersects) {
+        const object = intersect.object;
+        if (object.userData && object.userData.userId) {
+            newTarget = object;
+            break;
+        }
+    }
+
+    if (newTarget) {
+        currentTarget = newTarget;
+        if (!targetReticle) {
+            targetReticle = new TargetReticle();
+        }
+    } else {
+        if (targetReticle) {
+            targetReticle.remove();
+            targetReticle = null;
+            currentTarget = null;
+        }
+    }
+}
+
+function animate(timestamp) {
     requestAnimationFrame(animate);
+    
+    // Update particle systems
+    const deltaTime = (timestamp - lastTime) / 1000;
+    if (particleSystem) {
+        particleSystem.update(deltaTime);
+    }
+    if (staticParticleField) {
+        staticParticleField.update(deltaTime);
+    }
+    lastTime = timestamp;
     
     // Update grid shader uniforms
     if (grid.material.uniforms) {
@@ -276,6 +654,14 @@ function animate() {
     // Update all user positions
     for (const userId of userSpheres.keys()) {
         updateUserPosition(userId);
+    }
+    
+    // Update target reticle
+    if (targetReticle && currentTarget) {
+        targetReticle.update(currentTarget);
+    }
+    if (zspaceReticle && currentZTarget) {
+        zspaceReticle.update(currentZTarget);
     }
     
     controls.update();
@@ -616,6 +1002,16 @@ let draggedWindow = null;
 let dragOffset = { x: 0, y: 0 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize minimize buttons
+    document.querySelectorAll('.minimize-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent dragging when clicking minimize
+            const window = button.closest('.window');
+            window.classList.toggle('minimized');
+            button.textContent = window.classList.contains('minimized') ? '+' : '−';
+        });
+    });
+
     // Initialize window dragging
     document.querySelectorAll('.window-title').forEach(titleBar => {
         titleBar.addEventListener('mousedown', e => {
@@ -645,80 +1041,358 @@ document.addEventListener('DOMContentLoaded', () => {
         initWebSocket();
         initAudio();
 
-        // Add event listeners for controls
-        document.getElementById('center-camera').addEventListener('click', () => {
-            camera.position.set(5, 5, 5);
-            camera.lookAt(0, 0, 0);
-            addLogEntry('Camera centered', 'info');
+        // L-System loading
+        document.getElementById('load-lsystem').addEventListener('click', () => {
+            document.getElementById('lsystem-file').click();
+        });
+        
+        document.getElementById('lsystem-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadLSystem(file);
+            }
         });
 
-        document.getElementById('toggle-grid').addEventListener('click', () => {
-            grid.visible = !grid.visible;
-            addLogEntry(`Grid ${grid.visible ? 'shown' : 'hidden'}`, 'info');
+        // Window dragging
+        document.addEventListener('mousedown', startDragging);
+        document.addEventListener('mousemove', dragWindow);
+        document.addEventListener('mouseup', stopDragging);
+        
+        // Other controls
+        document.getElementById('autoRotate').addEventListener('change', (e) => {
+            controls.autoRotate = e.target.checked;
+        });
+        
+        document.getElementById('showGrid').addEventListener('change', (e) => {
+            if (grid) grid.visible = e.target.checked;
+        });
+        
+        document.getElementById('muteAudio').addEventListener('change', (e) => {
+            if (audioContext) {
+                if (e.target.checked) {
+                    audioContext.suspend();
+                } else {
+                    audioContext.resume();
+                }
+            }
         });
 
-        // Handle window resize
-        window.addEventListener('resize', onWindowResize, false);
+        // Particle system energy control
+        document.getElementById('particle-energy').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById('energy-value').textContent = value.toFixed(2);
+            if (particleSystem) {
+                particleSystem.setEnergy(value);
+            }
+        });
+
+        // Static particle field density control
+        document.getElementById('static-particle-density').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById('density-value').textContent = value.toFixed(2);
+            if (staticParticleField) {
+                staticParticleField.setDensity(value);
+            }
+        });
+        
+        // Add click handler for targeting
+        // Removed from here
     });
 });
 
-// Add this CSS to the existing styles
-const style = document.createElement('style');
-style.textContent = `
-    #users-window {
-        max-height: 80vh !important;
-        display: flex;
-        flex-direction: column;
+// L-System functionality
+let currentLSystem = null;
+let currentLSystemData = null;
+let currentLSystemScale = 1.0;
+let currentLSystemHeight = 0.0;
+let isGenerating = false;
+
+function updateLSystemTransform() {
+    if (currentLSystem) {
+        currentLSystem.scale.setScalar(currentLSystemScale);
+        currentLSystem.position.y = currentLSystemHeight;
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function regenerateLSystem() {
+    if (!currentLSystemData || isGenerating) return;
+    
+    isGenerating = true;
+    addLogEntry('Regenerating L-System...', 'info');
+    
+    // Update parameters from controls
+    currentLSystemData.iterations = parseInt(document.getElementById('lsystem-iterations').value);
+    currentLSystemData.angle = parseFloat(document.getElementById('lsystem-angle').value);
+    currentLSystemData.stepLength = parseFloat(document.getElementById('lsystem-step').value);
+    
+    // Use setTimeout to allow the UI to update
+    setTimeout(() => {
+        try {
+            // Generate new geometry
+            const geometry = generateLSystemGeometry(currentLSystemData);
+            
+            // Remove existing L-system
+            if (currentLSystem) {
+                scene.remove(currentLSystem);
+            }
+            
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0x7dcfff,
+                linewidth: 2
+            });
+            
+            // Create new mesh
+            const mesh = new THREE.LineSegments(geometry, material);
+            
+            // Center the geometry at origin
+            geometry.computeBoundingBox();
+            const box = geometry.boundingBox;
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            geometry.translate(-center.x, -center.y, -center.z);
+            
+            // Apply current scale and height
+            mesh.scale.setScalar(currentLSystemScale);
+            mesh.position.y = currentLSystemHeight;
+            
+            scene.add(mesh);
+            currentLSystem = mesh;
+            
+            // Update info window
+            updateLSystemInfo(currentLSystemData);
+            
+            // Add log entry
+            addLogEntry(`Regenerated L-System with ${currentLSystemData.iterations} iterations`, 'info');
+        } catch (error) {
+            console.error('Error regenerating L-System:', error);
+            addLogEntry('Error regenerating L-System', 'error');
+        } finally {
+            isGenerating = false;
+        }
+    }, 0);
+}
+
+const debouncedRegenerate = debounce(regenerateLSystem, 300);
+
+// Initialize everything
+document.addEventListener('DOMContentLoaded', () => {
+    // L-System transform controls
+    document.getElementById('lsystem-scale').addEventListener('input', (e) => {
+        currentLSystemScale = parseFloat(e.target.value);
+        document.getElementById('scale-value').textContent = currentLSystemScale.toFixed(1);
+        updateLSystemTransform();
+    });
+    
+    document.getElementById('lsystem-height').addEventListener('input', (e) => {
+        currentLSystemHeight = parseFloat(e.target.value);
+        document.getElementById('height-value').textContent = currentLSystemHeight.toFixed(1);
+        updateLSystemTransform();
+    });
+    
+    // L-System generation controls - now reactive
+    document.getElementById('lsystem-iterations').addEventListener('input', (e) => {
+        document.getElementById('iterations-value').textContent = e.target.value;
+        debouncedRegenerate();
+    });
+    
+    document.getElementById('lsystem-angle').addEventListener('input', (e) => {
+        document.getElementById('angle-value').textContent = e.target.value + '°';
+        debouncedRegenerate();
+    });
+    
+    document.getElementById('lsystem-step').addEventListener('input', (e) => {
+        document.getElementById('step-value').textContent = parseFloat(e.target.value).toFixed(1);
+        debouncedRegenerate();
+    });
+});
+
+function updateLSystemInfo(lsystem) {
+    currentLSystemData = lsystem;
+    document.getElementById('info-name').textContent = lsystem.plantname || 'Untitled';
+    document.getElementById('info-author').textContent = lsystem.author || 'Anonymous';
+    document.getElementById('info-created').textContent = new Date(lsystem.created).toLocaleDateString();
+    document.getElementById('info-iterations').textContent = lsystem.iterations;
+    document.getElementById('info-description').textContent = lsystem.description || 'No description provided';
+    
+    // Update control values
+    document.getElementById('lsystem-iterations').value = lsystem.iterations;
+    document.getElementById('iterations-value').textContent = lsystem.iterations;
+    document.getElementById('lsystem-angle').value = lsystem.angle;
+    document.getElementById('angle-value').textContent = lsystem.angle + '°';
+    document.getElementById('lsystem-step').value = lsystem.stepLength;
+    document.getElementById('step-value').textContent = lsystem.stepLength.toFixed(1);
+}
+
+function loadLSystem(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const lsystem = JSON.parse(e.target.result);
+            
+            // Generate new geometry
+            const geometry = generateLSystemGeometry(lsystem);
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0x7dcfff,
+                linewidth: 2
+            });
+            
+            // Remove existing L-system if present
+            if (currentLSystem) {
+                scene.remove(currentLSystem);
+            }
+            
+            // Create mesh and add to scene
+            const mesh = new THREE.LineSegments(geometry, material);
+            
+            // Center the geometry at origin
+            geometry.computeBoundingBox();
+            const box = geometry.boundingBox;
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            geometry.translate(-center.x, -center.y, -center.z);
+            
+            // Reset transform values
+            currentLSystemScale = 1.0;
+            currentLSystemHeight = 0.0;
+            document.getElementById('lsystem-scale').value = 1.0;
+            document.getElementById('scale-value').textContent = '1.0';
+            document.getElementById('lsystem-height').value = 0.0;
+            document.getElementById('height-value').textContent = '0.0';
+            
+            mesh.scale.setScalar(currentLSystemScale);
+            mesh.position.y = currentLSystemHeight;
+            
+            scene.add(mesh);
+            currentLSystem = mesh;
+            
+            // Update info window and controls
+            updateLSystemInfo(lsystem);
+            
+            // Add log entry
+            addLogEntry(`Loaded L-System: ${lsystem.plantname}`, 'info');
+            
+        } catch (error) {
+            console.error('Error loading L-System:', error);
+            addLogEntry('Error loading L-System', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+function generateLSystemGeometry(lsystem) {
+    const states = [];
+    const vertices = [];
+    const lines = [];
+    let currentState = {
+        pos: new THREE.Vector3(0, 0, 0),
+        dir: new THREE.Vector3(0, 1, 0),
+        right: new THREE.Vector3(1, 0, 0)
+    };
+    
+    const stepLength = lsystem.stepLength || 1;
+    const angle = (lsystem.angle || 25.7) * Math.PI / 180;
+    let axiom = lsystem.axiom;
+    let rules = {};
+    
+    // Parse rules
+    lsystem.rules.split('\n').forEach(rule => {
+        const [symbol, production] = rule.split('=');
+        if (symbol && production) {
+            rules[symbol.trim()] = production.trim();
+        }
+    });
+    
+    // Apply rules
+    for (let i = 0; i < lsystem.iterations; i++) {
+        let newAxiom = '';
+        for (let char of axiom) {
+            newAxiom += rules[char] || char;
+        }
+        axiom = newAxiom;
     }
     
-    #users-table-container {
-        flex-grow: 1;
-        overflow-y: auto;
+    // Generate geometry
+    for (let char of axiom) {
+        switch (char) {
+            case 'F':
+                const start = currentState.pos.clone();
+                currentState.pos.add(currentState.dir.clone().multiplyScalar(stepLength));
+                vertices.push(start, currentState.pos.clone());
+                lines.push(vertices.length - 2, vertices.length - 1);
+                break;
+            case '+':
+                const rotMatrixPlus = new THREE.Matrix4().makeRotationAxis(currentState.right, -angle);
+                currentState.dir.applyMatrix4(rotMatrixPlus);
+                break;
+            case '-':
+                const rotMatrixMinus = new THREE.Matrix4().makeRotationAxis(currentState.right, angle);
+                currentState.dir.applyMatrix4(rotMatrixMinus);
+                break;
+            case '[':
+                states.push({
+                    pos: currentState.pos.clone(),
+                    dir: currentState.dir.clone(),
+                    right: currentState.right.clone()
+                });
+                break;
+            case ']':
+                if (states.length > 0) {
+                    currentState = states.pop();
+                }
+                break;
+        }
     }
     
-    #users-table td {
-        padding: 2px 8px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.2;
-        max-width: 150px;
-    }
+    // Create geometry
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices.flatMap(v => [v.x, v.y, v.z]), 3));
+    geometry.setIndex(lines);
     
-    .user-type {
-        background-color: #4CAF50;
-        padding: 1px 4px;
-        border-radius: 2px;
-        color: white;
-        font-size: 0.8em;
-    }
+    return geometry;
+}
 
-    .stats-container {
-        padding: 4px;
-    }
-
-    .stat-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 2px 4px;
-        line-height: 1.2;
-    }
-
-    .stat-row span:first-child {
-        color: #8899aa;
-    }
-
-    @keyframes flash {
-        0% { opacity: 1; }
-        50% { opacity: 0.3; }
-        100% { opacity: 1; }
-    }
-
-    .flash {
-        animation: flash 0.3s ease-out;
-    }
-`;
-document.head.appendChild(style);
+// Initialize everything
+document.addEventListener('DOMContentLoaded', () => {
+    // L-System transform controls
+    document.getElementById('lsystem-scale').addEventListener('input', (e) => {
+        currentLSystemScale = parseFloat(e.target.value);
+        document.getElementById('scale-value').textContent = currentLSystemScale.toFixed(1);
+        updateLSystemTransform();
+    });
+    
+    document.getElementById('lsystem-height').addEventListener('input', (e) => {
+        currentLSystemHeight = parseFloat(e.target.value);
+        document.getElementById('height-value').textContent = currentLSystemHeight.toFixed(1);
+        updateLSystemTransform();
+    });
+    
+    // L-System generation controls
+    document.getElementById('lsystem-iterations').addEventListener('input', (e) => {
+        document.getElementById('iterations-value').textContent = e.target.value;
+    });
+    
+    document.getElementById('lsystem-angle').addEventListener('input', (e) => {
+        document.getElementById('angle-value').textContent = e.target.value + '°';
+    });
+    
+    document.getElementById('lsystem-step').addEventListener('input', (e) => {
+        document.getElementById('step-value').textContent = parseFloat(e.target.value).toFixed(1);
+    });
+    
+    document.getElementById('regenerate-lsystem').addEventListener('click', regenerateLSystem);
+});
 
 // Connected users table handling
 let activeUsers = new Map();
@@ -802,3 +1476,61 @@ function updateUsersTable() {
     if (viewerCountEl) viewerCountEl.textContent = 0;  // We don't track viewers yet
     if (clientIdEl) clientIdEl.textContent = clientId || '-';
 }
+
+// Add this CSS to the existing styles
+const style = document.createElement('style');
+style.textContent = `
+    #users-window {
+        max-height: 80vh !important;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #users-table-container {
+        flex-grow: 1;
+        overflow-y: auto;
+    }
+    
+    #users-table td {
+        padding: 2px 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+        max-width: 150px;
+    }
+    
+    .user-type {
+        background-color: #4CAF50;
+        padding: 1px 4px;
+        border-radius: 2px;
+        color: white;
+        font-size: 0.8em;
+    }
+
+    .stats-container {
+        padding: 4px;
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 4px;
+        line-height: 1.2;
+    }
+
+    .stat-row span:first-child {
+        color: #8899aa;
+    }
+
+    @keyframes flash {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+
+    .flash {
+        animation: flash 0.3s ease-out;
+    }
+`;
+document.head.appendChild(style);
