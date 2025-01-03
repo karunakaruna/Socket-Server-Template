@@ -1188,6 +1188,14 @@ const debouncedRegenerate = debounce(regenerateLSystem, 300);
 
 // Initialize everything
 document.addEventListener('DOMContentLoaded', () => {
+    // Load window layout first
+    fetch('window-layout.json')
+        .then(response => response.json())
+        .then(layout => {
+            loadWindowLayout(layout);
+        })
+        .catch(error => console.error('Error loading window layout:', error));
+
     // L-System transform controls
     document.getElementById('lsystem-scale').addEventListener('input', (e) => {
         currentLSystemScale = parseFloat(e.target.value);
@@ -1477,6 +1485,116 @@ function updateUsersTable() {
     if (clientIdEl) clientIdEl.textContent = clientId || '-';
 }
 
+// Window management functionality
+function getAllWindowPositions() {
+    const layout = {};
+    document.querySelectorAll('.window').forEach(window => {
+        const id = window.id;
+        const rect = window.getBoundingClientRect();
+        layout[id] = {
+            left: window.style.left,
+            top: window.style.top,
+            width: window.style.width,
+            height: window.style.height,
+            transform: window.style.transform,
+            minimized: window.classList.contains('minimized'),
+            zIndex: window.style.zIndex || '1'
+        };
+    });
+    return layout;
+}
+
+function loadWindowLayout(layout) {
+    Object.entries(layout).forEach(([id, position]) => {
+        const window = document.getElementById(id);
+        if (window) {
+            window.style.left = position.left;
+            window.style.top = position.top;
+            window.style.width = position.width || '';
+            window.style.height = position.height || '';
+            window.style.transform = position.transform || '';
+            window.style.zIndex = position.zIndex || '1';
+            
+            if (position.minimized) {
+                window.classList.add('minimized');
+            } else {
+                window.classList.remove('minimized');
+            }
+        }
+    });
+}
+
+// Window management button handlers
+document.addEventListener('DOMContentLoaded', () => {
+    const echoBtn = document.getElementById('echo-windows');
+    const saveBtn = document.getElementById('save-windows');
+    const loadBtn = document.getElementById('load-windows');
+    const fileInput = document.getElementById('window-config-file');
+
+    if (echoBtn) {
+        echoBtn.addEventListener('click', () => {
+            const positions = getAllWindowPositions();
+            console.log('Current Window Positions:', positions);
+            
+            // Create a formatted message for the log
+            const message = Object.entries(positions)
+                .map(([id, pos]) => {
+                    return `${id}: (${Math.round(pos.x)}, ${Math.round(pos.y)}) - ` +
+                           `${pos.visible ? 'Visible' : 'Hidden'}, ` +
+                           `${pos.minimized ? 'Minimized' : 'Normal'}`;
+                })
+                .join('\n');
+            
+            addLogEntry('Window Positions:\n' + message);
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            const positions = getAllWindowPositions();
+            const blob = new Blob([JSON.stringify(positions, null, 2)], {
+                type: 'application/json'
+            });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `window-layout-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            addLogEntry('Window layout saved to file');
+        });
+    }
+
+    if (loadBtn && fileInput) {
+        loadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const layout = JSON.parse(event.target.result);
+                    loadWindowLayout(layout);
+                    addLogEntry('Window layout loaded successfully');
+                } catch (error) {
+                    console.error('Error loading window layout:', error);
+                    addLogEntry('Error loading window layout: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            fileInput.value = ''; // Reset for future use
+        });
+    }
+});
+
 // Add this CSS to the existing styles
 const style = document.createElement('style');
 style.textContent = `
@@ -1534,3 +1652,49 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Add save/load layout functionality
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('save-layout').addEventListener('click', () => {
+        const layout = getAllWindowPositions();
+        const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'window-layout.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Add visual feedback
+        const saveBtn = document.getElementById('save-layout');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Layout Saved!';
+        setTimeout(() => {
+            saveBtn.textContent = originalText;
+        }, 1000);
+    });
+
+    document.getElementById('load-layout').addEventListener('click', () => {
+        document.getElementById('layout-file').click();
+    });
+
+    document.getElementById('layout-file').addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const layout = JSON.parse(e.target.result);
+                    loadWindowLayout(layout);
+                } catch (error) {
+                    console.error('Error loading layout:', error);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset for future use
+        }
+    });
+});

@@ -260,9 +260,61 @@
             margin-bottom: 8px;
             font-size: 0.9em;
         }
+
+        /* Window Management Buttons */
+        .window-management {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .window-btn {
+            background: rgba(13, 17, 23, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: #88ffaa;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .window-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .window-btn:active {
+            transform: translateY(1px);
+        }
+
+        .window-btn i {
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
+    <div class="window-management">
+        <button class="window-btn" id="echo-windows">
+            <i class="fas fa-list"></i>
+            Echo Windows
+        </button>
+        <button class="window-btn" id="save-windows">
+            <i class="fas fa-save"></i>
+            Save Layout
+        </button>
+        <button class="window-btn" id="load-windows">
+            <i class="fas fa-folder-open"></i>
+            Load Layout
+        </button>
+        <input type="file" id="window-config-file" style="display: none" accept=".json">
+    </div>
     <div id="scene-container">
         <div id="hud">
             <div class="hud-line"><span class="hud-label">Axiom:</span><span id="hud-axiom"></span></div>
