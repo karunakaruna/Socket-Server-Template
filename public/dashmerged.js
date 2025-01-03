@@ -1040,6 +1040,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initThreeJS();
         initWebSocket();
         initAudio();
+        ///load the testrite lsystem
+        loadLSystem('public/lsystems/testrite.json');
 
         // L-System loading
         document.getElementById('load-lsystem').addEventListener('click', () => {
