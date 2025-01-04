@@ -334,7 +334,19 @@
       "tz": 0,
       "afk": false,
       "textstream": "",
-      "lastActivity": 1735988876739
+      "lastActivity": 1735989288233
+    },
+    "7bc51bf3-6720-4aa9-abd7-336ffc502ac2": {
+      "id": "7bc51bf3-6720-4aa9-abd7-336ffc502ac2",
+      "username": "User_7bc51",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735989844337
     }
   },
   "secrets": [
@@ -449,6 +461,10 @@
     [
       "fdf97d3d",
       "dc893d38-0e0b-41d5-bf9d-bff8a7c29d9d"
+    ],
+    [
+      "60f721fc",
+      "7bc51bf3-6720-4aa9-abd7-336ffc502ac2"
     ]
   ],
   "timestamps": {
@@ -479,6 +495,7 @@
     "62c1d949": 1735987974775,
     "cb1516b9": 1735988115989,
     "966a57c5": 1735988365720,
-    "fdf97d3d": 1735988876739
+    "fdf97d3d": 1735989288233,
+    "60f721fc": 1735989822998
   }
 }
