@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon-16x16.png">
+    <title>WorldTree L-System Explorer</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="lsystem.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1b26;
+            --bg-secondary: #24283b;
+            --text-primary: #a9b1d6;
+            --text-secondary: #7aa2f7;
+            --accent: #7dcfff;
+            --error: #f7768e;
+            --success: #9ece6a;
+            --card-bg: rgba(26, 27, 38, 0.95);
+        }   
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #scene-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            right: 320px;  /* Aligns with the control panel */
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            text-align: right;
+            pointer-events: none;
+            z-index: 100;
+            background: rgba(26, 27, 38, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            max-width: 400px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        #hud .hud-line {
+            margin: 4px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        #hud .hud-label {
+            opacity: 0.7;
+            margin-right: 4px;
+        }
+
+        #controls-panel {
+            width: 300px;
+            background: var(--bg-secondary);
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group h3 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 0.5rem;
+            font-family: monospace;
+            resize: vertical;
+            height: 100px;
+        }
+
+        textarea#description {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .parameter-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .parameter-control label {
+            flex: 1;
+        }
+
+        .parameter-control input {
+            width: 100px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 0.25rem;
+        }
+
+        input[type="range"] {
+            width: calc(100% - 50px);
+            margin: 0.5rem 0;
+            background: var(--bg-primary);
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #angleValue {
+            display: inline-block;
+            min-width: 45px;
+            text-align: right;
+            margin-left: 5px;
+        }
+
+        #resetCamera {
+            margin-top: 1rem;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            width: 100%;
+            border-radius: 4px;
+        }
+
+        #resetCamera:hover {
+            opacity: 0.9;
+        }
+
+        .command-list {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .command-group {
+            margin-bottom: 0.5rem;
+        }
+
+        .command-group h4 {
+            color: var(--accent);
+            margin-bottom: 0.2rem;
+            font-size: 0.8rem;
+        }
+
+        .command-group p {
+            margin: 0.1rem 0;
+            font-family: monospace;
+            color: var(--text-secondary);
+        }
+
+        #save-status {
+            margin-top: 8px;
+            color: var(--success);
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .preset-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .preset-controls button {
+            flex: 1;
+        }
+
+        .preset-list {
+            margin: 12px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .preset-list button {
+            width: 100%;
+            margin-bottom: 4px;
+            text-align: left;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preset-list button .delete-preset {
+            color: var(--error);
+            margin-left: 8px;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .preset-list button .delete-preset:hover {
+            background: var(--error);
+            color: var(--bg-primary);
+        }
+
+        .builtin-presets {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--accent);
+        }
+
+        .builtin-presets h4 {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        /* Window Management Buttons */
+        .window-management {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .window-btn {
+            background: rgba(13, 17, 23, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: #88ffaa;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .window-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .window-btn:active {
+            transform: translateY(1px);
+        }
+
+        .window-btn i {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="window-management">
+        <button class="window-btn" id="echo-windows">
+            <i class="fas fa-list"></i>
+            Echo Windows
+        </button>
+        <button class="window-btn" id="save-windows">
+            <i class="fas fa-save"></i>
+            Save Layout
+        </button>
+        <button class="window-btn" id="load-windows">
+            <i class="fas fa-folder-open"></i>
+            Load Layout
+        </button>
+        <input type="file" id="window-config-file" style="display: none" accept=".json">
+    </div>
+    <div id="scene-container">
+        <div id="hud">
+            <div class="hud-line"><span class="hud-label">Axiom:</span><span id="hud-axiom"></span></div>
+            <div class="hud-line"><span class="hud-label">Rules:</span><span id="hud-rules"></span></div>
+        </div>
+    </div>
+    <div id="controls-panel">
+        <div class="control-group">
+            <h3>L-System Rules</h3>
+            <div class="parameter-control">
+                <label for="plantname">Name:</label>
+                <input type="text" id="plantname" placeholder="Give your L-system a name">
+            </div>
+            <div class="parameter-control">
+                <label for="author">Author:</label>
+                <input type="text" id="author" placeholder="Your name">
+            </div>
+            <div class="parameter-control">
+                <label for="description">Description:</label>
+                <textarea id="description" placeholder="Describe your L-system"></textarea>
+            </div>
+            <div class="parameter-control">
+                <label for="axiom">Axiom:</label>
+                <textarea id="axiom" placeholder="Axiom (e.g. F)">F</textarea>
+            </div>
+            <div class="parameter-control">
+                <label for="rules">Rules:</label>
+                <textarea id="rules" placeholder="Rules (one per line, e.g. F=F[+F]F[-F]F)">F=F[+F]F[-F]F</textarea>
+            </div>
+            <div class="parameter-control">
+                <label for="iterations">Iterations:</label>
+                <input type="number" id="iterations" value="3" min="1" max="7">
+            </div>
+            <div class="parameter-control">
+                <label for="angle">Angle (0-90°):</label>
+                <input type="range" id="angle" min="0" max="90" value="25.7" step="0.1">
+                <span id="angleValue">25.7°</span>
+            </div>
+            <div class="parameter-control">
+                <label for="length">Step Length:</label>
+                <input type="number" id="length" value="1" step="0.1">
+            </div>
+        </div>
+        <div class="control-group">
+            <h3>Presets</h3>
+            <div class="preset-controls">
+                <button id="save-preset">Save as Preset</button>
+                <button id="load-preset">Load Preset</button>
+                <input type="file" id="preset-file" accept=".json" style="display: none;">
+            </div>
+            <div id="user-presets" class="preset-list">
+                <!-- User presets will be added here -->
+            </div>
+            <div class="builtin-presets">
+                <h4>Built-in Examples</h4>
+                <button id="preset-plant">Plant</button>
+                <button id="preset-dragon">Dragon Curve</button>
+                <button id="preset-koch">Koch Snowflake</button>
+                <button id="preset-param">Parametric Tree</button>
+            </div>
+        </div>
+        <div class="control-group">
+            <h3>Turtle Commands</h3>
+            <div class="command-list">
+                <div class="command-group">
+                    <h4>Movement</h4>
+                    <p>F - Move forward (creating geometry)</p>
+                    <p>H - Move forward half length (creating geometry)</p>
+                    <p>G - Move forward (no geometry)</p>
+                    <p>f - Move forward (no geometry)</p>
+                    <p>h - Move forward half length (no geometry)</p>
+                </div>
+                <div class="command-group">
+                    <h4>Rotation</h4>
+                    <p>+ - Turn right</p>
+                    <p>- - Turn left</p>
+                    <p>& - Pitch up</p>
+                    <p>^ - Pitch down</p>
+                    <p>\ - Roll clockwise</p>
+                    <p>/ - Roll counter-clockwise</p>
+                    <p>| - Turn 180 degrees</p>
+                    <p>* - Roll 180 degrees</p>
+                    <p>~ - Pitch/Roll/Turn random amount</p>
+                </div>
+                <div class="command-group">
+                    <h4>Scale</h4>
+                    <p>" - Multiply current length</p>
+                    <p>! - Multiply current thickness</p>
+                    <p>_ - Divide current length</p>
+                    <p>? - Divide current width</p>
+                    <p>; - Multiply current angle</p>
+                    <p>@ - Divide current angle</p>
+                </div>
+                <div class="command-group">
+                    <h4>Structure</h4>
+                    <p>[ - Push turtle state (start branch)</p>
+                    <p>] - Pop turtle state (end branch)</p>
+                    <p>{ - Start polygon</p>
+                    <p>. - Make polygon vertex</p>
+                    <p>} - End polygon</p>
+                    <p>% - Cut off remainder of branch</p>
+                </div>
+                <div class="command-group">
+                    <h4>Color</h4>
+                    <p>' - Increment color index U</p>
+                    <p># - Increment color index V</p>
+                </div>
+            </div>
+        </div>
+        <div class="control-group">
+            <h3>Save/Load</h3>
+            <button id="save-lsystem">Save L-System</button>
+            <div id="save-status"></div>
+        </div>
+        <button id="resetCamera">Reset Camera View</button>
+    </div>
+</body>
+</html>

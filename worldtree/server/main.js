@@ -9,12 +9,19 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files from both public directories
+app.use('/', express.static(path.join(__dirname, '../public')));
+app.use('/v3', express.static(path.join(__dirname, '../public3')));
 
-// In-memory user state
-const users = new Map();
-const userSecrets = new Map();
+// Serve ordinal.html at root
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/ordinal.html'));
+});
+
+// Serve debug tools at /debug
+app.get('/debug', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public3/debug_tools.html'));
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -86,6 +93,10 @@ wss.on('connection', (ws) => {
         handleUserDisconnect(userId);
     });
 });
+
+// In-memory user state
+const users = new Map();
+const userSecrets = new Map();
 
 // Helper functions
 function broadcastUserList() {

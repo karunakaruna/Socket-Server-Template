@@ -1,0 +1,11 @@
+{
+  "plantname": "Formidum",
+  "author": "Jonny O",
+  "created": "2025-01-03T12:47:48.947Z",
+  "axiom": "ABC",
+  "rules": "A=F[+FA][-FAAAABBC[FC]AAFF]FA\nB=F--[+FB][-FB]FABCA\nC=F[+FC][-FC]FAC",
+  "iterations": 4,
+  "angle": 41.6,
+  "stepLength": 0.5,
+  "description": "A formidable opponent"
+}

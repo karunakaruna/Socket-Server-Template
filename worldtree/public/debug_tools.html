@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Tools</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1b26;
+            color: #a9b1d6;
+        }
+        .debug-container {
+            background-color: rgba(26, 27, 38, 0.95);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            border: 1px solid #7aa2f7;
+            backdrop-filter: blur(10px);
+        }
+        .window-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #7aa2f7;
+            border-bottom: 1px solid rgba(122, 162, 247, 0.3);
+            padding-bottom: 10px;
+        }
+        .nav-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(26, 27, 38, 0.8);
+            border: 1px solid #7aa2f7;
+            color: #7aa2f7;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .nav-toggle:hover {
+            background: rgba(122, 162, 247, 0.2);
+        }
+        .nav-menu {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
+            background: rgba(26, 27, 38, 0.95);
+            border: 1px solid #7aa2f7;
+            border-radius: 8px;
+            padding: 20px;
+            width: 300px;
+            transform: translateX(350px);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(10px);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        .nav-menu.active {
+            transform: translateX(0);
+        }
+        .nav-menu h3 {
+            color: #7aa2f7;
+            margin: 0 0 15px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(122, 162, 247, 0.3);
+            padding-bottom: 5px;
+        }
+        .debug-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(122, 162, 247, 0.1);
+            border-radius: 4px;
+        }
+        .debug-section h3 {
+            color: #7aa2f7;
+            margin: 0 0 10px 0;
+        }
+        #websocket-status {
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .connected {
+            background: rgba(158, 206, 106, 0.2);
+            color: #9ece6a;
+        }
+        .disconnected {
+            background: rgba(247, 118, 142, 0.2);
+            color: #f7768e;
+        }
+        #debug-log {
+            background: rgba(26, 27, 38, 0.5);
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(122, 162, 247, 0.1);
+        }
+        .timestamp {
+            color: #7aa2f7;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <div class="window-title">Debug Tools</div>
+        
+        <div class="debug-section">
+            <h3>WebSocket Status</h3>
+            <div id="websocket-status" class="disconnected">Disconnected</div>
+        </div>
+
+        <div class="debug-section">
+            <h3>Connected Users</h3>
+            <div id="user-list"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>Debug Log</h3>
+            <div id="debug-log"></div>
+        </div>
+    </div>
+
+    <button class="nav-toggle">≡ Menu</button>
+    <div class="nav-menu">
+        <h3>Navigation</h3>
+        <div class="routes">
+            <div class="route-item">
+                <a href="/">🏠 Home</a>
+                <div class="description">Main visualization page</div>
+            </div>
+            <div class="route-item">
+                <a href="/debug">🛠️ Debug Tools</a>
+                <div class="description">System debugging interface</div>
+            </div>
+            <div class="route-item">
+                <a href="/ordinal.html">Ψ Ordinal View</a>
+                <div class="description">Ordinal visualization system</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        const wsStatus = document.getElementById('websocket-status');
+        const userList = document.getElementById('user-list');
+        const debugLog = document.getElementById('debug-log');
+
+        function addLogEntry(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            debugLog.appendChild(entry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        ws.onopen = () => {
+            wsStatus.className = 'connected';
+            wsStatus.textContent = 'Connected';
+            addLogEntry('WebSocket connection established');
+        };
+
+        ws.onclose = () => {
+            wsStatus.className = 'disconnected';
+            wsStatus.textContent = 'Disconnected';
+            addLogEntry('WebSocket connection closed', 'error');
+        };
+
+        ws.onerror = (error) => {
+            addLogEntry(`WebSocket error: ${error}`, 'error');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                addLogEntry(`Received: ${JSON.stringify(data)}`);
+                
+                if (data.type === 'userList') {
+                    userList.innerHTML = data.users.map(user => `
+                        <div class="log-entry">
+                            ${user.name} (${user.status})
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                addLogEntry(`Error parsing message: ${error}`, 'error');
+            }
+        };
+
+        // Navigation menu
+        const navToggle = document.querySelector('.nav-toggle');
+        const navMenu = document.querySelector('.nav-menu');
+        
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            navToggle.style.opacity = navMenu.classList.contains('active') ? '0' : '1';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !navToggle.contains(e.target)) {
+                navMenu.classList.remove('active');
+                navToggle.style.opacity = '1';
+            }
+        });
+
+        // Keep connection alive
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

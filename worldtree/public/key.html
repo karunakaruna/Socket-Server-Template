@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Generator & Reader</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            text-align: center; 
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .square-box {
+            width: 320px;
+            height: 320px;
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.2;
+            letter-spacing: 0.5em;
+            padding: 15px;
+            margin: 10px auto;
+            white-space: pre;
+            resize: none;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #inputText {
+            background-color: #ff00ff20;
+            border: 2px solid #ff00ff;
+        }
+        #outputGrid {
+            background: #f5f5f5;
+            border: none;
+            display: inline-block;
+        }
+        #copyButton {
+            background-color: #0000ff20;
+            border: 2px solid #0000ff;
+            padding: 8px 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #keyInput {
+            background-color: #ffff0020;
+            border: 2px solid #ffff00;
+        }
+        #decodedText {
+            background-color: #00ff0020;
+            border: 2px solid #00ff00;
+            font-family: monospace;
+        }
+        .generate-button, .decode-button {
+            padding: 8px 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        .section {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>Key Generator</h2>
+    <div class="section">
+        <textarea id="inputText" class="square-box" placeholder="Enter text to encode..."></textarea>
+        <br>
+        <button class="generate-button" onclick="generateKey()">Generate Key</button>
+        <pre id="outputGrid" class="square-box"></pre>
+        <button id="copyButton" onclick="copyKey()">Copy Key</button>
+    </div>
+
+    <h2>Key Reader</h2>
+    <div class="section">
+        <textarea id="keyInput" class="square-box" placeholder="Paste key here..." spellcheck="false"></textarea>
+        <br>
+        <button class="decode-button" onclick="decodeKey()">Decode Key</button>
+        <pre id="decodedText" class="square-box"></pre>
+    </div>
+    
+    <script>
+        function generateRandomKey(length = 256) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function formatGrid(str) {
+            let result = '';
+            for (let i = 0; i < 256; i += 16) {
+                result += str.slice(i, i + 16) + '\n';
+            }
+            return result;
+        }
+
+        function encodeMessage(message) {
+            let key = generateRandomKey();
+            const encoder = new TextEncoder();
+            const data = encoder.encode(message);
+            const lengthBytes = data.length.toString(16).padStart(4, '0');
+            key = lengthBytes + key.slice(4);
+            
+            for (let i = 0; i < data.length && i < 126; i++) {
+                const pos = (i * 2) + 4;
+                const byte = data[i].toString(16).padStart(2, '0');
+                key = key.slice(0, pos) + byte + key.slice(pos + 2);
+            }
+            return key;
+        }
+
+        function decodeMessage(key) {
+            try {
+                const lengthHex = key.slice(0, 4);
+                const length = parseInt(lengthHex, 16);
+                
+                if (isNaN(length) || length < 0 || length > 126) {
+                    return "Invalid key format";
+                }
+                
+                let bytes = new Uint8Array(length);
+                for (let i = 0; i < length; i++) {
+                    const pos = (i * 2) + 4;
+                    const byte = parseInt(key.slice(pos, pos + 2), 16);
+                    bytes[i] = byte;
+                }
+                
+                const decoder = new TextDecoder();
+                return decoder.decode(bytes);
+            } catch (e) {
+                return "Error decoding key";
+            }
+        }
+
+        function generateKey() {
+            const input = document.getElementById('inputText').value;
+            const key = encodeMessage(input);
+            document.getElementById('outputGrid').textContent = formatGrid(key);
+        }
+
+        function decodeKey() {
+            const key = document.getElementById('keyInput').value.replace(/[\n\s]/g, '');
+            if (key.length !== 256) {
+                document.getElementById('decodedText').textContent = "Invalid key length";
+                return;
+            }
+            const decoded = decodeMessage(key);
+            document.getElementById('decodedText').textContent = decoded;
+        }
+
+        function copyKey() {
+            const key = document.getElementById('outputGrid').textContent.replace(/[\n\s]/g, '');
+            navigator.clipboard.writeText(key)
+                .then(() => alert('Key copied to clipboard!'))
+                .catch(err => alert('Failed to copy key: ' + err));
+        }
+
+        // Auto-format pasted keys
+        document.getElementById('keyInput').addEventListener('input', function(e) {
+            let key = e.target.value.replace(/[\n\s]/g, '');
+            if (key.length > 256) {
+                key = key.slice(0, 256);
+            }
+            e.target.value = formatGrid(key);
+            e.target.scrollTop = 0; // Prevent scrolling
+        });
+    </script>
+</body>
+</html>

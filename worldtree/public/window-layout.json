@@ -1,0 +1,56 @@
+{
+  "controls-window": {
+    "left": "1615.22px",
+    "top": "322.969px",
+    "width": "",
+    "height": "",
+    "transform": "",
+    "minimized": false,
+    "zIndex": "1"
+  },
+  "lsystem-controls": {
+    "left": "893.938px",
+    "top": "874.953px",
+    "width": "",
+    "height": "",
+    "transform": "",
+    "minimized": true,
+    "zIndex": "1"
+  },
+  "users-window": {
+    "left": "7.96875px",
+    "top": "77.9531px",
+    "width": "497px",
+    "height": "229px",
+    "transform": "",
+    "minimized": false,
+    "zIndex": "1"
+  },
+  "log-window": {
+    "left": "1101.22px",
+    "top": "680.219px",
+    "width": "805px",
+    "height": "301px",
+    "transform": "",
+    "minimized": false,
+    "zIndex": "1"
+  },
+  "stats-window": {
+    "left": "1483.97px",
+    "top": "78.9688px",
+    "width": "423px",
+    "height": "223px",
+    "transform": "",
+    "minimized": false,
+    "zIndex": "1"
+  },
+  "lsystem-info": {
+    "left": "18.9375px",
+    "top": "698.938px",
+    "width": "282px",
+    "height": "299px",
+    "transform": "",
+    "minimized": false,
+    "zIndex": "1"
+  }
+}

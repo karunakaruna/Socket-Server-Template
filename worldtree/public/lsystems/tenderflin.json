@@ -1,0 +1,11 @@
+{
+  "plantname": "Tenderflin",
+  "author": "Jonny Ostrem",
+  "created": "2025-01-03T12:47:39.194Z",
+  "axiom": "[A]////[B][C]",
+  "rules": "A=F///(A)[+FFF-FF(A)][-F(A)]\nB=F/(B)[++F(B)][--FFBB(B)]\nC=F/(C)[+++F(C)][---F(C)]",
+  "iterations": 4,
+  "angle": 16.3,
+  "stepLength": 2.8,
+  "description": "An experiment in saving l-systems in a json format."
+}

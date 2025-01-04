@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Widget</title>
+    <link rel="stylesheet" href="timer.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-container">
+        <div class="timer-widget">
+            <svg class="progress-ring" width="200" height="200">
+                <circle class="progress-ring__circle" r="90" cx="100" cy="100" />
+            </svg>
+            <div class="time-text"></div>
+        </div>
+        <div class="small-timer-container">
+            <svg class="small-progress-ring" width="64" height="64">
+                <circle class="small-progress-ring__circle" r="30" cx="32" cy="32" />
+            </svg>
+            <div class="small-time-text"></div>
+        </div>
+    </div>
+    <div class="controls">
+        <label for="timer-duration">Set Timer Duration (seconds):</label>
+        <input type="number" id="timer-duration" value="10" onchange="window.timer.setDuration(this.value)">
+        <button onclick="window.timer.start()">Start</button>
+        <button onclick="window.timer.stop()">Stop</button>
+        <button onclick="window.timer.reset()">Reset</button>
+
+        <!-- Small Timer Controls -->
+        <div style="margin-top: 20px;">
+            <button onclick="window.smallTimer.start()">Start Small Timer</button>
+            <button onclick="window.smallTimer.stop()">Stop Small Timer</button>
+            <button onclick="window.smallTimer.reset()">Reset Small Timer</button>
+        </div>
+    </div>
+    <div class="readme">
+        <h3>Timer Widget Usage</h3>
+        <p>This widget provides a visual countdown timer. You can specify a callback function to execute when the timer finishes.</p>
+        <pre><code>
+// Example Usage
+function reconnect() {
+    console.log('Reconnecting...');
+    // Add reconnection logic here
+}
+
+const timer = new TimerWidget(10, reconnect);
+timer.start();
+        </code></pre>
+        <h3>Console Commands</h3>
+        <p>Use the following console commands to control the timers:</p>
+        <pre><code>
+// Start the main timer
+timer.start();
+
+// Stop the main timer
+timer.stop();
+
+// Reset the main timer
+timer.reset();
+
+// Start the small timer
+smallTimer.start();
+
+// Stop the small timer
+smallTimer.stop();
+        </code></pre>
+    </div>
+
+    <script type="module" src="timer.js"></script>
+    <script type="module">
+        import { TimerWidget, SmallTimerWidget } from './timer.js';
+        
+        // Make timer instances globally accessible
+        window.timer = new TimerWidget(10);
+        window.smallTimer = new SmallTimerWidget(10);
+        
+        // Set callbacks
+        timer.setCallback(() => console.log('Main timer finished!'));
+        smallTimer.setCallback(() => console.log('hi'));
+        
+        // Initialize timers
+        timer.start();
+        smallTimer.start();
+    </script>
+</body>
+</html>

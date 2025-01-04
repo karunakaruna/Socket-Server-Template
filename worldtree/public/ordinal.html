@@ -53,6 +53,9 @@
             margin: 0 0 10px 0;
             text-shadow: 0 0 20px rgba(122, 162, 247, 0.5);
             animation: glow 2s ease-in-out infinite alternate;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: font-family 0.3s ease;
         }
 
         .title {
@@ -108,6 +111,144 @@
                 text-shadow: 0 0 30px rgba(122, 162, 247, 0.8);
             }
         }
+
+        .nav-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(26, 27, 38, 0.8);
+            border: 1px solid #7aa2f7;
+            color: #7aa2f7;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .nav-toggle:hover {
+            background: rgba(122, 162, 247, 0.2);
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
+            background: rgba(26, 27, 38, 0.95);
+            border: 1px solid #7aa2f7;
+            border-radius: 8px;
+            padding: 20px;
+            width: 300px;
+            transform: translateX(350px);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(10px);
+            color: #a9b1d6;
+            font-family: 'Courier New', monospace;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .nav-menu.active {
+            transform: translateX(0);
+        }
+
+        .nav-menu h3 {
+            color: #7aa2f7;
+            margin: 0 0 15px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(122, 162, 247, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .folder-structure {
+            margin-bottom: 20px;
+        }
+
+        .folder-structure ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .folder-structure li {
+            padding: 3px 0 3px 20px;
+            position: relative;
+            font-size: 13px;
+        }
+
+        .folder-structure .folder {
+            color: #e0af68;
+        }
+
+        .folder-structure .file {
+            color: #9ece6a;
+        }
+
+        .folder-structure .folder::before {
+            content: "📁";
+            position: absolute;
+            left: 0;
+        }
+
+        .folder-structure .file::before {
+            content: "📄";
+            position: absolute;
+            left: 0;
+        }
+
+        .nav-menu a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #7aa2f7;
+        }
+
+        .nav-menu .routes {
+            margin-bottom: 20px;
+        }
+
+        .nav-menu .route-item {
+            padding: 5px 10px;
+            margin: 2px 0;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .nav-menu .route-item:hover {
+            background: rgba(122, 162, 247, 0.1);
+        }
+
+        .nav-menu .description {
+            font-size: 11px;
+            color: rgba(169, 177, 214, 0.6);
+            margin-top: 2px;
+        }
+
+        /* Custom scrollbar */
+        .nav-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .nav-menu::-webkit-scrollbar-track {
+            background: rgba(26, 27, 38, 0.5);
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: rgba(122, 162, 247, 0.3);
+            border-radius: 3px;
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(122, 162, 247, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -128,6 +269,87 @@
         </div>
         <div id="poetry">Beyond ω, a trembling bridge; beyond that, echoes of greater infinities.</div>
         <div id="context">An infinite expanse folds upon itself, spiraling into recursive echoes of boundless order. Each step forward unveils new depths, where the horizon collapses into a shimmering lattice of structure and dissolution.</div>
+    </div>
+
+    <button class="nav-toggle">≡ Menu</button>
+    <div class="nav-menu">
+        <h3>Navigation</h3>
+        <div class="routes">
+            <div class="route-item">
+                <a href="/">🏠 Home</a>
+                <div class="description">Main visualization page</div>
+            </div>
+            <div class="route-item">
+                <a href="/ordinal.html">Ψ Ordinal View</a>
+                <div class="description">Ordinal visualization system</div>
+            </div>
+            <div class="route-item">
+                <a href="/dashmerge.html">📊 Dashboard Merge</a>
+                <div class="description">Merged dashboard interface</div>
+            </div>
+            <div class="route-item">
+                <a href="/lsystem.html">🌳 L-System</a>
+                <div class="description">L-System visualization</div>
+            </div>
+            <div class="route-item">
+                <a href="/debug">🛠️ Debug Tools</a>
+                <div class="description">System debugging interface</div>
+            </div>
+            <div class="route-item">
+                <a href="/timer.html">⏱️ Timer</a>
+                <div class="description">System timer utility</div>
+            </div>
+        </div>
+
+        <h3>Folder Structure</h3>
+        <div class="folder-structure">
+            <ul>
+                <li class="folder">public/
+                    <ul>
+                        <li class="folder">components/
+                            <ul>
+                                <li class="folder">core/
+                                    <ul>
+                                        <li class="file">DashMerged.js</li>
+                                        <li class="file">ThreeScene.js</li>
+                                    </ul>
+                                </li>
+                                <li class="folder">windows/
+                                    <ul>
+                                        <li class="file">BaseWindow.js</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="folder">lsystems/
+                            <ul>
+                                <li class="file">dashboard-3d.js</li>
+                                <li class="file">dashboard-network.js</li>
+                                <li class="file">dashboard-ui.js</li>
+                            </ul>
+                        </li>
+                        <li class="folder">sound/
+                            <ul>
+                                <li class="file">notification.wav</li>
+                                <li class="file">pop.wav</li>
+                                <li class="file">blip.wav</li>
+                            </ul>
+                        </li>
+                        <li class="file"><a href="/ordinal.html">ordinal.html</a></li>
+                        <li class="file"><a href="/dashmerge.html">dashmerge.html</a></li>
+                        <li class="file"><a href="/lsystem.html">lsystem.html</a></li>
+                        <li class="file"><a href="/debug">debug_tools.html</a></li>
+                        <li class="file"><a href="/timer.html">timer.html</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h3>System Info</h3>
+        <div class="route-item">
+            <a href="/health">💓 Health Check</a>
+            <div class="description">System status and metrics</div>
+        </div>
     </div>
 
     <script id="vertexShader" type="x-shader/x-vertex">
@@ -215,6 +437,55 @@
     </script>
 
     <script type="module">
+        const psiFonts = [
+            // Serif fonts
+            'Garamond',
+            'Baskerville',
+            'Times New Roman',
+            'Georgia',
+            'Bodoni MT',
+            'Palatino',
+            'Didot',
+            'Cambria',
+            'Book Antiqua',
+            'Goudy Old Style',
+            // Sans-serif fonts
+            'Helvetica Neue',
+            'Arial',
+            'Futura',
+            'Avant Garde',
+            'Century Gothic',
+            'Optima',
+            'Franklin Gothic',
+            'Univers',
+            'Frutiger',
+            'Gill Sans'
+        ];
+
+        let currentPsiFont = 0;
+        const psiHeader = document.querySelector('.psi-header');
+        
+        function cyclePsiFont() {
+            currentPsiFont = (currentPsiFont + 1) % psiFonts.length;
+            psiHeader.style.fontFamily = psiFonts[currentPsiFont];
+            
+            // Add a quick scale animation
+            psiHeader.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                psiHeader.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        psiHeader.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent particle system click
+            cyclePsiFont();
+            collapseParticles(collapseLevel); // Still trigger particles
+        });
+
+        // Initialize with random font
+        currentPsiFont = Math.floor(Math.random() * psiFonts.length);
+        psiHeader.style.fontFamily = psiFonts[currentPsiFont];
+
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js';
 
         const shaderCanvas = document.getElementById('shader-canvas');
@@ -402,6 +673,23 @@
         }
 
         updateServerData();
+
+        // Navigation menu toggle
+        const navToggle = document.querySelector('.nav-toggle');
+        const navMenu = document.querySelector('.nav-menu');
+        
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            navToggle.style.opacity = navMenu.classList.contains('active') ? '0' : '1';
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !navToggle.contains(e.target)) {
+                navMenu.classList.remove('active');
+                navToggle.style.opacity = '1';
+            }
+        });
     </script>
 </body>
 </html>

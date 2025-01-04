@@ -1,0 +1,11 @@
+{
+  "plantname": "Hypermoss",
+  "author": "Jonny Ostrem",
+  "created": "2025-01-03T12:47:12.363Z",
+  "axiom": "ABC",
+  "rules": "A=F(A)[+F(A)][-F(A)]\nB=F(B)[+BBBBB///BBB+F(B)][--F(B)]\nC=F(C)[++/+FFFF(C)][---F(C)]",
+  "iterations": 5,
+  "angle": 39.9,
+  "stepLength": 0.5,
+  "description": "Hypermoss is a structure left behind by organic growth process. "
+}

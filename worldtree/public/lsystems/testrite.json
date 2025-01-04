@@ -1,0 +1,11 @@
+{
+  "plantname": "Testrite",
+  "author": "Jonny Ostrem",
+  "created": "2025-01-03T06:42:10.606Z",
+  "axiom": "ABC",
+  "rules": "A=F(A)[+F(A)][-F(A)]\nB=F(B)[++F(B)][--F(B)]\nC=F(C)[+++F(C)][---F(C)]",
+  "iterations": 4,
+  "angle": 15.5,
+  "stepLength": 0.5,
+  "description": "An experiment in saving l-systems in a json format."
+}

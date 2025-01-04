@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon-16x16.png">
+    <title>WorldTree Seed - Dashboard</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="dashmerged.js"></script>
+    <link rel="stylesheet" href="timer.css">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <nav id="nav-bar">
+        <a href="/" class="nav-logo">
+            <span>🌱</span>
+            <span>Worldtree v.1111</span>
+        </a>
+        <div class="nav-links">
+            <a href="/dashmerge.html" class="active">🧭 Explorer</a>
+            <a href="/dashboard.html">📔 Dashboard</a>
+            <a href="/lsystem.html">🌿 LSystems</a>
+        </div>
+    </nav>
+
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Controls Window -->
+    <div id="controls-window" class="window">
+        <div class="window-title">
+            <span class="window-title-text">Scene Controls</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="control-section">
+                <h4>L-System</h4>
+                <div class="control-group">
+                    <button id="load-lsystem" class="primary-button compact">Load L-System</button>
+                    <input type="file" id="lsystem-file" accept=".json" style="display: none;">
+                </div>
+            </div>
+            <div class="control-section">
+                <h4>Scene</h4>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="autoRotate"> Auto Rotate
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="showGrid" checked> Show Grid
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="muteAudio"> Mute Audio
+                    </label>
+                </div>
+                <div class="control-group">
+                    <button id="save-layout" class="secondary-button compact">Save Window Layout</button>
+                    <button id="load-layout" class="secondary-button compact">Load Window Layout</button>
+                    <input type="file" id="layout-file" accept=".json" style="display: none;">
+                </div>
+                <div class="control-group">
+                    <label for="particle-energy">Particle Energy</label>
+                    <div class="slider-container">
+                        <input type="range" id="particle-energy" min="0" max="1" step="0.01" value="0.5">
+                        <span id="energy-value">0.5</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="static-particle-density">Static Field Density</label>
+                    <div class="slider-container">
+                        <input type="range" id="static-particle-density" min="0" max="1" step="0.01" value="0.5">
+                        <span id="density-value">0.5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lsystem-controls" class="window">
+        <div class="window-title">
+            <span class="window-title-text">L-System Controls</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="control-section">
+                <h4>Transform</h4>
+                <div class="control-group">
+                    <label>Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-scale" min="0.1" max="5" step="0.1" value="1">
+                        <span class="slider-value" id="scale-value">1.0</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Height</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-height" min="-5" max="5" step="0.1" value="0">
+                        <span class="slider-value" id="height-value">0.0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h4>Generation</h4>
+                <div class="control-group">
+                    <label>Iterations</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-iterations" min="1" max="8" step="1" value="4">
+                        <span class="slider-value" id="iterations-value">4</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Angle (deg)</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-angle" min="0" max="90" step="1" value="25">
+                        <span class="slider-value" id="angle-value">25°</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Step Length</label>
+                    <div class="slider-container">
+                        <input type="range" id="lsystem-step" min="0.1" max="2" step="0.1" value="1">
+                        <span class="slider-value" id="step-value">1.0</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <button id="regenerate-lsystem" class="secondary-button">Regenerate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="three-container"></div>
+
+    <div id="users-window" class="window">
+        <div class="window-title">
+            <span class="window-title-text">Connected Users</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="users-table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Position</th>
+                            <th>Info</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="log-window" class="window">
+        <div class="window-title">
+            <span class="window-title-text">Log</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div id="log-container"></div>
+        </div>
+    </div>
+
+    <div id="stats-window" class="window">
+        <div class="window-title">
+            <span class="window-title-text">Stats</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="stats-container">
+                <div class="stat-row">
+                    <span>Client ID:</span>
+                    <span id="client-id">-</span>
+                </div>
+                <div class="stat-row">
+                    <span>Users:</span>
+                    <span id="user-count">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Pings:</span>
+                    <span id="ping-count">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lsystem-info" class="window">
+        <div class="window-title">
+            <span class="window-title-text">L-System Info</span>
+            <button class="minimize-button">−</button>
+        </div>
+        <div class="window-content">
+            <div class="info-grid">
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span id="info-name" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Author:</span>
+                    <span id="info-author" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Created:</span>
+                    <span id="info-created" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Iterations:</span>
+                    <span id="info-iterations" class="info-value">-</span>
+                </div>
+            </div>
+            <div class="info-description">
+                <span class="info-label">Description:</span>
+                <p id="info-description" class="info-value">-</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Three.js scene
+        initThreeJS();
+    </script>
+</body>
+</html>
