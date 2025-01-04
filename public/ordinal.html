@@ -15,6 +15,13 @@
             position: relative;
             width: 100vw;
             height: 100vh;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: none;
         }
 
         canvas {
@@ -370,6 +377,14 @@
                 touch-action: none;  /* Enable direct manipulation of emojis */
                 cursor: move;
             }
+        }
+
+        .worm-emoji {
+            font-size: 24px;
+            cursor: move;
+            touch-action: none;
+            -webkit-user-drag: none;
+            user-drag: none;
         }
     </style>
 </head>
@@ -1126,50 +1141,82 @@
             console.log('Worm emoji created at:', x, y);
             const wormEmoji = document.createElement('div');
             wormEmoji.textContent = '🐛';
+            wormEmoji.className = 'worm-emoji';
             wormEmoji.style.position = 'absolute';
             wormEmoji.style.fontSize = '30px';
             wormEmoji.style.left = `${x}px`;
             wormEmoji.style.top = `${y}px`;
-            wormEmoji.style.zIndex = 2000;
-            wormEmoji.style.userSelect = 'none';
-            wormEmoji.className = 'emoji-draggable';
-            document.body.appendChild(wormEmoji);
+            wormEmoji.style.zIndex = '1000';
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            function setTranslate(xPos, yPos, el) {
+                el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+            }
+
+            function dragStart(e) {
+                if (e.type === "touchstart") {
+                    initialX = e.touches[0].clientX - xOffset;
+                    initialY = e.touches[0].clientY - yOffset;
+                } else {
+                    initialX = e.clientX - xOffset;
+                    initialY = e.clientY - yOffset;
+                }
+                if (e.target === wormEmoji) {
+                    isDragging = true;
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    if (e.type === "touchmove") {
+                        currentX = e.touches[0].clientX - initialX;
+                        currentY = e.touches[0].clientY - initialY;
+                    } else {
+                        currentX = e.clientX - initialX;
+                        currentY = e.clientY - initialY;
+                    }
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    setTranslate(currentX, currentY, wormEmoji);
+                }
+            }
+
+            function dragEnd(e) {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            wormEmoji.addEventListener('touchstart', dragStart, false);
+            wormEmoji.addEventListener('touchend', dragEnd, false);
+            wormEmoji.addEventListener('touchmove', drag, false);
+            wormEmoji.addEventListener('mousedown', dragStart, false);
+            wormEmoji.addEventListener('mousemove', drag, false);
+            wormEmoji.addEventListener('mouseup', dragEnd, false);
 
             let tapCount = 0;
+
             wormEmoji.addEventListener('click', (e) => {
                 tapCount++;
                 if (tapCount === 15) {
-                    const wormX = e.clientX;
-                    const wormY = e.clientY;
+                    const rect = wormEmoji.getBoundingClientRect();
+                    const wormX = rect.left + xOffset;
+                    const wormY = rect.top + yOffset;
                     createButterflyEmoji(wormX, wormY);
                     wormEmoji.remove();
                 }
             });
 
-            function handleTouchEvents(element) {
-                let touchStartX = 0;
-                let touchStartY = 0;
-                
-                element.addEventListener('touchstart', (e) => {
-                    const touch = e.touches[0];
-                    touchStartX = touch.clientX - parseFloat(element.style.left || 0);
-                    touchStartY = touch.clientY - parseFloat(element.style.top || 0);
-                    e.preventDefault(); // Prevent scrolling while dragging
-                });
-
-                element.addEventListener('touchmove', (e) => {
-                    const touch = e.touches[0];
-                    element.style.left = `${touch.clientX - touchStartX}px`;
-                    element.style.top = `${touch.clientY - touchStartY}px`;
-                    e.preventDefault();
-                });
-            }
-
-            handleTouchEvents(wormEmoji);
-
-            setTimeout(() => {
-                wormEmoji.remove();
-            }, 10000); // Worm lives for 10 seconds
+            document.body.appendChild(wormEmoji);
+            return wormEmoji;
         }
 
         function createAppleEmoji(x, y) {
