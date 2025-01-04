@@ -352,6 +352,25 @@
             from { transform: scale(0); opacity: 1; }
             to { transform: scale(1.5); opacity: 0; }
         }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            body {
+                -webkit-user-select: none;  /* Safari */
+                -ms-user-select: none;      /* IE 10 and IE 11 */
+                user-select: none;          /* Standard syntax */
+                touch-action: manipulation;  /* Enable smooth touch interactions */
+            }
+            
+            .debug-ui {
+                display: none !important;  /* Hide debug UI on mobile */
+            }
+
+            .emoji-draggable {
+                touch-action: none;  /* Enable direct manipulation of emojis */
+                cursor: move;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1113,8 +1132,8 @@
             wormEmoji.style.top = `${y}px`;
             wormEmoji.style.zIndex = 2000;
             wormEmoji.style.userSelect = 'none';
+            wormEmoji.className = 'emoji-draggable';
             document.body.appendChild(wormEmoji);
-            makeDraggable(wormEmoji);
 
             let tapCount = 0;
             wormEmoji.addEventListener('click', (e) => {
@@ -1126,6 +1145,27 @@
                     wormEmoji.remove();
                 }
             });
+
+            function handleTouchEvents(element) {
+                let touchStartX = 0;
+                let touchStartY = 0;
+                
+                element.addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX - parseFloat(element.style.left || 0);
+                    touchStartY = touch.clientY - parseFloat(element.style.top || 0);
+                    e.preventDefault(); // Prevent scrolling while dragging
+                });
+
+                element.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    element.style.left = `${touch.clientX - touchStartX}px`;
+                    element.style.top = `${touch.clientY - touchStartY}px`;
+                    e.preventDefault();
+                });
+            }
+
+            handleTouchEvents(wormEmoji);
 
             setTimeout(() => {
                 wormEmoji.remove();
@@ -1143,8 +1183,29 @@
             appleEmoji.style.top = `${y}px`;
             appleEmoji.style.zIndex = 2000;
             appleEmoji.style.userSelect = 'none';
+            appleEmoji.className = 'emoji-draggable';
             document.body.appendChild(appleEmoji);
-            makeDraggable(appleEmoji);
+
+            function handleTouchEvents(element) {
+                let touchStartX = 0;
+                let touchStartY = 0;
+                
+                element.addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX - parseFloat(element.style.left || 0);
+                    touchStartY = touch.clientY - parseFloat(element.style.top || 0);
+                    e.preventDefault(); // Prevent scrolling while dragging
+                });
+
+                element.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    element.style.left = `${touch.clientX - touchStartX}px`;
+                    element.style.top = `${touch.clientY - touchStartY}px`;
+                    e.preventDefault();
+                });
+            }
+
+            handleTouchEvents(appleEmoji);
 
             appleEmoji.addEventListener('dblclick', (e) => {
                 if (Math.random() < 0.5) { // 50% chance to create a worm
