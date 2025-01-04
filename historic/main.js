@@ -18,7 +18,7 @@ app.get('/health', (req, res) => {
 
 // Add route for merged interface
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/dashmerge.html');
+  res.sendFile(__dirname + '/public/merged.html');
 });
 
 // Add route for original interface
@@ -645,19 +645,6 @@ setInterval(() => {
 }, 5000); // Check every 5 seconds
 
 // Broadcast CSV update to all clients
-function broadcastCsvUpdate() {
-    const csvInfo = getCsvInfo();
-    const message = JSON.stringify({
-        type: 'csvinfo',
-        info: csvInfo
-    });
-    
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(message);
-        }
-    });
-}
 function broadcastCsvUpdate() {
     const csvInfo = getCsvInfo();
     const message = JSON.stringify({

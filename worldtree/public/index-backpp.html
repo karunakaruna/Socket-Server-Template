@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorldTree Visualizer</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Main canvas for Three.js -->
+    <canvas id="three-canvas"></canvas>
+    
+    <!-- Windows -->
+    <div id="users-window" class="window">
+        <div class="window-header">
+            <span class="window-title">Connected Users</span>
+            <button class="window-close">×</button>
+        </div>
+        <div class="window-content">
+            <div id="users-list"></div>
+        </div>
+    </div>
+    
+    <div id="controls-window" class="window">
+        <div class="window-header">
+            <span class="window-title">Scene Controls</span>
+            <button class="window-close">×</button>
+        </div>
+        <div class="window-content">
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="auto-rotate" checked>
+                    Auto Rotate
+                </label>
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="show-grid" checked>
+                    Show Grid
+                </label>
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="mute-audio" checked>
+                    Mute Audio
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div id="log-window" class="window">
+        <div class="window-header">
+            <span class="window-title">Log</span>
+            <button class="window-close">×</button>
+        </div>
+        <div class="window-content">
+            <div id="log-messages"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="worldtree.js"></script>
+</body>
+</html>

@@ -133,26 +133,24 @@
         }
 
         .nav-menu {
+            display: block; /* Show by default for testing */
+            left: 20px;
+            right: auto;
+            transform: translateX(0);
             position: fixed;
             top: 20px;
-            right: 20px;
             z-index: 999;
             background: rgba(26, 27, 38, 0.95);
             border: 1px solid #7aa2f7;
             border-radius: 8px;
             padding: 20px;
             width: 300px;
-            transform: translateX(350px);
-            transition: transform 0.3s ease;
             backdrop-filter: blur(10px);
             color: #a9b1d6;
             font-family: 'Courier New', monospace;
             max-height: calc(100vh - 40px);
             overflow-y: auto;
-        }
-
-        .nav-menu.active {
-            transform: translateX(0);
+            cursor: move;
         }
 
         .nav-menu h3 {
@@ -249,13 +247,118 @@
         .nav-menu::-webkit-scrollbar-thumb:hover {
             background: rgba(122, 162, 247, 0.5);
         }
+
+        @media only screen and (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-dot.online {
+            background-color: green;
+        }
+        .status-dot.offline {
+            background-color: red;
+        }
+
+        .movement-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .compass-emoji {
+            position: fixed;
+            font-size: 48px;
+            z-index: 2000;
+            cursor: move;
+            background: none;
+            border: none;
+            box-shadow: none;
+        }
+
+        .pinned {
+            position: relative;
+        }
+
+        .pin-dot {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: white;
+            top: -10px;
+            right: -10px;
+            z-index: 3000;
+        }
+
+        .arc-circle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: arc-fade-out 5s ease-out forwards;
+            pointer-events: none;
+            z-index: 3000;
+        }
+
+        @keyframes arc-fade-out {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            animation: sparkle-animation 1s ease-out;
+            pointer-events: none;
+            z-index: 3000;
+        }
+
+        @keyframes sparkle-animation {
+            from { transform: scale(0); opacity: 1; }
+            to { transform: scale(1); opacity: 0; }
+        }
+
+        .click-ring {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 3px solid white;
+            animation: ring-animation 1s ease-out;
+            pointer-events: none;
+            z-index: 3000;
+        }
+
+        @keyframes ring-animation {
+            from { transform: scale(0); opacity: 1; }
+            to { transform: scale(1.5); opacity: 0; }
+        }
     </style>
 </head>
 <body>
     <canvas id="shader-canvas"></canvas>
     <canvas id="particle-canvas"></canvas>
     <div class="content-overlay">
-        <div class="psi-header">Ψ</div>
+        <div id="logo" class="psi-header">Ψ</div>
         <div class="title" id="dynamic-title">WORLDTREE</div>
         <div class="server-data">
             <span>node: psi-wtmn-01</span>•
@@ -269,88 +372,17 @@
         </div>
         <div id="poetry">Beyond ω, a trembling bridge; beyond that, echoes of greater infinities.</div>
         <div id="context">An infinite expanse folds upon itself, spiraling into recursive echoes of boundless order. Each step forward unveils new depths, where the horizon collapses into a shimmering lattice of structure and dissolution.</div>
-    </div>
-
-    <button class="nav-toggle">≡ Menu</button>
-    <div class="nav-menu">
-        <h3>Navigation</h3>
-        <div class="routes">
-            <div class="route-item">
-                <a href="/">🏠 Home</a>
-                <div class="description">Main visualization page</div>
-            </div>
-            <div class="route-item">
-                <a href="/ordinal.html">Ψ Ordinal View</a>
-                <div class="description">Ordinal visualization system</div>
-            </div>
-            <div class="route-item">
-                <a href="/dashmerge.html">📊 Dashboard Merge</a>
-                <div class="description">Merged dashboard interface</div>
-            </div>
-            <div class="route-item">
-                <a href="/lsystem.html">🌳 L-System</a>
-                <div class="description">L-System visualization</div>
-            </div>
-            <div class="route-item">
-                <a href="/debug">🛠️ Debug Tools</a>
-                <div class="description">System debugging interface</div>
-            </div>
-            <div class="route-item">
-                <a href="/timer.html">⏱️ Timer</a>
-                <div class="description">System timer utility</div>
-            </div>
-        </div>
-
-        <h3>Folder Structure</h3>
-        <div class="folder-structure">
-            <ul>
-                <li class="folder">public/
-                    <ul>
-                        <li class="folder">components/
-                            <ul>
-                                <li class="folder">core/
-                                    <ul>
-                                        <li class="file">DashMerged.js</li>
-                                        <li class="file">ThreeScene.js</li>
-                                    </ul>
-                                </li>
-                                <li class="folder">windows/
-                                    <ul>
-                                        <li class="file">BaseWindow.js</li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="folder">lsystems/
-                            <ul>
-                                <li class="file">dashboard-3d.js</li>
-                                <li class="file">dashboard-network.js</li>
-                                <li class="file">dashboard-ui.js</li>
-                            </ul>
-                        </li>
-                        <li class="folder">sound/
-                            <ul>
-                                <li class="file">notification.wav</li>
-                                <li class="file">pop.wav</li>
-                                <li class="file">blip.wav</li>
-                            </ul>
-                        </li>
-                        <li class="file"><a href="/ordinal.html">ordinal.html</a></li>
-                        <li class="file"><a href="/dashmerge.html">dashmerge.html</a></li>
-                        <li class="file"><a href="/lsystem.html">lsystem.html</a></li>
-                        <li class="file"><a href="/debug">debug_tools.html</a></li>
-                        <li class="file"><a href="/timer.html">timer.html</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-
-        <h3>System Info</h3>
-        <div class="route-item">
-            <a href="/health">💓 Health Check</a>
-            <div class="description">System status and metrics</div>
+        <div id="status-container">
+            <div id="status-dot" class="status-dot offline"></div>
+            <span id="online-count">0 users online</span>
         </div>
     </div>
+
+    <div id="navigation-container"></div>
+    <div id="compass-emoji" class="compass-emoji">🧭</div>
+
+    <div id="movement-overlay" class="movement-overlay">Movement: 0</div>
+    <div id="average-motion-overlay" class="movement-overlay" style="bottom: 60px;">Average Motion: 0</div>
 
     <script id="vertexShader" type="x-shader/x-vertex">
         void main() {
@@ -437,6 +469,9 @@
     </script>
 
     <script type="module">
+        import { renderNavigation } from './navigation.js';
+        renderNavigation('navigation-container');
+
         const psiFonts = [
             // Serif fonts
             'Garamond',
@@ -468,15 +503,69 @@
         function cyclePsiFont() {
             currentPsiFont = (currentPsiFont + 1) % psiFonts.length;
             psiHeader.style.fontFamily = psiFonts[currentPsiFont];
-            
-            // Add a quick scale animation
-            psiHeader.style.transform = 'scale(1.1)';
+            psiHeader.style.transition = 'font-family 0.3s ease, transform 0.3s ease';
+            psiHeader.style.transform = 'scale(1.2)';
             setTimeout(() => {
                 psiHeader.style.transform = 'scale(1)';
-            }, 150);
+            }, 300);
         }
 
-        psiHeader.addEventListener('click', (e) => {
+        function createIntenseParticleEffect(x, y) {
+            console.log('Intense particle effect triggered at:', x, y);
+            const particles = [];
+            for (let i = 0; i < 200; i++) { // Increased particle count for intensity
+                const particle = new Particle(x, y, Math.random() * 2 + 1); // Smaller points
+                particle.vx = (Math.random() - 0.5) * 6 + Math.sin(i) * 0.5; // Added turbulence
+                particle.vy = (Math.random() - 0.5) * 6 + Math.cos(i) * 0.5; // Added turbulence
+                particles.push(particle);
+            }
+
+            const particleCanvas = document.getElementById('particle-canvas');
+            const ctx = particleCanvas.getContext('2d');
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+                particles.forEach((p, index) => {
+                    p.update();
+                    p.draw();
+                    if (p.size <= 0.5) {
+                        particles.splice(index, 1);
+                    }
+                });
+                if (particles.length > 0) {
+                    requestAnimationFrame(animateParticles);
+                }
+            }
+            animateParticles();
+        }
+
+        psiHeader.addEventListener('dblclick', (e) => {
+            createIntenseParticleEffect(e.clientX, e.clientY);
+        });
+
+        let psiClickCount = 0;
+        let psiClickTimeout;
+
+        document.getElementById('logo').addEventListener('click', (e) => {
+            psiClickCount++;
+
+            createClickRing(e.clientX, e.clientY);
+
+            if (psiClickCount === 1) {
+                psiClickTimeout = setTimeout(() => {
+                    psiClickCount = 0;
+                }, 2000);
+            }
+
+            if (psiClickCount === 5) {
+                clearTimeout(psiClickTimeout);
+                psiClickCount = 0;
+
+                const xOffset = Math.random() * 100 - 50;
+                const yOffset = Math.random() * 100 - 50;
+                createAppleEmoji(e.clientX + xOffset, e.clientY + yOffset);
+            }
+
             e.stopPropagation(); // Prevent particle system click
             cyclePsiFont();
             collapseParticles(collapseLevel); // Still trigger particles
@@ -559,10 +648,10 @@
         }
 
         function collapseParticles(iterations) {
-            for (let i = 0; i < iterations * 20; i++) {
-                let x = canvas.width / 2 + (Math.random() - 0.5) * 300;
-                let y = canvas.height / 2 + (Math.random() - 0.5) * 300;
-                let size = Math.random() * 15 + 8;
+            for (let i = 0; i < iterations * 100; i++) {
+                let x = canvas.width / 2 + (Math.random() - 0.5) * 200;
+                let y = canvas.height / 2 + (Math.random() - 0.5) * 200;
+                let size = Math.random() * 20 + 10;
                 particles.push(new Particle(x, y, size));
             }
         }
@@ -690,6 +779,420 @@
                 navToggle.style.opacity = '1';
             }
         });
+
+        const particles2 = [];
+        const particleCount = 10; // Only a handful
+
+        class Particle2 {
+            constructor(x, y, speedX, speedY, size) {
+                this.x = x;
+                this.y = y;
+                this.speedX = speedX;
+                this.speedY = speedY;
+                this.size = size;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Wrap around the screen
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y < 0) this.y = canvas.height;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles2() {
+            for (let i = 0; i < particleCount; i++) {
+                particles2.push(new Particle2(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 0.5,
+                    Math.random() * 2 + 1
+                ));
+            }
+        }
+
+        function animateParticles2() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles2.forEach(particle => {
+                particle.update();
+                particle.draw(ctx);
+            });
+            requestAnimationFrame(animateParticles2);
+        }
+
+        initParticles2();
+        animateParticles2();
+
+        let ws;
+        const statusDot = document.getElementById('status-dot');
+        const onlineCount = document.getElementById('online-count');
+
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.hostname;
+            const port = window.location.port || (protocol === 'wss:' ? '443' : '80');
+            const wsUrl = `${protocol}//${host}:${port}`;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                console.log('Connected to WebSocket server');
+                statusDot.className = 'status-dot online';
+            };
+
+            ws.onclose = function() {
+                console.log('Disconnected from WebSocket server');
+                statusDot.className = 'status-dot offline';
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'userupdate') {
+                    onlineCount.textContent = `${data.users.length} users online`;
+                } else if (data.type === 'serverinfo') {
+                    updateServerInfo(data);
+                }
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function updateServerInfo(data) {
+            if (data.numUsers !== undefined) {
+                onlineCount.textContent = `${data.numUsers} users online`;
+            }
+            // Display additional server info if needed
+            console.log('Server Load:', data.load);
+            console.log('Memory Usage:', data.memoryUsage);
+        }
+
+        document.addEventListener('DOMContentLoaded', initWebSocket);
+
+        function makeDraggable(element) {
+            let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
+
+            element.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e.preventDefault();
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                posX = mouseX - e.clientX;
+                posY = mouseY - e.clientY;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                element.style.top = (element.offsetTop - posY) + "px";
+                element.style.left = (element.offsetLeft - posX) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        makeDraggable(document.querySelector('.nav-menu'));
+        const compassEmoji = document.getElementById('compass-emoji');
+        makeDraggable(compassEmoji);
+
+        let hideNavTimeout;
+
+        let lastX = 0;
+        let lastY = 0;
+        let motionHistory = [];
+        const historySize = 10;
+
+        let cumulativeMovement = 0;
+        let displayedMotion = 0;
+        let averageMotion = 0;
+
+        let lastMotion = 0;
+
+        function updateMenuOpacity() {
+            // Check if mouse is over the menu
+            const isMouseOverMenu1 = navMenu.matches(':hover');
+            const isMouseOverCompass = compassEmoji.matches(':hover');
+
+            // Adjust opacity based on average motion and mouse position
+            const navOpacity = isMouseOverMenu1 || isMouseOverCompass ? 1 : Math.min(1, Math.max(0, displayedMotion / 30));
+            navMenu.style.opacity = navOpacity;
+            compassEmoji.style.opacity = navOpacity;
+
+            requestAnimationFrame(updateMenuOpacity);
+        }
+
+        updateMenuOpacity();
+
+        function updateMotion() {
+            // Calculate delta from last motion
+            const deltaMotion = cumulativeMovement - lastMotion;
+            lastMotion = cumulativeMovement;
+
+            // Lerp towards the delta motion
+            displayedMotion += (deltaMotion - displayedMotion) * 0.1;
+
+            // Update overlays
+            document.getElementById('movement-overlay').textContent = `Movement: ${cumulativeMovement.toFixed(2)}`;
+            document.getElementById('average-motion-overlay').textContent = `Average Motion: ${displayedMotion.toFixed(2)}`;
+
+            // Check if mouse is over the menu
+            const isMouseOverMenu = navMenu.matches(':hover');
+
+            // Adjust nav-menu opacity based on average motion and mouse position
+            const navOpacity = isMouseOverMenu ? 1 : Math.min(1, Math.max(0, displayedMotion / 30));
+            navMenu.style.opacity = navOpacity;
+
+            requestAnimationFrame(updateMotion);
+        }
+
+        updateMotion();
+
+        setInterval(() => {
+            // Store the current cumulative movement for delta calculation
+            lastMotion = cumulativeMovement;
+        }, 100);
+
+        setInterval(() => {
+            // Calculate average motion over the last second
+            averageMotion = motionHistory.reduce((a, b) => a + b, 0) / motionHistory.length;
+            motionHistory = [];
+        }, 1000);
+
+        document.addEventListener('mousemove', (e) => {
+            clearTimeout(hideNavTimeout);
+            navMenu.classList.remove('hidden');
+
+            const deltaX = e.clientX - lastX;
+            const deltaY = e.clientY - lastY;
+            const motion = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            // Update motion history
+            motionHistory.push(motion);
+
+            // Update cumulative movement
+            cumulativeMovement += motion;
+
+            lastX = e.clientX;
+            lastY = e.clientY;
+
+            hideNavTimeout = setTimeout(() => {
+                navMenu.classList.add('hidden');
+            }, 1000);
+        });
+
+        let isPinned = false;
+        let pinElement = null;
+        let arcElement = null;
+
+        compassEmoji.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const holdDuration = 500; // Duration to hold for pinning
+            let holdTimeout;
+
+            function startHold() {
+                holdTimeout = setTimeout(() => {
+                    isPinned = !isPinned;
+                    compassEmoji.classList.toggle('pinned', isPinned);
+
+                    if (isPinned) {
+                        pinElement = document.createElement('div');
+                        pinElement.className = 'pin-dot';
+                        compassEmoji.appendChild(pinElement);
+                    } else if (pinElement) {
+                        pinElement.remove();
+                        pinElement = null;
+                    }
+                }, holdDuration);
+
+                arcElement = document.createElement('div');
+                arcElement.className = 'arc-circle';
+                arcElement.style.left = `${e.clientX - 20}px`;
+                arcElement.style.top = `${e.clientY - 20}px`;
+                document.body.appendChild(arcElement);
+                setTimeout(() => arcElement.remove(), 5000);
+            }
+
+            function clearHold() {
+                clearTimeout(holdTimeout);
+            }
+
+            compassEmoji.addEventListener('mouseup', clearHold);
+            compassEmoji.addEventListener('mouseleave', clearHold);
+
+            startHold();
+        });
+
+        function createClickRing(x, y) {
+            console.log('Click ring effect triggered at:', x, y);
+            const clickRing = document.createElement('div');
+            clickRing.className = 'click-ring';
+            clickRing.style.left = `${x - 75}px`;
+            clickRing.style.top = `${y - 75}px`;
+            document.body.appendChild(clickRing);
+            setTimeout(() => clickRing.remove(), 1000);
+        }
+
+        document.addEventListener('click', (e) => {
+            createClickRing(e.clientX, e.clientY);
+        });
+
+        document.getElementById('logo').addEventListener('click', (e) => {
+            psiClickCount++;
+
+            createClickRing(e.clientX, e.clientY);
+
+            if (psiClickCount === 1) {
+                psiClickTimeout = setTimeout(() => {
+                    psiClickCount = 0;
+                }, 2000);
+            }
+
+            if (psiClickCount === 5) {
+                clearTimeout(psiClickTimeout);
+                psiClickCount = 0;
+
+                const xOffset = Math.random() * 100 - 50;
+                const yOffset = Math.random() * 100 - 50;
+                createAppleEmoji(e.clientX + xOffset, e.clientY + yOffset);
+            }
+
+            e.stopPropagation(); // Prevent particle system click
+            cyclePsiFont();
+            collapseParticles(collapseLevel); // Still trigger particles
+        });
+
+        function createButterflyEmoji(x, y) {
+            console.log('Butterfly emoji created at:', x, y);
+            const butterflyEmoji = document.createElement('div');
+            butterflyEmoji.textContent = '🦋';
+            butterflyEmoji.style.position = 'absolute';
+            const size = Math.random() * 20 + 30; // Random size between 30px and 50px
+            butterflyEmoji.style.fontSize = `${size}px`;
+            const colors = ['#FF69B4', '#FFD700', '#ADFF2F', '#00BFFF', '#FF4500'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            butterflyEmoji.style.color = randomColor;
+            butterflyEmoji.style.left = `${x}px`;
+            butterflyEmoji.style.top = `${y}px`;
+            butterflyEmoji.style.zIndex = 2000;
+            butterflyEmoji.style.userSelect = 'none';
+            document.body.appendChild(butterflyEmoji);
+            makeDraggable(butterflyEmoji);
+
+            setTimeout(() => {
+                butterflyEmoji.remove();
+            }, 30000); // Butterfly lives for 30 seconds
+        }
+
+        function createWormEmoji(x, y) {
+            console.log('Worm emoji created at:', x, y);
+            const wormEmoji = document.createElement('div');
+            wormEmoji.textContent = '🐛';
+            wormEmoji.style.position = 'absolute';
+            wormEmoji.style.fontSize = '30px';
+            wormEmoji.style.left = `${x}px`;
+            wormEmoji.style.top = `${y}px`;
+            wormEmoji.style.zIndex = 2000;
+            wormEmoji.style.userSelect = 'none';
+            document.body.appendChild(wormEmoji);
+            makeDraggable(wormEmoji);
+
+            let tapCount = 0;
+            wormEmoji.addEventListener('click', (e) => {
+                tapCount++;
+                if (tapCount === 15) {
+                    const wormX = e.clientX;
+                    const wormY = e.clientY;
+                    createButterflyEmoji(wormX, wormY);
+                    wormEmoji.remove();
+                }
+            });
+
+            setTimeout(() => {
+                wormEmoji.remove();
+            }, 10000); // Worm lives for 10 seconds
+        }
+
+        function createAppleEmoji(x, y) {
+            console.log('Apple emoji created at:', x, y);
+            const appleEmoji = document.createElement('div');
+            appleEmoji.textContent = '🍎';
+            appleEmoji.style.position = 'absolute';
+            const size = Math.random() * 20 + 40; // Random size between 40px and 60px
+            appleEmoji.style.fontSize = `${size}px`;
+            appleEmoji.style.left = `${x}px`;
+            appleEmoji.style.top = `${y}px`;
+            appleEmoji.style.zIndex = 2000;
+            appleEmoji.style.userSelect = 'none';
+            document.body.appendChild(appleEmoji);
+            makeDraggable(appleEmoji);
+
+            appleEmoji.addEventListener('dblclick', (e) => {
+                if (Math.random() < 0.5) { // 50% chance to create a worm
+                    createWormEmoji(e.clientX, e.clientY);
+                }
+            });
+
+            const lifespan = Math.random() * 5000 + 5000; // Random lifespan between 5 and 10 seconds
+            const desaturationInterval = lifespan / 100;
+            let saturation = 1;
+
+            const desaturate = setInterval(() => {
+                saturation -= 0.01;
+                appleEmoji.style.filter = `saturate(${saturation})`;
+                if (saturation <= 0) {
+                    clearInterval(desaturate);
+                }
+            }, desaturationInterval);
+
+            setTimeout(() => {
+                const currentX = parseFloat(appleEmoji.style.left);
+                const currentY = parseFloat(appleEmoji.style.top);
+                appleEmoji.remove();
+                clearInterval(desaturate);
+                emitParticles(currentX, currentY);
+            }, lifespan);
+        }
+
+        compassEmoji.addEventListener('dblclick', (e) => {
+            createClickRing(e.clientX, e.clientY);
+        });
+
+        function emitParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'sparkle';
+                particle.style.left = `${x + Math.random() * 20 - 10}px`;
+                particle.style.top = `${y + Math.random() * 20 - 10}px`;
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        // Randomize compass position on page load
+        const randomX = Math.random() * (window.innerWidth - 48);
+        const randomY = Math.random() * (window.innerHeight - 48);
+        compassEmoji.style.left = `${randomX}px`;
+        compassEmoji.style.top = `${randomY}px`;
     </script>
 </body>
 </html>

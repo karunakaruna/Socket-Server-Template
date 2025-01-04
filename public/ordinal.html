@@ -186,9 +186,72 @@
         .nav-menu::-webkit-scrollbar-thumb:hover {
             background: rgba(122, 162, 247, 0.5);
         }
+
+        #nav-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #24283b;
+            border-bottom: 2px solid #7dcfff;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 2rem;
+            text-decoration: none;
+            color: #a9b1d6;
+        }
+
+        .nav-logo span {
+            font-size: 1.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #a9b1d6;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background: #1a1b26;
+            color: #7dcfff;
+        }
+
+        .nav-links a.active {
+            background: #7dcfff;
+            color: #1a1b26;
+        }
     </style>
 </head>
 <body>
+    <nav id="nav-bar">
+        <a href="/" class="nav-logo">
+            <span>🌱</span>
+            <span>WorldTree Seed</span>
+        </a>
+        <div class="nav-links">
+            <a href="/viewer.html">Viewer</a>
+            <a href="/index.html">Classic</a>
+            <a href="/dashboard.html">3D View</a>
+            <a href="/original.html">Original</a>
+        </div>
+    </nav>
     <canvas id="shader-canvas"></canvas>
     <canvas id="particle-canvas"></canvas>
     <div class="content-overlay">
