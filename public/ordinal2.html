@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collapsing Horizons</title>
+    <style>
+        body {
+            margin: 0;
+            background: black;
+            color: white;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            text-align: center;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #poetry {
+            position: absolute;
+            width: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            opacity: 0.8;
+            transition: opacity 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="poetry">Beyond &omega;, a trembling bridge; beyond that, echoes of greater infinities.</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function drawCollapse(iterations) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            let x = canvas.width / 2;
+            let y = canvas.height / 2;
+            let size = 200;
+            
+            for (let i = 0; i < iterations; i++) {
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.stroke();
+                size *= 0.6; 
+                x += (Math.random() - 0.5) * 40;
+                y += (Math.random() - 0.5) * 40;
+            }
+        }
+
+        let collapseLevel = 1;
+        function collapse() {
+            collapseLevel += 1;
+            drawCollapse(collapseLevel);
+            document.getElementById('poetry').innerText = generatePoetry(collapseLevel);
+        }
+
+        function generatePoetry(level) {
+            const phrases = [
+                "Beyond &omega;, a trembling bridge...",
+                "The next vast silence folds inward...",
+                "From the heights of &epsilon;_0, echoes descend...",
+                "A shimmer in the hierarchy, a breath between infinities...",
+                "Collapse and rise, an endless recursion..."
+            ];
+            return phrases[level % phrases.length];
+        }
+
+        drawCollapse(collapseLevel);
+        canvas.addEventListener('click', collapse);
+    </script>
+</body>
+</html>

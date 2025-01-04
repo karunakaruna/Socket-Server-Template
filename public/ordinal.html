@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ψ-WTMN Ordinal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1b26;
+            color: #a9b1d6;
+            overflow: hidden;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #shader-canvas {
+            z-index: 1;
+        }
+
+        #particle-canvas {
+            z-index: 2;
+        }
+
+        .content-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .psi-header {
+            font-size: 120px;
+            font-weight: bold;
+            color: #7aa2f7;
+            text-shadow: 0 0 10px rgba(122, 162, 247, 0.5);
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #7dcfff;
+            text-shadow: 0 0 10px rgba(125, 207, 255, 0.5);
+            margin-bottom: 30px;
+            letter-spacing: 10px;
+        }
+
+        .server-data {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #9ece6a;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 800px;
+            padding: 0 20px;
+        }
+
+        #poetry {
+            font-size: 18px;
+            color: #bb9af7;
+            margin-bottom: 20px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        #context {
+            font-size: 16px;
+            color: #7aa2f7;
+            text-align: center;
+            max-width: 800px;
+            line-height: 1.8;
+            padding: 0 20px;
+            opacity: 0.8;
+        }
+
+        .nav-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(122, 162, 247, 0.1);
+            border: 1px solid #7aa2f7;
+            color: #7aa2f7;
+            padding: 8px 12px;
+            cursor: pointer;
+            z-index: 1000;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .nav-toggle:hover {
+            background: rgba(122, 162, 247, 0.2);
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(26, 27, 38, 0.95);
+            border-left: 1px solid #7aa2f7;
+            padding: 20px;
+            transition: right 0.3s ease;
+            z-index: 999;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-menu.active {
+            right: 0;
+        }
+
+        .nav-menu h3 {
+            color: #7aa2f7;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .nav-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-menu li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .nav-menu li::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: #7aa2f7;
+            font-family: 'Courier New', monospace;
+        }
+
+        .nav-menu a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #7aa2f7;
+        }
+
+        .nav-menu::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .nav-menu::-webkit-scrollbar-track {
+            background: rgba(122, 162, 247, 0.1);
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: rgba(122, 162, 247, 0.3);
+            border-radius: 3px;
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(122, 162, 247, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="shader-canvas"></canvas>
+    <canvas id="particle-canvas"></canvas>
+    <div class="content-overlay">
+        <div class="psi-header">Ψ</div>
+        <div class="title" id="dynamic-title">WORLDTREE</div>
+        <div class="server-data">
+            <span>node: psi-wtmn-01</span>•
+            <span>uptime: 127.4h</span>•
+            <span>peers: 47</span>•
+            <span>latency: 23ms</span>•
+            <span>throughput: 1.2GB/s</span>•
+            <span>load: 0.42</span>•
+            <span>memory: 84.2%</span>•
+            <span>temp: 42.3°C</span>
+        </div>
+        <div id="poetry">Beyond ω, a trembling bridge; beyond that, echoes of greater infinities.</div>
+        <div id="context">An infinite expanse folds upon itself, spiraling into recursive echoes of boundless order. Each step forward unveils new depths, where the horizon collapses into a shimmering lattice of structure and dissolution.</div>
+    </div>
+
+    <button class="nav-toggle">≡ Menu</button>
+    <nav class="nav-menu">
+        <h3>Navigation</h3>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/dashmerge.html">Dashboard Merge</a></li>
+            <li><a href="/lsystem.html">L-System</a></li>
+            <li><a href="/debug">Debug Tools</a></li>
+            <li><a href="/timer.html">Timer</a></li>
+        </ul>
+        
+        <h3>Components</h3>
+        <ul>
+            <li><a href="#">Particle System</a></li>
+            <li><a href="#">L-System Generator</a></li>
+            <li><a href="#">WebSocket Bridge</a></li>
+            <li><a href="#">Sound Engine</a></li>
+        </ul>
+        
+        <h3>Files</h3>
+        <ul>
+            <li><a href="#">ordinal.html</a></li>
+            <li><a href="#">dashmerge.html</a></li>
+            <li><a href="#">lsystem.html</a></li>
+            <li><a href="#">debug_tools.html</a></li>
+            <li><a href="#">timer.html</a></li>
+        </ul>
+    </nav>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        uniform float time;
+        uniform vec2 resolution;
+
+        float random(vec2 st) {
+            return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+        }
+
+        void main() {
+            vec2 st = gl_FragCoord.xy/resolution.xy;
+            float r = random(st + time * 0.1);
+            
+            // Create a grid effect
+            vec2 grid = fract(st * 50.0);
+            float cell = step(0.98, random(floor(st * 50.0)));
+            
+            // Add some movement
+            float wave = sin(st.x * 10.0 + time) * 0.5 + 0.5;
+            wave *= sin(st.y * 8.0 + time * 1.2) * 0.5 + 0.5;
+            
+            // Combine effects
+            float final = cell * 0.5 + wave * 0.3;
+            final *= smoothstep(0.0, 0.5, st.y); // Fade top to bottom
+            
+            gl_FragColor = vec4(vec3(0.478, 0.635, 0.968) * final, 1.0);
+        }
+    </script>
+
+    <script type="module">
+        // Initialize variables
+        let collapseLevel = 1;
+        function collapse() {
+            collapseLevel += 1;
+            collapseParticles(collapseLevel);
+            document.getElementById('poetry').innerText = generatePoetry(collapseLevel);
+            document.getElementById('context').innerText = generateContext(collapseLevel);
+        }
+
+        function generatePoetry(level) {
+            const phrases = [
+                "Beyond ω, a trembling bridge...",
+                "The next vast silence folds inward...",
+                "From the heights of ε₀, echoes descend...",
+                "A shimmer in the hierarchy, a breath between infinities...",
+                "Collapse and rise, an endless recursion..."
+            ];
+            return phrases[level % phrases.length];
+        }
+
+        function generateContext(level) {
+            const descriptions = [
+                "An infinite expanse folds upon itself, spiraling into recursive echoes of boundless order.",
+                "Each step forward unveils new depths, where the horizon collapses into a shimmering lattice of structure and dissolution.",
+                "Infinity contracts, revealing a hidden scaffold—an unseen architecture beneath perception.",
+                "A cascade of realities intertwines, where the finite and the boundless dance in ceaseless motion.",
+                "Folding upon folding, the grand hierarchy extends beyond sight, collapsing and emerging anew."
+            ];
+            return descriptions[level % descriptions.length];
+        }
+
+        collapseParticles(collapseLevel);
+
+        // Menu toggle functionality
+        const navToggle = document.querySelector('.nav-toggle');
+        const navMenu = document.querySelector('.nav-menu');
+
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !navToggle.contains(e.target)) {
+                navMenu.classList.remove('active');
+            }
+        });
+
+        // Font cycling for title
+        const psiFonts = [
+            // Serif fonts
+            'Garamond',
+            'Baskerville',
+            'Times New Roman',
+            'Georgia',
+            'Palatino',
+            // Sans-serif fonts
+            'Helvetica',
+            'Arial',
+            'Roboto'
+        ];
+
+        const title = document.getElementById('dynamic-title');
+        const text = title.textContent;
+        title.textContent = '';
+
+        let charIndex = 0;
+        let fontIndex = 0;
+
+        function typeWriter() {
+            if (charIndex < text.length) {
+                title.textContent += text.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeWriter, 100);
+            } else {
+                setTimeout(cycleFont, 2000);
+            }
+        }
+
+        function cycleFont() {
+            fontIndex = (fontIndex + 1) % psiFonts.length;
+            title.style.fontFamily = psiFonts[fontIndex];
+            charIndex = 0;
+            title.textContent = '';
+            typeWriter();
+        }
+
+        typeWriter();
+
+        // Particle system
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.alpha = Math.random();
+                this.targetAlpha = Math.random();
+                this.size = Math.random() * 2 + 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+
+                this.alpha += (this.targetAlpha - this.alpha) * 0.02;
+
+                if (Math.abs(this.alpha - this.targetAlpha) < 0.01) {
+                    this.targetAlpha = Math.random();
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(122, 162, 247, ${this.alpha * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function collapseParticles(level) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            particles.forEach(p => {
+                const dx = centerX - p.x;
+                const dy = centerY - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                p.vx += (dx / dist) * 0.5 * level;
+                p.vy += (dy / dist) * 0.5 * level;
+            });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+
+        initParticles();
+        animate();
+
+        // Add click event to trigger collapse
+        document.addEventListener('click', collapse);
+
+        // Shader setup
+        const shaderCanvas = document.getElementById('shader-canvas');
+        const gl = shaderCanvas.getContext('webgl');
+
+        if (!gl) {
+            console.error('WebGL not supported');
+        } else {
+            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, `
+                attribute vec2 position;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0);
+                }
+            `);
+            gl.compileShader(vertexShader);
+
+            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, document.getElementById('fragmentShader').textContent);
+            gl.compileShader(fragmentShader);
+
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            gl.useProgram(program);
+
+            const vertices = new Float32Array([
+                -1, -1,
+                1, -1,
+                -1, 1,
+                1, 1
+            ]);
+
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+            const positionLocation = gl.getAttribLocation(program, 'position');
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            const timeLocation = gl.getUniformLocation(program, 'time');
+            const resolutionLocation = gl.getUniformLocation(program, 'resolution');
+
+            function resizeShaderCanvas() {
+                shaderCanvas.width = window.innerWidth;
+                shaderCanvas.height = window.innerHeight;
+                gl.viewport(0, 0, shaderCanvas.width, shaderCanvas.height);
+                gl.uniform2f(resolutionLocation, shaderCanvas.width, shaderCanvas.height);
+            }
+
+            window.addEventListener('resize', resizeShaderCanvas);
+            resizeShaderCanvas();
+
+            let startTime = Date.now();
+
+            function renderShader() {
+                const currentTime = (Date.now() - startTime) / 1000;
+                gl.uniform1f(timeLocation, currentTime);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                requestAnimationFrame(renderShader);
+            }
+
+            renderShader();
+        }
+    </script>
+</body>
+</html>

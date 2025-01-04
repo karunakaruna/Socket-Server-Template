@@ -15,7 +15,12 @@ app.use('/v3', express.static(path.join(__dirname, '../public3')));
 
 // Serve ordinal.html at root
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/ordinal.html'));
+    res.sendFile(path.join(__dirname, '../public3/ordinal.html'));
+});
+
+// Serve dashmerge.html
+app.get('/dashmerge.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dashmerge.html'));
 });
 
 // Serve debug tools at /debug

@@ -1,21 +1,18 @@
-import { DragManager } from '../../utils/DragAndDrop.js';
-
 /**
  * Base window component that all window components extend
  */
 export class BaseWindow {
-    constructor(id, title, eventBus) {
+    constructor(id, title) {
         this.id = id;
         this.title = title;
-        this.eventBus = eventBus;
         this.element = null;
-        this.dragManager = new DragManager();
         this.isMinimized = false;
+        this.dragOffset = { x: 0, y: 0 };
+        this.isDragging = false;
     }
 
     /**
      * Create the window HTML
-     * @returns {string} Window HTML
      */
     createTemplate() {
         return `
@@ -33,7 +30,6 @@ export class BaseWindow {
 
     /**
      * Render window content - override in child classes
-     * @returns {string} Content HTML
      */
     renderContent() {
         return '';
@@ -43,25 +39,69 @@ export class BaseWindow {
      * Initialize the window
      */
     init() {
-        // Get window element
         this.element = document.getElementById(this.id);
         if (!this.element) {
             throw new Error(`Window element with id "${this.id}" not found`);
         }
 
-        // Setup dragging
-        const titleBar = this.element.querySelector('.window-title');
-        this.dragManager.initializeDragging(this.element, titleBar);
-
-        // Setup minimize button
-        const minimizeButton = this.element.querySelector('.minimize-button');
-        minimizeButton.addEventListener('click', () => this.toggleMinimize());
-
-        // Initialize content
+        this.initDragging();
+        this.initMinimize();
         this.initContent();
+    }
 
-        // Emit ready event
-        this.eventBus.emit('windowReady', { id: this.id });
+    /**
+     * Initialize dragging functionality
+     */
+    initDragging() {
+        const titleBar = this.element.querySelector('.window-title');
+        
+        titleBar.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only handle left click
+            
+            this.isDragging = true;
+            const rect = this.element.getBoundingClientRect();
+            this.dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!this.isDragging) return;
+
+            const x = e.clientX - this.dragOffset.x;
+            const y = e.clientY - this.dragOffset.y;
+
+            // Keep window within viewport bounds
+            const rect = this.element.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            const boundedX = Math.max(0, Math.min(x, viewportWidth - rect.width));
+            const boundedY = Math.max(0, Math.min(y, viewportHeight - rect.height));
+
+            this.element.style.left = `${boundedX}px`;
+            this.element.style.top = `${boundedY}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            this.isDragging = false;
+        });
+    }
+
+    /**
+     * Initialize minimize button
+     */
+    initMinimize() {
+        const minimizeButton = this.element.querySelector('.minimize-button');
+        minimizeButton.addEventListener('click', () => {
+            this.isMinimized = !this.isMinimized;
+            const content = this.element.querySelector('.window-content');
+            content.style.display = this.isMinimized ? 'none' : 'block';
+            minimizeButton.textContent = this.isMinimized ? '+' : '−';
+        });
     }
 
     /**
@@ -70,26 +110,7 @@ export class BaseWindow {
     initContent() {}
 
     /**
-     * Toggle window minimize state
-     */
-    toggleMinimize() {
-        this.isMinimized = !this.isMinimized;
-        const content = this.element.querySelector('.window-content');
-        content.style.display = this.isMinimized ? 'none' : 'block';
-        
-        const button = this.element.querySelector('.minimize-button');
-        button.textContent = this.isMinimized ? '+' : '−';
-
-        this.eventBus.emit('windowMinimize', {
-            id: this.id,
-            minimized: this.isMinimized
-        });
-    }
-
-    /**
      * Set window position
-     * @param {number} x - X position
-     * @param {number} y - Y position
      */
     setPosition(x, y) {
         if (this.element) {
@@ -103,7 +124,6 @@ export class BaseWindow {
      */
     destroy() {
         if (this.element) {
-            this.dragManager.destroy();
             this.element.remove();
         }
     }
