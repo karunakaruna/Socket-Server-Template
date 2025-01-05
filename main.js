@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const WebSocket = require("ws");
 const fs = require("fs");
 const crypto = require('crypto'); // Add crypto for secure random generation
+const path = require('path'); // Add path for audio streaming
 
 const app = express();
 app.use(express.static("public"));
@@ -21,7 +22,6 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/ordinal.html');
 });
 
-
 // Add route for dashboard
 app.get('/dashboard.html', (req, res) => {
   res.sendFile(__dirname + '/public/dashboard.html');
@@ -31,7 +31,6 @@ app.get('/dashboard.html', (req, res) => {
 app.get('/dashmerge.html', (req, res) => {
   res.sendFile(__dirname + '/public/dashmerge.html');
 });
-
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -272,6 +271,40 @@ function broadcastServerInfo() {
 // Start broadcasting server info
 broadcastServerInfo();
 
+// Audio streaming setup
+const CHUNK_SIZE = 128 * 1024; // 128KB chunks for smoother streaming
+let audioStream = null;
+let isStreaming = false;
+
+function startAudioStream() {
+    if (isStreaming) return;
+    isStreaming = true;
+    
+    const audioPath = path.join(__dirname, 'public/sound/stream.mp3');
+    audioStream = fs.createReadStream(audioPath, { highWaterMark: CHUNK_SIZE });
+    
+    audioStream.on('data', (chunk) => {
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'audio_chunk',
+                    data: chunk.toString('base64')
+                }));
+            }
+        });
+    });
+    
+    audioStream.on('end', () => {
+        isStreaming = false;
+        startAudioStream(); // Loop the audio
+    });
+    
+    audioStream.on('error', (error) => {
+        console.error('Audio stream error:', error);
+        isStreaming = false;
+    });
+}
+
 // WebSocket connection handler
 wss.on("connection", (ws) => {
   console.log("New WebSocket connection established");
@@ -281,6 +314,11 @@ wss.on("connection", (ws) => {
   // Instead, we wait for either:
   // 1. A reconnect message with a valid secret (restores existing user)
   // 2. A reconnect message with invalid/no secret (creates new user)
+  
+  // Start streaming if this is the first client
+  if (!isStreaming) {
+    startAudioStream();
+  }
   
   // Handle messages
   ws.on("message", (data) => {

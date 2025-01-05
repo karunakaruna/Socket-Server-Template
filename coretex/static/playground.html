@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coretex Playground</title>
+    <style>
+        :root {
+            --primary-color: #2d3436;
+            --secondary-color: #0984e3;
+            --success-color: #00b894;
+            --warning-color: #fdcb6e;
+            --error-color: #d63031;
+            --background-color: #f5f6fa;
+            --panel-background: white;
+            --text-color: #2d3436;
+            --border-radius: 8px;
+            --spacing: 20px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: var(--spacing);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+        }
+
+        .panel {
+            background: var(--panel-background);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .playground-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing);
+            height: 800px;
+        }
+
+        .documentation {
+            overflow-y: auto;
+            padding-right: var(--spacing);
+        }
+
+        .code-playground {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+        }
+
+        #editor {
+            height: 60%;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            resize: none;
+            padding: 10px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        #output {
+            height: 30%;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            font-family: 'Consolas', monospace;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .function-doc {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .function-name {
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-family: 'Consolas', monospace;
+        }
+
+        .function-params {
+            margin: 10px 0;
+            font-family: 'Consolas', monospace;
+            color: #666;
+        }
+
+        .function-description {
+            margin: 10px 0;
+        }
+
+        .example-code {
+            background: #f1f2f6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            margin: 10px 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .run-button {
+            padding: 10px 20px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+            flex: 1;
+        }
+
+        .run-button:hover {
+            background: #0873c4;
+        }
+
+        .nav-links {
+            margin-bottom: var(--spacing);
+        }
+
+        .nav-links a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            margin-right: 15px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        #encoderSelect {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">← Back to Testing Interface</a>
+        </div>
+        
+        <h1>Coretex Playground & Documentation</h1>
+        
+        <div class="playground-container">
+            <div class="documentation panel">
+                <h2>Available Functions</h2>
+
+                <div class="function-doc">
+                    <div class="function-name">createObject(data, encoder)</div>
+                    <div class="function-description">
+                        Creates a new encrypted object in the Coretex system. Returns the object's UUID and encryption key.
+                    </div>
+                    <div class="example-code">
+// Create an encrypted message
+await createObject({
+    type: "message",
+    content: "Secret message",
+    encoding: "ascii"
+});
+
+// Response will include:
+// {
+//   "uuid": "generated-uuid",
+//   "encryption_key": "your-encryption-key"
+// }</div>
+                </div>
+
+                <div class="function-doc">
+                    <div class="function-name">retrieveObject(uuid, key)</div>
+                    <div class="function-description">
+                        Retrieves and decrypts an object using its UUID and encryption key.
+                    </div>
+                    <div class="example-code">
+// Retrieve and decrypt an object
+await retrieveObject(
+    "your-uuid",
+    "your-encryption-key"
+);
+
+// The response will be the decrypted object:
+// {
+//   "type": "message",
+//   "content": "Secret message",
+//   "encoding": "ascii"
+// }</div>
+                </div>
+
+                <div class="function-doc">
+                    <div class="function-name">modifyObject(uuid, key, modifications)</div>
+                    <div class="function-description">
+                        Modifies an encrypted object. Requires the original UUID and encryption key.
+                    </div>
+                    <div class="example-code">
+// Modify an encrypted object
+await modifyObject(
+    "your-uuid",
+    "your-encryption-key",
+    {
+        content: "Updated secret message",
+        encoding: "utf8"
+    }
+);</div>
+                </div>
+
+                <div class="function-doc">
+                    <div class="function-name">analyzeGlyphs(text)</div>
+                    <div class="function-description">
+                        Analyzes text for special characters and suggests optimal encoding methods.
+                    </div>
+                    <div class="example-code">
+// Analyze text with special characters
+await analyzeGlyphs("Hello 世界 🌍");
+
+// Response will show character analysis:
+// {
+//   "unicode_ranges": ["Basic Latin", "CJK", "Emoji"],
+//   "suggested_encoding": "utf8"
+// }</div>
+                </div>
+            </div>
+
+            <div class="code-playground panel">
+                <select id="encoderSelect">
+                    <option value="ascii">ASCII</option>
+                    <option value="utf8">UTF-8</option>
+                    <option value="base64">Base64</option>
+                    <option value="hex">Hex</option>
+                </select>
+                <textarea id="editor" spellcheck="false">// Example: Create and retrieve an encrypted message
+
+// 1. Create an encrypted object
+const result = await createObject({
+    type: "message",
+    content: "Top secret message",
+    encoding: "utf8"
+});
+
+// 2. Retrieve the encrypted object
+const retrieved = await retrieveObject(
+    result.uuid,
+    result.encryption_key
+);
+
+console.log('Retrieved:', retrieved);</textarea>
+                <div id="output">// Output will appear here...</div>
+                <div class="controls">
+                    <button class="run-button" onclick="runCode()">Run Code</button>
+                    <button class="run-button" onclick="clearOutput()">Clear Output</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize encoder select
+        async function loadEncoders() {
+            try {
+                const response = await fetch('/encoders');
+                const encoders = await response.json();
+                const select = document.getElementById('encoderSelect');
+                select.innerHTML = encoders.map(enc => 
+                    `<option value="${enc}">${enc}</option>`
+                ).join('');
+            } catch (e) {
+                console.error('Failed to load encoders:', e);
+            }
+        }
+
+        // Function to run the code from the editor
+        async function runCode() {
+            const code = document.getElementById('editor').value;
+            const output = document.getElementById('output');
+            
+            try {
+                // Create an async function from the code and execute it
+                const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+                const fn = new AsyncFunction(code);
+                const result = await fn();
+                output.textContent = typeof result === 'object' ? 
+                    JSON.stringify(result, null, 2) : 
+                    String(result);
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = '// Output will appear here...';
+        }
+
+        // Add syntax highlighting and better code editing experience
+        document.getElementById('editor').addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                const value = this.value;
+                
+                this.value = value.substring(0, start) + '    ' + value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+            }
+        });
+
+        // API functions that can be called from the playground
+        async function createObject(data) {
+            const response = await fetch('/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...data,
+                    encoder: document.getElementById('encoderSelect').value
+                })
+            });
+            return await response.json();
+        }
+
+        async function retrieveObject(uuid, key) {
+            const response = await fetch(`/retrieve/${uuid}?key=${encodeURIComponent(key)}`);
+            return await response.json();
+        }
+
+        async function modifyObject(uuid, key, modifications) {
+            const response = await fetch(`/modify/${uuid}?key=${encodeURIComponent(key)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(modifications)
+            });
+            return await response.json();
+        }
+
+        async function analyzeGlyphs(text) {
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            return await response.json();
+        }
+
+        // Load encoders when page loads
+        loadEncoders();
+    </script>
+</body>
+</html>

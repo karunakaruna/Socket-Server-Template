@@ -66,7 +66,7 @@
         }
 
         .output-area:empty::before {
-            content: 'No output yet...';
+            content: 'No output yet...'; 
             color: #666;
             font-style: italic;
         }
@@ -213,7 +213,7 @@
             background: var(--background-color);
             padding: 2px 5px;
             border-radius: 3px;
-            font-family: monospace;
+            foQnt-family: monospace;
             font-size: 12px;
         }
         .length-info {
@@ -395,6 +395,179 @@
         .copy-button.copied {
             background: #107c10;
         }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-weight: bold;
+        }
+
+        .key-inputs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .primary-button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .primary-button:hover {
+            filter: brightness(1.1);
+        }
+
+        .secondary-button {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid #ddd;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .secondary-button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .tools-panel {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tool-button {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .tool-button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--panel-background);
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            border-bottom-color: var(--secondary-color);
+        }
+
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .char-count {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .icon-button {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .icon-button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .editor-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            background-color: var(--panel-background);
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+        }
+
+        .code-editor {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            resize: vertical;
+        }
+
+        .debug-log {
+            display: none;
+            padding: 10px;
+            background-color: var(--panel-background);
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+        }
+
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--panel-background);
+            border-bottom: 1px solid #ddd;
+        }
+
+        .debug-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .debug-content {
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            max-height: 200px;
+        }
     </style>
 </head>
 <body>
@@ -486,6 +659,10 @@
                         <label for="retrieveUuid">UUID:</label>
                         <input type="text" id="retrieveUuid" placeholder="Enter UUID">
                     </div>
+                    <div class="form-group">
+                        <label for="retrieveKey">Key:</label>
+                        <input type="text" id="retrieveKey" placeholder="Enter encryption key">
+                    </div>
                     <div class="button-group">
                         <button onclick="retrieveObject()">Retrieve</button>
                         <button onclick="clearOutput('retrieveOutput')" class="small-button">Clear Output</button>
@@ -512,6 +689,10 @@
                     <div class="form-group">
                         <label for="modifyUuid">UUID:</label>
                         <input type="text" id="modifyUuid" placeholder="Enter UUID">
+                    </div>
+                    <div class="form-group">
+                        <label for="modifyKey">Key:</label>
+                        <input type="text" id="modifyKey" placeholder="Enter encryption key">
                     </div>
                     <div class="form-group">
                         <label for="modifications">Modifications (JSON):</label>
@@ -550,6 +731,88 @@
                 </div>
             </div>
             <div class="output" id="analyzeOutput"></div>
+        </div>
+
+        <div class="control-panel">
+            <div class="input-group">
+                <label for="encoderSelect">Encoder:</label>
+                <select id="encoderSelect" class="styled-select">
+                    <option value="ascii">ASCII</option>
+                </select>
+            </div>
+
+            <div class="key-inputs">
+                <div class="input-group">
+                    <label for="uuidInput">UUID:</label>
+                    <input type="text" id="uuidInput" class="styled-input" placeholder="Enter UUID">
+                </div>
+                <div class="input-group">
+                    <label for="keyInput">Key:</label>
+                    <input type="text" id="keyInput" class="styled-input" placeholder="Enter encryption key">
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="createBtn" class="primary-button">
+                    <span class="mdi mdi-plus"></span>
+                    Create
+                </button>
+                <button id="retrieveBtn" class="secondary-button">
+                    <span class="mdi mdi-download"></span>
+                    Retrieve
+                </button>
+                <button id="modifyBtn" class="secondary-button">
+                    <span class="mdi mdi-pencil"></span>
+                    Modify
+                </button>
+            </div>
+
+            <div class="tools-panel">
+                <button id="formatBtn" class="tool-button" title="Format JSON">
+                    <span class="mdi mdi-format-align-left"></span>
+                </button>
+                <button id="copyBtn" class="tool-button" title="Copy to Clipboard">
+                    <span class="mdi mdi-content-copy"></span>
+                </button>
+                <button id="clearBtn" class="tool-button" title="Clear Editor">
+                    <span class="mdi mdi-delete"></span>
+                </button>
+                <button id="helpBtn" class="tool-button" title="Help">
+                    <span class="mdi mdi-help-circle"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-header">
+                <div class="tab active">Input Data</div>
+                <div class="editor-controls">
+                    <span id="charCount" class="char-count">0 characters</span>
+                    <button id="toggleDebugBtn" class="icon-button" title="Toggle Debug Log">
+                        <span class="mdi mdi-console"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="editor-wrapper">
+                <textarea id="inputData" class="code-editor" placeholder="Enter your JSON data here..."></textarea>
+                <div id="debugLog" class="debug-log">
+                    <div class="debug-header">
+                        <h3>Debug Log</h3>
+                        <div class="debug-controls">
+                            <button id="clearDebugBtn" class="icon-button" title="Clear Debug Log">
+                                <span class="mdi mdi-delete"></span>
+                            </button>
+                            <button id="toggleAutoScrollBtn" class="icon-button active" title="Auto Scroll">
+                                <span class="mdi mdi-arrow-down-bold"></span>
+                            </button>
+                            <button id="toggleWordWrapBtn" class="icon-button active" title="Word Wrap">
+                                <span class="mdi mdi-wrap"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="debug-content"></div>
+                </div>
+            </div>
         </div>
 
         <script>
@@ -745,7 +1008,7 @@
             async function retrieveObject() {
                 try {
                     const uuid = document.getElementById('retrieveUuid').value;
-                    const key = prompt('Please enter the encryption key:');
+                    const key = document.getElementById('retrieveKey').value;
                     if (!key) return;
 
                     const response = await fetch(`/retrieve/${uuid}?type=${currentType}&key=${encodeURIComponent(key)}`, {
@@ -766,7 +1029,7 @@
             async function modifyObject() {
                 try {
                     const uuid = document.getElementById('modifyUuid').value;
-                    const key = prompt('Please enter the encryption key:');
+                    const key = document.getElementById('modifyKey').value;
                     if (!key) return;
 
                     const modifications = JSON.parse(document.getElementById('modifications').value);

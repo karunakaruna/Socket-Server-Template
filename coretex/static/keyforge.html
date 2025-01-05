@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!-- Previous HTML and styles remain the same until the showContextMenu function -->
+
+<script>
+    // Previous code remains the same until showContextMenu
+
+    function showContextMenu(x, y) {
+        removeContextMenu();
+        
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        menu.innerHTML = `
+            <div class="context-menu-item" onclick="createKey(${x}, ${y})">Create Key 🔑</div>
+            <div class="context-menu-item" onclick="createChest(${x}, ${y})">Create Chest 🔒</div>
+            <div class="context-menu-item" onclick="createSecret(${x}, ${y})">Create Secret 📄</div>
+        `;
+        
+        const menuX = x + menu.offsetWidth > window.innerWidth ? window.innerWidth - menu.offsetWidth : x;
+        const menuY = y + menu.offsetHeight > window.innerHeight ? window.innerHeight - menu.offsetHeight : y;
+        
+        menu.style.left = menuX + 'px';
+        menu.style.top = menuY + 'px';
+        document.body.appendChild(menu);
+    }
+
+    function generateFeatherKey() {
+        const length = Math.floor(Math.random() * 7) + 9; // 9-15 characters
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let key = 'f'; // Always starts with f
+        for (let i = 1; i < length; i++) {
+            key += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return key;
+    }
+
+    function createSecret(x, y) {
+        const featherKey = generateFeatherKey();
+        const secretData = {
+            id: generateId(),
+            content: "Secret message",
+            created: new Date().toISOString()
+        };
+        
+        const encryptedData = encryptData(secretData, featherKey);
+        const page = createDraggable('📄', encryptedData, x, y);
+        page.classList.add('locked');
+        page.dataset.encrypted = 'true';
+        page.dataset.type = 'lock'; // Reuse lock type for compatibility
+        
+        const feather = createDraggable('🪶', featherKey, x + 70, y);
+        feather.dataset.type = 'key'; // Reuse key type for compatibility
+        
+        showStatus('Secret created with feather key! 📄🪶');
+    }
+
+    // Rest of the code remains the same
+</script>
+</body>
+</html>

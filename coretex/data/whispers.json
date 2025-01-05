@@ -1,1 +1,134 @@
-{}
+{
+  "enterprise_configuration": {
+    "cluster_settings": {
+      "primary_node": {
+        "host": "node-01.example.com",
+        "port": 9876,
+        "roles": ["master", "data", "ingest"],
+        "resources": {
+          "cpu_cores": 8,
+          "memory_gb": 32,
+          "storage_tb": 4
+        },
+        "health_status": {
+          "status": "green",
+          "last_checked": "2025-01-04T22:38:27-08:00",
+          "metrics": {
+            "cpu_usage": 0.45,
+            "memory_usage": 0.68,
+            "disk_usage": 0.72
+          }
+        }
+      },
+      "replica_nodes": [
+        {
+          "id": "replica-01",
+          "host": "node-02.example.com",
+          "port": 9877,
+          "roles": ["data", "ingest"],
+          "sync_status": "active",
+          "lag_seconds": 0.05
+        },
+        {
+          "id": "replica-02",
+          "host": "node-03.example.com",
+          "port": 9878,
+          "roles": ["data"],
+          "sync_status": "active",
+          "lag_seconds": 0.08
+        }
+      ]
+    },
+    "security_policies": {
+      "authentication": {
+        "methods": ["oauth2", "certificate", "token"],
+        "token_expiry_hours": 24,
+        "max_failed_attempts": 5,
+        "lockout_duration_minutes": 30,
+        "password_policy": {
+          "min_length": 12,
+          "require_uppercase": true,
+          "require_numbers": true,
+          "require_special": true,
+          "max_age_days": 90
+        }
+      },
+      "encryption": {
+        "algorithms": {
+          "at_rest": "AES-256-GCM",
+          "in_transit": "TLS-1.3",
+          "key_exchange": "ECDHE-RSA"
+        },
+        "key_rotation": {
+          "enabled": true,
+          "interval_days": 30,
+          "grace_period_hours": 48
+        }
+      }
+    },
+    "monitoring": {
+      "metrics_collection": {
+        "interval_seconds": 15,
+        "retention_days": 90,
+        "exporters": [
+          {
+            "type": "prometheus",
+            "endpoint": "/metrics",
+            "port": 9090
+          },
+          {
+            "type": "elasticsearch",
+            "host": "logs.example.com",
+            "index_pattern": "metrics-{YYYY.MM.DD}"
+          }
+        ]
+      },
+      "alerts": [
+        {
+          "name": "high_cpu_usage",
+          "condition": "cpu_usage > 0.85",
+          "duration": "5m",
+          "severity": "warning",
+          "notifications": ["slack", "email"]
+        },
+        {
+          "name": "replica_lag",
+          "condition": "replica_lag_seconds > 5",
+          "duration": "1m",
+          "severity": "critical",
+          "notifications": ["pagerduty", "slack", "sms"]
+        }
+      ]
+    },
+    "backup_strategy": {
+      "schedule": {
+        "full_backup": "0 0 * * 0",  
+        "incremental": "0 */4 * * *"  
+      },
+      "retention": {
+        "full_backups": {
+          "count": 4,
+          "min_age_days": 7
+        },
+        "incremental_backups": {
+          "count": 48,
+          "min_age_hours": 4
+        }
+      },
+      "storage_locations": [
+        {
+          "type": "s3",
+          "bucket": "enterprise-backups",
+          "region": "us-west-2",
+          "encryption": "AES256"
+        },
+        {
+          "type": "gcs",
+          "bucket": "dr-backups",
+          "location": "us-central1",
+          "encryption": "google-managed"
+        }
+      ]
+    }
+  }
+}

@@ -33,9 +33,11 @@ class ASCIIEncoder(GlyphEncoder):
         self.name = "ascii"
         self.debug = True
         
-    def format_json(self, data: Dict[str, Any]) -> str:
-        """Format JSON data with proper indentation"""
-        return json.dumps(data, indent=2)
+    def format_json(self, data):
+        """Format JSON data for debug output"""
+        if isinstance(data, (dict, list)):
+            return json.dumps(data, indent=2, sort_keys=True)
+        return str(data)
         
     def encode(self, data: Dict[str, Any]) -> str:
         try:
@@ -69,13 +71,9 @@ class ASCIIEncoder(GlyphEncoder):
             raise
         
     def decode(self, text: str) -> Dict[str, Any]:
+        """Decode a string of glyphs back into data"""
         try:
-            if self.debug:
-                print(f"\nDecoding:")
-                print(f"  Input length: {len(text)}")
-                print("  First 50 chars:", repr(text[:50]))
-            
-            # Strip whitespace
+            # Remove any whitespace
             text = text.strip()
             
             # Must be hex digits
@@ -91,7 +89,9 @@ class ASCIIEncoder(GlyphEncoder):
                 raise ValueError(f"Invalid length prefix: {str(e)}")
             
             if self.debug:
-                print(f"  Message length: {length}")
+                print(f"\nDecoding:")
+                print(f"  Input length: {len(text)}")
+                print("  First 50 chars:", repr(text[:50]))
             
             # Extract message bytes
             try:
@@ -111,12 +111,15 @@ class ASCIIEncoder(GlyphEncoder):
                 if self.debug:
                     print(f"  JSON string: {json_str}")
                 
-                result = json.loads(json_str)
+                data = json.loads(json_str)
                 if self.debug:
                     print(f"\n  Final result (formatted):")
-                    print(self.format_json(result))
+                    print(self.format_json(data))
                 
-                return result
+                # Return formatted JSON for dicts/lists
+                if isinstance(data, (dict, list)):
+                    return self.format_json(data)
+                return data
                 
             except UnicodeDecodeError as e:
                 raise ValueError(f"Invalid ASCII data: {str(e)}")
