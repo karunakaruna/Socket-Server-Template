@@ -1,0 +1,82 @@
+# Coretex Web Interface - Machine Instructions
+
+## 1. Environment Setup
+### Install Dependencies
+Ensure Python and Flask are installed:
+```
+pip install flask
+```
+
+### Locate Coretex File
+- The file `coretex.py` should be in the working directory.
+- If missing, retrieve or create it.
+
+---
+
+## 2. Running Coretex Web Server
+Run the following command to start the server:
+```
+python coretex.py
+```
+This launches a Flask server on port **5000**.
+
+---
+
+## 3. API Endpoints
+
+### Create Encrypted Object
+**Request:**
+```
+POST /create
+Content-Type: application/json
+Body: { "name": "Dream Space", "elements": ["floating", "soft light"] }
+```
+
+**Response:**
+```
+{
+    "uuid": "<generated-uuid>",
+    "data": "▇▇▇▇▇...",
+    "meta": { "modifications": [] }
+}
+```
+
+### Retrieve Decrypted Object
+**Request:**
+```
+GET /retrieve/<uuid>
+```
+
+**Response:**
+```
+{
+    "uuid": "<uuid>",
+    "data": { "name": "Dream Space", "elements": ["floating", "soft light"] },
+    "meta": { "modifications": [] }
+}
+```
+
+### Modify Stored Object
+**Request:**
+```
+POST /modify/<uuid>
+Content-Type: application/json
+Body: { "elements": ["floating", "soft light", "water"] }
+```
+
+**Response:**
+```
+{
+    "uuid": "<uuid>",
+    "data": { "name": "Dream Space", "elements": ["floating", "soft light", "water"] },
+    "meta": { "modifications": [{ "elements": ["floating", "soft light", "water"] }] }
+}
+```
+
+---
+
+## 4. Next Steps
+- **Frontend Development:** Build an HTML+JavaScript UI to interact with the API.
+- **Authentication:** Add security for access control.
+- **Database Storage:** Store encrypted objects persistently.
+

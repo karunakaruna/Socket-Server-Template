@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coretex Testing Interface</title>
+    <style>
+        :root {
+            --primary-color: #2d3436;
+            --secondary-color: #0984e3;
+            --success-color: #00b894;
+            --warning-color: #fdcb6e;
+            --error-color: #d63031;
+            --background-color: #f5f6fa;
+            --panel-background: white;
+            --text-color: #2d3436;
+            --border-radius: 8px;
+            --spacing: 20px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: var(--spacing);
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+        }
+
+        .tool-section {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: var(--spacing);
+        }
+
+        .output-area {
+            height: 400px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', monospace;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .output-area .timestamp {
+            color: #569cd6;
+        }
+
+        .output-area .success {
+            color: #6a9955;
+        }
+
+        .output-area .error {
+            color: #f44747;
+        }
+
+        .output-area:empty::before {
+            content: 'No output yet...';
+            color: #666;
+            font-style: italic;
+        }
+
+        .tool-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .type-selector {
+            margin-bottom: var(--spacing);
+            display: flex;
+            gap: 10px;
+        }
+
+        .type-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: all 0.2s;
+        }
+
+        .type-button.active {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 120px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .example-data {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .small-button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid #ddd;
+        }
+
+        .small-button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .encoder-selector {
+            margin-bottom: 15px;
+        }
+        .encoder-selector select {
+            padding: 5px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+        .example-output {
+            font-family: monospace;
+            padding: 10px;
+            background: var(--background-color-dark);
+            border-radius: var(--border-radius);
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .analyzer-panel {
+            margin-top: 20px;
+        }
+        .analyzer-input {
+            width: 100%;
+            min-height: 100px;
+            font-family: monospace;
+            margin-bottom: 10px;
+        }
+        .analysis-results {
+            margin-top: 10px;
+        }
+        .analysis-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: var(--background-color-dark);
+            border-radius: var(--border-radius);
+        }
+        .analysis-section h4 {
+            margin: 0 0 10px 0;
+        }
+        .unicode-ranges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .unicode-range {
+            background: var(--background-color);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .length-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        .length-info span:nth-child(odd) {
+            font-weight: bold;
+        }
+
+        .copy-button {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 2px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .copy-button:hover {
+            background: var(--background-color-dark);
+        }
+        .copy-success {
+            color: #4CAF50;
+            font-size: 12px;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .copy-success.show {
+            opacity: 1;
+        }
+        .example-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .encoded-message-container {
+            margin: 10px 0;
+        }
+
+        .encoded-message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .encoded-message-box {
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 0;
+            min-height: 50px;
+        }
+
+        .copy-button {
+            padding: 5px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .copy-button:hover {
+            background: #0056b3;
+        }
+
+        .output-container {
+            margin-top: 10px;
+        }
+
+        .encoded-message-box {
+            margin-top: 10px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .encoded-message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .encoded-message-text {
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+            padding: 10px;
+            background: #2d2d2d;
+            border-radius: 4px;
+            color: #d4d4d4;
+            max-height: none;
+            overflow: visible;
+        }
+
+        .encoded-output {
+            margin-top: 10px;
+            display: none;
+        }
+        .encoded-output div:first-child {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .encoded-output div:last-child {
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .encoded-message {
+            margin-top: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #1e1e1e;
+            padding: 10px;
+            width: 512px;
+        }
+
+        .encoded-message .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #d4d4d4;
+        }
+
+        .encoded-message textarea {
+            width: 512px;
+            height: 512px;
+            font-family: monospace;
+            background: #2d2d2d;
+            color: #d4d4d4;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            resize: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .copy-button {
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .copy-button:hover {
+            background: #106ebe;
+        }
+
+        .copy-button.copied {
+            background: #107c10;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel full-width">
+            <h1>Coretex Testing Interface</h1>
+            
+            <div class="type-selector">
+                <button class="type-button active" onclick="selectType('object')" data-type="object">Standard Object</button>
+                <button class="type-button" onclick="selectType('ephemera')" data-type="ephemera">Ephemera</button>
+                <button class="type-button" onclick="selectType('whisper')" data-type="whisper">Whisper</button>
+            </div>
+        </div>
+
+        <!-- Create Section -->
+        <div class="panel">
+            <h2>Create Object</h2>
+            <div class="tool-section">
+                <div class="tool-controls">
+                    <div class="form-group">
+                        <label for="createType">Type:</label>
+                        <select id="createType">
+                            <option value="object">Object</option>
+                            <option value="ephemera">Ephemera</option>
+                            <option value="whisper">Whisper</option>
+                        </select>
+                    </div>
+                    <div class="form-group encoder-selector">
+                        <label for="createEncoder">Encoder:</label>
+                        <select id="createEncoder">
+                            <!-- Will be populated by loadEncoders() -->
+                        </select>
+                    </div>
+                    <div class="form-group object-field">
+                        <label for="objectName">Name:</label>
+                        <input type="text" id="objectName" placeholder="Enter object name">
+                    </div>
+
+                    <div class="form-group object-field">
+                        <label for="objectDescription">Description:</label>
+                        <textarea id="objectDescription" placeholder="Enter description"></textarea>
+                    </div>
+
+                    <div class="form-group ephemera-field" style="display: none;">
+                        <label for="ttlSeconds">Time to Live (seconds):</label>
+                        <input type="number" id="ttlSeconds" value="86400">
+                    </div>
+
+                    <div class="form-group ephemera-field" style="display: none;">
+                        <label for="accessLimit">Access Limit:</label>
+                        <input type="number" id="accessLimit" value="5">
+                    </div>
+
+                    <div class="form-group whisper-field" style="display: none;">
+                        <label for="recipientId">Recipient ID:</label>
+                        <input type="text" id="recipientId" placeholder="Enter recipient ID">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="content">Content (JSON):</label>
+                        <textarea id="content" placeholder="Enter content as JSON"></textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <button onclick="createObject()">Create</button>
+                        <button onclick="loadExample()">Load Example</button>
+                        <button onclick="clearOutput('createOutput')" class="small-button">Clear Output</button>
+                    </div>
+                </div>
+                <div class="output-container">
+                    <div id="createOutput" class="output-area"></div>
+                    <div class="encoded-message" style="display: none;">
+                        <div class="header">
+                            <span>Encoded message:</span>
+                            <button onclick="copyMessage(this)" class="copy-button">Copy</button>
+                        </div>
+                        <textarea readonly spellcheck="false"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Retrieve Section -->
+        <div class="panel">
+            <h2>Retrieve Object</h2>
+            <div class="tool-section">
+                <div class="tool-controls">
+                    <div class="form-group">
+                        <label for="retrieveUuid">UUID:</label>
+                        <input type="text" id="retrieveUuid" placeholder="Enter UUID">
+                    </div>
+                    <div class="button-group">
+                        <button onclick="retrieveObject()">Retrieve</button>
+                        <button onclick="clearOutput('retrieveOutput')" class="small-button">Clear Output</button>
+                    </div>
+                </div>
+                <div class="output-container">
+                    <div id="retrieveOutput" class="output-area"></div>
+                    <div class="encoded-output" style="margin-top: 10px; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span>Encoded message:</span>
+                            <button onclick="copyEncoded(this)" class="copy-button">Copy</button>
+                        </div>
+                        <div style="font-family: monospace; white-space: pre-wrap; word-break: break-all; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modify Section -->
+        <div class="panel object-field">
+            <h2>Modify Object</h2>
+            <div class="tool-section">
+                <div class="tool-controls">
+                    <div class="form-group">
+                        <label for="modifyUuid">UUID:</label>
+                        <input type="text" id="modifyUuid" placeholder="Enter UUID">
+                    </div>
+                    <div class="form-group">
+                        <label for="modifications">Modifications (JSON):</label>
+                        <textarea id="modifications" placeholder="Enter modifications as JSON"></textarea>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="modifyObject()">Modify</button>
+                        <button onclick="testModification()">Test Modification</button>
+                        <button onclick="clearOutput('modifyOutput')" class="small-button">Clear Output</button>
+                    </div>
+                </div>
+                <div class="output-container">
+                    <div id="modifyOutput" class="output-area"></div>
+                    <div class="encoded-output" style="margin-top: 10px; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span>Encoded message:</span>
+                            <button onclick="copyEncoded(this)" class="copy-button">Copy</button>
+                        </div>
+                        <div style="font-family: monospace; white-space: pre-wrap; word-break: break-all; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Glyph Analyzer Section -->
+        <div class="panel analyzer-panel">
+            <h2>Glyph Analyzer</h2>
+            <div class="content">
+                <div class="form-group">
+                    <label for="analyzeInput">Paste encoded message:</label>
+                    <textarea id="analyzeInput" class="analyzer-input" placeholder="Paste your encoded message here"></textarea>
+                </div>
+                <div class="button-group">
+                    <button onclick="analyzeGlyphs()">Analyze</button>
+                    <button onclick="clearOutput('analyzeOutput')" class="small-button">Clear Output</button>
+                </div>
+            </div>
+            <div class="output" id="analyzeOutput"></div>
+        </div>
+
+        <script>
+            let currentType = 'object';
+            const API_BASE = 'http://localhost:5000';
+
+            function selectType(type) {
+                currentType = type;
+                document.querySelectorAll('.type-button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.type === type);
+                });
+
+                // Show/hide fields based on type
+                document.querySelectorAll('.object-field').forEach(el => {
+                    el.style.display = type === 'object' ? 'block' : 'none';
+                });
+                document.querySelectorAll('.ephemera-field').forEach(el => {
+                    el.style.display = type === 'ephemera' ? 'block' : 'none';
+                });
+                document.querySelectorAll('.whisper-field').forEach(el => {
+                    el.style.display = type === 'whisper' ? 'block' : 'none';
+                });
+
+                loadExample();
+            }
+
+            function addOutputLine(outputId, content, type = 'info') {
+                const output = document.getElementById(outputId);
+                const timestamp = new Date().toISOString();
+                const line = document.createElement('div');
+                
+                if (typeof content === 'object') {
+                    content = JSON.stringify(content, null, 2);
+                }
+
+                line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${type}">${content}</span>`;
+                output.appendChild(line);
+                output.scrollTop = output.scrollHeight;
+            }
+
+            function clearOutput(outputId) {
+                document.getElementById(outputId).innerHTML = '';
+            }
+
+            async function copyToClipboard(text, buttonId) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const successSpan = document.getElementById(`${buttonId}-success`);
+                    successSpan.classList.add('show');
+                    setTimeout(() => {
+                        successSpan.classList.remove('show');
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                }
+            }
+
+            function createCopyButton(text, id) {
+                const container = document.createElement('div');
+                container.className = 'example-header';
+                
+                const label = document.createElement('span');
+                label.textContent = 'Encoded message:';
+                container.appendChild(label);
+                
+                const button = document.createElement('button');
+                button.className = 'copy-button';
+                button.textContent = 'Copy';
+                button.onclick = () => copyToClipboard(text, id);
+                container.appendChild(button);
+                
+                const successSpan = document.createElement('span');
+                successSpan.className = 'copy-success';
+                successSpan.id = `${id}-success`;
+                successSpan.textContent = 'Copied!';
+                container.appendChild(successSpan);
+                
+                return container;
+            }
+
+            async function loadEncoders() {
+                try {
+                    const response = await fetch('/encoders');
+                    const encoders = await response.json();
+                    
+                    const select = document.getElementById('createEncoder');
+                    select.innerHTML = '';
+                    
+                    for (const [name, description] of Object.entries(encoders)) {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = `${name} - ${description}`;
+                        select.appendChild(option);
+                    }
+                } catch (error) {
+                    console.error('Error loading encoders:', error);
+                }
+            }
+
+            async function loadExample() {
+                const examples = {
+                    object: {
+                        name: "Test Object",
+                        description: "A test standard object",
+                        content: {
+                            key1: "value1",
+                            key2: "value2"
+                        }
+                    },
+                    ephemera: {
+                        name: "Temporary Note",
+                        content: "This will self-destruct in 24 hours",
+                        ttl_seconds: 86400,
+                        access_limit: 5
+                    },
+                    whisper: {
+                        message: "This is a secret message",
+                        recipient_id: "test_recipient",
+                        sender_id: "test_sender"
+                    }
+                };
+
+                const example = examples[currentType];
+                if (currentType === 'object') {
+                    document.getElementById('objectName').value = example.name;
+                    document.getElementById('objectDescription').value = example.description;
+                    document.getElementById('content').value = JSON.stringify(example.content, null, 2);
+                } else if (currentType === 'ephemera') {
+                    document.getElementById('objectName').value = example.name;
+                    document.getElementById('content').value = example.content;
+                    document.getElementById('ttlSeconds').value = example.ttl_seconds;
+                    document.getElementById('accessLimit').value = example.access_limit;
+                } else if (currentType === 'whisper') {
+                    document.getElementById('content').value = example.message;
+                    document.getElementById('recipientId').value = example.recipient_id;
+                }
+            }
+
+            async function createObject() {
+                try {
+                    const type = document.getElementById('createType').value;
+                    const encoder = document.getElementById('createEncoder').value;
+                    const content = document.getElementById('content').value;
+                    
+                    let data;
+                    try {
+                        data = JSON.parse(content);
+                    } catch (e) {
+                        addOutputLine('createOutput', 'Error: Invalid JSON content', 'error');
+                        return;
+                    }
+                    
+                    data.type = type;
+                    data.encoder = encoder;
+                    
+                    if (type === 'object') {
+                        data.name = document.getElementById('objectName').value;
+                        data.description = document.getElementById('objectDescription').value;
+                    } else if (type === 'ephemera') {
+                        data.ttl_seconds = parseInt(document.getElementById('ttlSeconds').value);
+                        data.access_limit = parseInt(document.getElementById('accessLimit').value);
+                    } else if (type === 'whisper') {
+                        data.recipient_id = document.getElementById('recipientId').value;
+                        data.message = document.getElementById('content').value;
+                    }
+
+                    const response = await fetch('/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Failed to create object');
+
+                    addOutputLine('createOutput', 'Object created successfully:', 'success');
+                    addOutputLine('createOutput', result);
+                    
+                    if (result.example) {
+                        const container = document.querySelector('#createOutput + .encoded-message');
+                        const textarea = container.querySelector('textarea');
+                        container.style.display = 'block';
+                        textarea.value = result.example;
+                    }
+
+                    document.getElementById('retrieveUuid').value = result.uuid;
+                    document.getElementById('modifyUuid').value = result.uuid;
+                } catch (error) {
+                    addOutputLine('createOutput', `Error: ${error.message}`, 'error');
+                }
+            }
+
+            async function retrieveObject() {
+                try {
+                    const uuid = document.getElementById('retrieveUuid').value;
+                    const key = prompt('Please enter the encryption key:');
+                    if (!key) return;
+
+                    const response = await fetch(`/retrieve/${uuid}?type=${currentType}&key=${encodeURIComponent(key)}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Failed to retrieve object');
+
+                    addOutputLine('retrieveOutput', 'Object retrieved successfully:', 'success');
+                    addOutputLine('retrieveOutput', result, 'info');
+                } catch (error) {
+                    addOutputLine('retrieveOutput', `Error: ${error.message}`, 'error');
+                }
+            }
+
+            async function modifyObject() {
+                try {
+                    const uuid = document.getElementById('modifyUuid').value;
+                    const key = prompt('Please enter the encryption key:');
+                    if (!key) return;
+
+                    const modifications = JSON.parse(document.getElementById('modifications').value);
+                    const response = await fetch(`/modify/${uuid}?key=${encodeURIComponent(key)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(modifications)
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Failed to modify object');
+
+                    addOutputLine('modifyOutput', 'Object modified successfully:', 'success');
+                    addOutputLine('modifyOutput', result, 'info');
+                } catch (error) {
+                    addOutputLine('modifyOutput', `Error: ${error.message}`, 'error');
+                }
+            }
+
+            async function testModification() {
+                try {
+                    const modifications = JSON.parse(document.getElementById('modifications').value);
+                    addOutputLine('modifyOutput', 'Test Modifications:', 'info');
+                    addOutputLine('modifyOutput', modifications, 'success');
+                } catch (error) {
+                    addOutputLine('modifyOutput', `Error: ${error.message}`, 'error');
+                }
+            }
+
+            async function analyzeGlyphs() {
+                try {
+                    const glyphs = document.getElementById('analyzeInput').value;
+                    if (!glyphs) {
+                        addOutputLine('analyzeOutput', 'Error: No glyphs provided', 'error');
+                        return;
+                    }
+                    
+                    const response = await fetch('/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ glyphs })
+                    });
+                    
+                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Analysis failed');
+                    }
+                    
+                    // Clear previous output
+                    const output = document.getElementById('analyzeOutput');
+                    output.innerHTML = '';
+                    
+                    // Add copy button for input glyphs
+                    output.appendChild(createCopyButton(glyphs, 'analyze'));
+                    
+                    // Add general analysis
+                    const analysisDiv = document.createElement('div');
+                    analysisDiv.className = 'analysis-section';
+                    analysisDiv.innerHTML = `
+                        <h4>General Analysis</h4>
+                        <div class="length-info">
+                            <span>Total Length:</span>
+                            <span>${result.analysis.total_length} characters</span>
+                            <span>Byte Length:</span>
+                            <span>${result.analysis.byte_length} bytes</span>
+                            <span>Character Count:</span>
+                            <span>${result.analysis.char_count} (excluding whitespace)</span>
+                        </div>
+                        <h4>Unicode Ranges Used</h4>
+                        <div class="unicode-ranges">
+                            ${result.analysis.unicode_ranges.map(range => 
+                                `<span class="unicode-range">${range}</span>`
+                            ).join('')}
+                        </div>
+                    `;
+                    output.appendChild(analysisDiv);
+                    
+                    // Add decoder results
+                    for (const [name, data] of Object.entries(result.results)) {
+                        const decoderDiv = document.createElement('div');
+                        decoderDiv.className = 'analysis-section';
+                        
+                        if (data.success) {
+                            decoderDiv.innerHTML = `
+                                <h4>${name} Decoder</h4>
+                                <div class="length-info">
+                                    <span>Status:</span>
+                                    <span class="success">Successfully decoded</span>
+                                    <span>Decoded Data:</span>
+                                    <span>${JSON.stringify(data.decoded, null, 2)}</span>
+                                </div>
+                            `;
+                        } else {
+                            decoderDiv.innerHTML = `
+                                <h4>${name} Decoder</h4>
+                                <div class="length-info">
+                                    <span>Status:</span>
+                                    <span class="error">${data.error}</span>
+                                </div>
+                            `;
+                        }
+                        
+                        output.appendChild(decoderDiv);
+                    }
+                } catch (error) {
+                    addOutputLine('analyzeOutput', `Error: ${error.message}`, 'error');
+                }
+            }
+
+            function updateOutput(data) {
+                const outputDiv = document.getElementById('output');
+                const encodedMessageBox = document.getElementById('encodedMessageBox');
+                const encodedMessageText = encodedMessageBox.querySelector('.encoded-message-text');
+                
+                // Update main output
+                outputDiv.innerHTML = data;
+                
+                // Extract encoded message
+                const match = data.match(/Encoded message:\n([0-9a-fA-F]+)/);
+                if (match) {
+                    const encodedMessage = match[1].trim();
+                    encodedMessageText.textContent = encodedMessage;
+                    encodedMessageBox.style.display = 'block';
+                } else {
+                    encodedMessageBox.style.display = 'none';
+                }
+            }
+
+            function copyEncoded(button) {
+                const text = button.parentElement.nextElementSibling.textContent;
+                navigator.clipboard.writeText(text);
+                button.textContent = 'Copied!';
+                setTimeout(() => button.textContent = 'Copy', 2000);
+            }
+
+            function copyMessage(button) {
+                const textarea = button.parentElement.parentElement.querySelector('textarea');
+                textarea.select();
+                document.execCommand('copy');
+                
+                // Visual feedback
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            }
+
+            // Load encoders on page load
+            loadEncoders();
+            // Initialize with example data
+            loadExample();
+        </script>
+    </div>
+</body>
+</html>

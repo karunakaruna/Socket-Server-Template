@@ -2723,6 +2723,30 @@
       "afk": false,
       "textstream": "",
       "lastActivity": 1735962815955
+    },
+    "b8f9a55b-17f0-4177-8361-ea34fabcb545": {
+      "id": "b8f9a55b-17f0-4177-8361-ea34fabcb545",
+      "username": "User_b8f9a",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735995560976
+    },
+    "9f3c028b-5f32-46e9-9ce8-6f1d185eb55b": {
+      "id": "9f3c028b-5f32-46e9-9ce8-6f1d185eb55b",
+      "username": "User_9f3c0",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1735996178905
     }
   },
   "secrets": [
@@ -2737,11 +2761,21 @@
     [
       "f5c8767d",
       "5c57ed50-ef4f-45ea-a7fb-6bd0a18cdf0f"
+    ],
+    [
+      "35aad65e",
+      "b8f9a55b-17f0-4177-8361-ea34fabcb545"
+    ],
+    [
+      "babc2e00",
+      "9f3c028b-5f32-46e9-9ce8-6f1d185eb55b"
     ]
   ],
   "timestamps": {
     "35a8995a": 1735962764890,
     "895fa035": 1735962774681,
-    "f5c8767d": 1735962812456
+    "f5c8767d": 1735962812456,
+    "35aad65e": 1735995551598,
+    "babc2e00": 1735996158945
   }
 }

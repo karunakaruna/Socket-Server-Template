@@ -1,0 +1,79 @@
+# Coretex System - Context for LLM Development
+
+## 1. Overview
+Coretex is a **programmable encryption and compression system** that encodes JSON objects into **Unicode glyph sequences**. It requires a **Master Key** for **decryption and modification**. Unlike standard encryption, **Coretex avoids fixed mappings**, using **algorithmic transformations** to create a dynamic, secure data storage system.
+
+## 2. Key Features
+- **Object-Based Encryption:** Each Coretex object is stored as a **JSON structure** with a unique UUID reference.
+- **Glyph-Based Compression:** JSON data is **obfuscated into Unicode glyphs** using a mathematical transformation.
+- **Master Key Protection:** Only users with the correct **Master Key** can decrypt and modify objects.
+- **Dynamic Data Manipulation:** Objects can be updated **without needing predefined mappings**.
+- **Flask Web API:** The system includes an API to **create, retrieve, and modify** Coretex objects.
+
+## 3. Data Structure
+
+### **Encrypted Object Format**
+```json
+{
+    "uuid": "de3a45b2-64fc-11ee-8c99-0242ac120002",
+    "data": "▇▇▇▇▇...",
+    "meta": {
+        "modifications": []
+    }
+}
+```
+
+### **Decrypted Object Format (with Master Key)**
+```json
+{
+    "uuid": "de3a45b2-64fc-11ee-8c99-0242ac120002",
+    "data": {
+        "name": "Dream Space",
+        "elements": ["floating", "soft light"]
+    },
+    "meta": {
+        "modifications": []
+    }
+}
+```
+
+## 4. API Functionality
+
+### **Creating an Object**
+**Request:**
+```
+POST /create
+Content-Type: application/json
+Body: { "name": "Dream Space", "elements": ["floating", "soft light"] }
+```
+**Response:** JSON object with UUID and encrypted data.
+
+### **Retrieving an Object**
+**Request:**
+```
+GET /retrieve/<uuid>
+```
+**Response:** Decrypts and returns the stored JSON.
+
+### **Modifying an Object**
+**Request:**
+```
+POST /modify/<uuid>
+Content-Type: application/json
+Body: { "elements": ["floating", "soft light", "water"] }
+```
+**Response:** Returns updated object with encrypted modifications.
+
+## 5. Next Steps
+- **Develop Frontend Interface:** Build an **HTML+JavaScript UI** to interact with the Coretex API.
+- **Enhance Security:** Implement **authentication mechanisms**.
+- **Expand Encoding System:** Introduce **more complex algorithmic transformations**.
+
+## 6. Required Implementation Details
+1. **Flask Backend:** A REST API for managing Coretex objects.
+2. **JavaScript Frontend:** A simple web interface to **test object creation, retrieval, and modification**.
+3. **Security Layer:** A method to protect **Master Keys** and prevent unauthorized access.
+
+---
+
+This document provides the necessary **context** for an LLM to continue development of Coretex into a fully functional web-based encryption and storage system.
