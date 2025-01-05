@@ -515,16 +515,19 @@ function handlePingMessage() {
     }
 }
 
+// Try different ports for WebSocket connection
+const tryPorts = [5000, 5001, 5002, 5003, 5004];
+let currentPortIndex = 0;
+
 function initWebSocket() {
     if (ws) {
         console.log('Closing existing WebSocket connection');
         ws.close();
     }
 
-    // For remote server, we might need to use the host without the port
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
-    const port = window.location.port || (protocol === 'wss:' ? '443' : '80');
+    const port = tryPorts[currentPortIndex];
     const wsUrl = `${protocol}//${host}:${port}`;
     
     console.log('Attempting WebSocket connection to:', wsUrl);
@@ -538,6 +541,9 @@ function initWebSocket() {
 
         ws.onopen = function() {
             console.log('WebSocket Connected Successfully to:', wsUrl);
+            // Reset port index on successful connection
+            currentPortIndex = tryPorts.indexOf(port);
+            
             // If we have a stored secret, attempt to reconnect with it
             if (userSecret) {
                 console.log('Attempting to reconnect with stored secret');
@@ -547,30 +553,23 @@ function initWebSocket() {
                 }));
             } else {
                 console.log('No stored secret, will receive new one from server');
-                ws.send(JSON.stringify({
-                    type: 'reconnect'
-                }));
             }
-            addLogEntry('Connected to server', 'connection');
-            document.getElementById('status-dot').className = 'status-dot online';
-            reconnectAttempts = 0;
-        };
-
-        ws.onclose = function(event) {
-            console.log(`Disconnected from server (Code: ${event.code})`);
-            addLogEntry(`Disconnected from server (Code: ${event.code})`, 'error');
-            document.getElementById('status-dot').className = 'status-dot offline';
-            updatePingIndicator(false);
             
-            // if (!isReconnecting && event.code !== 1000) { 
-            //     handleReconnection();
-            // }
+            // Start ping interval
+            startPingInterval();
         };
 
         ws.onerror = function(error) {
             console.error('WebSocket Error:', error);
-            console.log('WebSocket readyState:', ws.readyState);
-            addLogEntry('WebSocket error occurred', 'error');
+            // Try next port on error
+            currentPortIndex++;
+            if (currentPortIndex < tryPorts.length) {
+                console.log(`Retrying with next port: ${tryPorts[currentPortIndex]}`);
+                setTimeout(initWebSocket, 1000);
+            } else {
+                console.error('Failed to connect to any port');
+                currentPortIndex = 0; // Reset for next attempt
+            }
         };
 
         ws.onmessage = function(event) {
@@ -854,7 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('timer-start').addEventListener('click', () => window.debugTimer.start());
     document.getElementById('timer-stop').addEventListener('click', () => window.debugTimer.stop());
     document.getElementById('timer-reset').addEventListener('click', () => window.debugTimer.reset());
-});
+};
 
 // Initialize WebSocket connection
 initWebSocket();
@@ -882,7 +881,7 @@ document.getElementById('logo').addEventListener('click', function() {
         message: 'WorldTree Seed activated! 🌱✨',
         logType: 'worldtree'
     }));
-});
+};
 
 function isDashboardUser(user) {
     return user.username?.toLowerCase().includes('dashboard') || 

@@ -6,7 +6,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, make_response
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from datetime import datetime
@@ -21,64 +21,138 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Set up static file handling
-@app.route('/')
-def serve_index():
-    return send_file('public/index.html')
-
-@app.route('/viewer')
-def serve_viewer():
-    return send_file('public/viewer.html')
-
-@app.route('/key')
-def serve_key():
-    return send_file('public/key.html')
-
-@app.route('/keyforge')
-def serve_keyforge():
-    return send_from_directory('coretex/static', 'keyforge.html')
-
-@app.route('/<path:path>')
-def serve_static(path):
-    # First try coretex/static directory (so CSS references work)
-    try:
-        return send_from_directory('coretex/static', path)
-    except:
-        try:
-            # Then try public directory
-            return send_from_directory('public', path)
-        except:
-            return f"File not found: {path}", 404
-
 # Initialize Coretex
 master_key = os.environ.get('CORETEX_MASTER_KEY', 'CORETEX_MASTER_KEY_2025')
 coretex = Coretex(master_key)
+
+# Routes for static files
+@app.route('/')
+def serve_index():
+    response = make_response(send_file('public/index.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.route('/viewer')
+def serve_viewer():
+    response = make_response(send_file('public/viewer.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+@app.route('/key')
+def serve_key():
+    response = make_response(send_file('public/key.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+@app.route('/keyforge')
+def serve_keyforge():
+    response = make_response(send_file('public/keyforge.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+@app.route('/coretex/<path:path>')
+def serve_coretex_static(path):
+    response = make_response(send_from_directory('coretex/static', path))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+@app.route('/<path:path>')
+def serve_static(path):
+    response = None
+    try:
+        # Try public directory
+        response = make_response(send_from_directory('public', path))
+    except:
+        return f"File not found: {path}", 404
+    
+    if response:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+# Coretex API routes
+@app.route('/api/encoders', methods=['GET'])
+def list_encoders():
+    """List available encoders"""
+    return jsonify(EncoderRegistry.list_encoders())
+
+@app.route('/api/create', methods=['POST'])
+def create():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Get encoder preference
+        encoder_type = data.pop("encoder", "box")
+        if encoder_type not in EncoderRegistry.list_encoders():
+            return jsonify({"error": "Invalid encoder type"}), 400
+            
+        coretex.default_encoder = encoder_type
+        
+        obj_type = data.pop("type", "object")
+        result = coretex.create_object(data, obj_type)
+        
+        # Add example of how the encoded data looks
+        if "uuid" in result:
+            obj = coretex.store.get(result["uuid"])
+            if obj:
+                result["example"] = obj["data"]
+        
+        return jsonify(result), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/retrieve/<uuid>', methods=['GET'])
+def retrieve(uuid):
+    try:
+        encryption_key = request.args.get('key')
+        if not encryption_key:
+            return jsonify({"error": "No encryption key provided"}), 400
+            
+        obj_type = request.args.get('type', 'object')
+        result = coretex.retrieve_object(uuid, encryption_key, obj_type)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/modify/<uuid>', methods=['POST'])
+def modify(uuid):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        encryption_key = data.pop('key', None)
+        if not encryption_key:
+            return jsonify({"error": "No encryption key provided"}), 400
+            
+        obj_type = data.pop('type', 'object')
+        result = coretex.modify_object(uuid, encryption_key, data, obj_type)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_glyphs():
+    try:
+        data = request.get_json()
+        if not data or 'glyphs' not in data:
+            return jsonify({"error": "No glyphs provided"}), 400
+            
+        encoder_name = data.get('encoder')
+        result = EncoderRegistry.decode(data['glyphs'], encoder_name)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # User management
 users = {}
 num_users = 0
 page_connections = {}  # Track which page each user is on
-
-# Coretex routes
-@app.route('/api/encoders', methods=['GET'])
-def list_encoders():
-    return jsonify(coretex.list_encoders())
-
-@app.route('/api/create', methods=['POST'])
-def create():
-    return jsonify(coretex.create(request.json))
-
-@app.route('/api/retrieve/<uuid>', methods=['GET'])
-def retrieve(uuid):
-    return jsonify(coretex.retrieve(uuid))
-
-@app.route('/api/modify/<uuid>', methods=['POST'])
-def modify(uuid):
-    return jsonify(coretex.modify(uuid, request.json))
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze():
-    return jsonify(coretex.analyze_glyphs(request.json))
 
 # WebSocket event handlers
 @socketio.on('connect')
@@ -139,26 +213,23 @@ def handle_listening_update(data):
         }, broadcast=True)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    max_retries = 3
-    current_try = 0
+    start_port = int(os.environ.get('PORT', 5000))
+    port = start_port
+    max_retries = 5
     
-    while current_try < max_retries:
+    while max_retries > 0:
         try:
-            print(f"Attempting to start server on port {port}...")
-            socketio.run(app, host='0.0.0.0', port=port, debug=True)
+            print(f"Starting server on port {port}...")
+            socketio.run(app, host='0.0.0.0', port=port, debug=True, allow_unsafe_werkzeug=True)
             break
         except OSError as e:
             if "Address already in use" in str(e):
-                current_try += 1
-                if current_try < max_retries:
-                    print(f"Port {port} is in use, trying port {port + 1}")
-                    port += 1
-                else:
-                    print(f"Could not find an available port after {max_retries} attempts")
-                    print("Please ensure no other instances of the server are running")
-                    print("You can use Task Manager to close any existing Python processes")
+                print(f"Port {port} is in use, trying port {port + 1}")
+                port += 1
+                max_retries -= 1
+                if max_retries == 0:
+                    print("Could not find an available port")
                     sys.exit(1)
             else:
-                print(f"An error occurred: {e}")
+                print(f"Error: {e}")
                 sys.exit(1)

@@ -2,10 +2,10 @@
   "name": "worldtree-server",
   "version": "1.0.0",
   "description": "WebSocket server for WorldTree visualization",
-  "main": "main.js",
+  "main": "server.py",
   "scripts": {
-    "start": "node main.js",
-    "dev": "nodemon main.js"
+    "start": "python server.py",
+    "dev": "python server.py"
   },
   "keywords": [],
   "author": "",
