@@ -3587,8 +3587,27 @@
       "afk": false,
       "textstream": "",
       "lastActivity": 1735909142487
+    },
+    "4406f4bd-7d3f-453f-a327-25210964ec92": {
+      "id": "4406f4bd-7d3f-453f-a327-25210964ec92",
+      "username": "User_4406f",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1736088890734
     }
   },
-  "secrets": [],
-  "timestamps": {}
+  "secrets": [
+    [
+      "85934997",
+      "4406f4bd-7d3f-453f-a327-25210964ec92"
+    ]
+  ],
+  "timestamps": {
+    "85934997": 1736088880739
+  }
 }
