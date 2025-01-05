@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from encoders import EncoderRegistry
+from .encoders import EncoderRegistry
 
 class Coretex:
     def __init__(self, master_key):
@@ -242,6 +242,10 @@ coretex = Coretex(master_key)
 def index():
     return app.send_static_file('index.html')
 
+@app.route('/keyforge')
+def keyforge():
+    return send_from_directory('static', 'keyforge.html')
+
 @app.route('/encoders', methods=['GET'])
 def list_encoders():
     """List available encoders"""
@@ -356,4 +360,4 @@ def analyze_glyphs():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(port=5001, debug=True)
