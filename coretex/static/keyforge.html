@@ -41,10 +41,10 @@
             const menu = document.createElement('div');
             menu.className = 'context-menu';
             menu.innerHTML = `
-                <div class="context-menu-item" onclick="createKey(${x}, ${y})">Create Key 🔑</div>
-                <div class="context-menu-item" onclick="createChest(${x}, ${y})">Create Chest 🔒</div>
-                <div class="context-menu-item" onclick="createSecret(${x}, ${y})">Create Secret 📜</div>
-                <div class="context-menu-item" onclick="createSoul(${x}, ${y})">Create Soul 👻</div>
+                <div class="context-menu-item" onclick="createLock(${x}, ${y})">🔒 Create Lock</div>
+                <div class="context-menu-item" onclick="createSoul(${x}, ${y})">✨ Create Soul</div>
+                <div class="context-menu-item" onclick="createKey(${x}, ${y})">🔑 Create Key</div>
+                <div class="context-menu-item" onclick="createSecret(${x}, ${y})">📜 Create Scroll</div>
             `;
             
             const menuX = x + menu.offsetWidth > window.innerWidth ? window.innerWidth - menu.offsetWidth : x;
@@ -82,20 +82,32 @@
         }
 
         function encryptData(data, keyString) {
-            const key = keyString.replace(/[{}]/g, '');
-            return btoa(JSON.stringify(data).split('').map((char, i) => 
-                String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length))
-            ).join(''));
+            try {
+                const jsonStr = JSON.stringify(data);
+                // Convert to base64 to handle special characters
+                const encodedData = btoa(encodeURIComponent(jsonStr));
+                const encrypted = encodedData.split('').map((char, i) => {
+                    const keyChar = keyString[i % keyString.length];
+                    return String.fromCharCode(char.charCodeAt(0) ^ keyChar.charCodeAt(0));
+                }).join('');
+                return btoa(encrypted);  // Encode final result to make it safe
+            } catch (e) {
+                console.error('Encryption error:', e);
+                return null;
+            }
         }
 
         function decryptData(encrypted, keyString) {
             try {
-                const key = keyString.replace(/[{}]/g, '');
-                const decrypted = atob(encrypted).split('').map((char, i) =>
-                    String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length))
-                ).join('');
-                return JSON.parse(decrypted);
+                const decoded = atob(encrypted);  // Decode the base64
+                const decrypted = decoded.split('').map((char, i) => {
+                    const keyChar = keyString[i % keyString.length];
+                    return String.fromCharCode(char.charCodeAt(0) ^ keyChar.charCodeAt(0));
+                }).join('');
+                const decodedData = decodeURIComponent(atob(decrypted));
+                return JSON.parse(decodedData);
             } catch (e) {
+                console.error('Decryption error:', e);
                 return null;
             }
         }
@@ -120,7 +132,18 @@
             lock.dataset.encrypted = 'true';
             lock.dataset.type = 'lock';
             
-            createDraggable('🔑', keyString, x + 70, y);
+            // Add interaction radius
+            const radius = document.createElement('div');
+            radius.className = 'lock-radius';
+            lock.appendChild(radius);
+            
+            // Create key at a distance
+            const angle = Math.random() * 2 * Math.PI;
+            const distance = 150 + Math.random() * 50; // Random distance between 150-200px
+            const keyX = x + Math.cos(angle) * distance;
+            const keyY = y + Math.sin(angle) * distance;
+            
+            createDraggable('🔑', keyString, keyX, keyY);
             showStatus('Chest created with matching key! 🔒');
         }
 
@@ -187,10 +210,20 @@
             radius.className = 'soul-radius';
             soul.appendChild(radius);
             
-            createSoulKey(soulKey1, x + 70, y - 30, soulId, 1);
-            createSoulKey(soulKey2, x + 70, y + 30, soulId, 2);
+            // Calculate random positions for keys
+            const angle1 = Math.random() * 2 * Math.PI;
+            const angle2 = angle1 + Math.PI + (Math.random() - 0.5);
+            const distance = 300 + Math.random() * 100;
             
-            showStatus('Soul created with two keys! ✨🔮');
+            const key1X = x + Math.cos(angle1) * distance;
+            const key1Y = y + Math.sin(angle1) * distance;
+            const key2X = x + Math.cos(angle2) * distance;
+            const key2Y = y + Math.sin(angle2) * distance;
+            
+            createSoulKey(soulKey1, key1X, key1Y, soulId, 1);
+            createSoulKey(soulKey2, key2X, key2Y, soulId, 2);
+            
+            showStatus('Soul created with two keys! ✨');
             return soul;
         }
 
@@ -211,6 +244,11 @@
                 const radius = soul.querySelector('.soul-radius');
                 const soulId = soul.dataset.soulId;
                 let hasNearbyKey = false;
+                
+                // Reset requirements for this soul
+                if (soulRequirements.has(soulId)) {
+                    soulRequirements.get(soulId).clear();
+                }
                 
                 document.querySelectorAll('[data-type="soul-key"]').forEach(key => {
                     if (key.dataset.soulId === soulId && checkSoulProximity(soul, key)) {
@@ -234,45 +272,49 @@
                     if (requirements.size === 2) {
                         const soulKeys = soulKeyStore.get(soulId);
                         const combinedKey = soulKeys.join('');
-                        const encrypted = soul.querySelector('.metadata').textContent;
-                        const decrypted = decryptData(encrypted, combinedKey);
-                        
-                        if (decrypted) {
-                            // Remove all children except metadata
-                            const metadata = soul.querySelector('.metadata');
-                            soul.textContent = '';  // Clear all children
-                            soul.appendChild(document.createTextNode('💫'));
+                        const metadata = soul.querySelector('.metadata');
+                        if (!metadata.classList.contains('decrypted')) {
+                            const encrypted = metadata.textContent;
+                            const decrypted = decryptData(encrypted, combinedKey);
                             
-                            // Update metadata with decrypted content
-                            metadata.textContent = JSON.stringify(decrypted, null, 2);
-                            metadata.classList.add('decrypted');
+                            if (decrypted) {
+                                // Remove all children except metadata
+                                soul.textContent = '';  // Clear all children
+                                soul.appendChild(document.createTextNode('💫'));
+                                
+                                // Update metadata with decrypted content
+                                metadata.textContent = JSON.stringify(decrypted, null, 2);
+                                metadata.classList.add('decrypted');
+                                soul.appendChild(metadata);
+                                
+                                // Add new radius
+                                const radius = document.createElement('div');
+                                radius.className = 'soul-radius';
+                                soul.appendChild(radius);
+                                showStatus('Soul released! 💫');
+                            }
+                        }
+                    } else if (requirements.size < 2 && soul.childNodes[0]?.nodeValue === '💫') {
+                        // Lock the soul when a key is removed
+                        const metadata = soul.querySelector('.metadata');
+                        if (metadata.classList.contains('decrypted')) {
+                            soul.textContent = '';  // Clear all children
+                            soul.appendChild(document.createTextNode('✨'));
+                            
+                            // Reset metadata to encrypted state
+                            metadata.classList.remove('decrypted');
+                            const soulKeys = soulKeyStore.get(soulId);
+                            const combinedKey = soulKeys.join('');
+                            const decrypted = JSON.parse(metadata.textContent);
+                            metadata.textContent = encryptData(decrypted, combinedKey);
                             soul.appendChild(metadata);
                             
                             // Add new radius
                             const radius = document.createElement('div');
                             radius.className = 'soul-radius';
                             soul.appendChild(radius);
-                            showStatus('Soul released! 💫');
+                            showStatus('Soul bound! ✨');
                         }
-                    } else if (soul.childNodes[0]?.nodeValue === '💫') {
-                        // Lock the soul when a key is removed
-                        const metadata = soul.querySelector('.metadata');
-                        soul.textContent = '';  // Clear all children
-                        soul.appendChild(document.createTextNode('✨'));
-                        
-                        // Reset metadata to encrypted state
-                        metadata.classList.remove('decrypted');
-                        const soulKeys = soulKeyStore.get(soulId);
-                        const combinedKey = soulKeys.join('');
-                        const decrypted = JSON.parse(metadata.textContent);
-                        metadata.textContent = encryptData(decrypted, combinedKey);
-                        soul.appendChild(metadata);
-                        
-                        // Add new radius
-                        const radius = document.createElement('div');
-                        radius.className = 'soul-radius';
-                        soul.appendChild(radius);
-                        showStatus('Soul bound! ✨');
                     }
                 }
             });
@@ -286,6 +328,38 @@
             
             // Store the actual key only in memory
             soulKeyStore.set(keyElement.id, key);
+
+            // Create main metadata showing "soul-key"
+            const metadata = document.createElement('div');
+            metadata.className = 'metadata';
+            metadata.textContent = 'soul-key';
+            metadata.style.display = 'none';
+            keyElement.appendChild(metadata);
+
+            // Create second metadata for key preview
+            const keyPreview = document.createElement('div');
+            keyPreview.className = 'metadata key-preview';
+            keyPreview.textContent = `${key.substring(0, 11)}...`;
+            keyPreview.style.display = 'none';
+            keyElement.appendChild(keyPreview);
+
+            // Add hover events for both metadata elements
+            keyElement.addEventListener('mouseenter', () => {
+                metadata.style.display = 'block';
+                keyPreview.style.display = 'block';
+                requestAnimationFrame(() => {
+                    metadata.classList.add('show');
+                    keyPreview.classList.add('show');
+                });
+            });
+            keyElement.addEventListener('mouseleave', () => {
+                metadata.classList.remove('show');
+                keyPreview.classList.remove('show');
+                metadata.style.display = 'none';
+                keyPreview.style.display = 'none';
+            });
+
+            return keyElement;
         }
 
         function updateSoulConnections(soul, key) {
@@ -313,6 +387,303 @@
             connection.style.transform = `rotate(${angle}deg)`;
             
             return connection;
+        }
+
+        // Lock key storage
+        const lockKeyStore = new Map();
+        const lockRequirements = new Map();
+
+        function generateLockKey() {
+            const data = {
+                id: generateId(),
+                essence: "Sealed secret",
+                created: new Date().toISOString(),
+                message: "This is a secret message! 🤫"
+            };
+            return data;
+        }
+
+        function createLock(x, y) {
+            const lockData = generateLockKey();
+            const keyString = generateKeyString();
+            const encryptedData = encryptData(lockData, keyString);
+            
+            if (!encryptedData) {
+                showStatus('Failed to create lock! ❌');
+                return;
+            }
+            
+            // Create the lock with encrypted data
+            const element = createDraggable('🔒', encryptedData, x, y);
+            element.dataset.type = 'lock';
+            element.dataset.lockId = lockData.id;
+            element.dataset.secretType = 'lock';
+            
+            // Add lock radius
+            const radius = document.createElement('div');
+            radius.className = 'soul-radius';  // Reusing soul styles
+            element.appendChild(radius);
+            
+            // Add metadata (encrypted)
+            const metadata = document.createElement('div');
+            metadata.className = 'metadata';
+            metadata.textContent = encryptedData;
+            element.appendChild(metadata);
+            
+            // Create the matching key outside the radius
+            const angle = Math.random() * 2 * Math.PI;
+            const distance = 250; // Place key outside the radius
+            const keyX = x + Math.cos(angle) * distance;
+            const keyY = y + Math.sin(angle) * distance;
+            createLockKey(keyX, keyY, lockData.id, keyString);
+            
+            showStatus('Lock manifested! 🔒');
+            return element;
+        }
+
+        function createLockKey(x, y, lockId, keyString) {
+            const key = createDraggable('🔑', keyString, x, y);
+            key.dataset.type = 'lock-key';
+            key.dataset.lockId = lockId;
+            
+            // Add key radius
+            const radius = document.createElement('div');
+            radius.className = 'soul-radius';  // Reusing soul styles
+            key.appendChild(radius);
+            
+            // Add metadata
+            const metadata = document.createElement('div');
+            metadata.className = 'metadata';
+            metadata.textContent = keyString;
+            key.appendChild(metadata);
+            
+            return key;
+        }
+
+        function updateLockKeyEffects() {
+            document.querySelectorAll('[data-type="lock"]').forEach(lock => {
+                if (!lock.dataset.lockId) return;
+                
+                const lockId = lock.dataset.lockId;
+                const radius = lock.querySelector('.soul-radius');
+                if (!radius) return;
+                
+                let hasNearbyKey = false;
+                let validKeyNearby = false;
+                let nearbyKey = null;
+                
+                document.querySelectorAll('[data-type="lock-key"]').forEach(key => {
+                    if (key.dataset.lockId !== lockId) return;
+                    
+                    if (checkLockKeyProximity(lock, key)) {
+                        hasNearbyKey = true;
+                        validKeyNearby = true;
+                        nearbyKey = key;
+                        const connection = updateLockKeyConnections(lock, key);
+                        if (connection) activeConnections.add(connection);
+                    }
+                });
+                
+                radius.classList.toggle('active', hasNearbyKey);
+                
+                // Update lock state based on key proximity
+                try {
+                    const metadata = lock.querySelector('.metadata');
+                    if (!metadata) return;
+                    
+                    if (validKeyNearby && !lock.classList.contains('decrypted')) {
+                        // Decrypt the data using the nearby key
+                        const keyString = nearbyKey.querySelector('.metadata').textContent;
+                        const decryptedData = decryptData(metadata.textContent, keyString);
+                        
+                        if (decryptedData) {
+                            lock.textContent = '🔓';
+                            lock.classList.add('decrypted');
+                            metadata.classList.add('decrypted');
+                            metadata.textContent = JSON.stringify(decryptedData, null, 2);
+                            lock.appendChild(metadata);
+                            lock.appendChild(radius);
+                            showStatus('Lock opened! 🔓');
+                        }
+                    } else if (!validKeyNearby && lock.classList.contains('decrypted')) {
+                        // Re-encrypt the data when key moves away
+                        const keyString = document.querySelector(`[data-type="lock-key"][data-lock-id="${lockId}"]`)
+                            .querySelector('.metadata').textContent;
+                        const data = JSON.parse(metadata.textContent);
+                        const encryptedData = encryptData(data, keyString);
+                        
+                        if (encryptedData) {
+                            lock.textContent = '🔒';
+                            lock.classList.remove('decrypted');
+                            metadata.classList.remove('decrypted');
+                            metadata.textContent = encryptedData;
+                            lock.appendChild(metadata);
+                            lock.appendChild(radius);
+                            showStatus('Lock secured! 🔒');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error updating lock:', e);
+                }
+                
+                // Clean up inactive connections
+                if (!hasNearbyKey) {
+                    activeConnections.forEach(conn => {
+                        if (conn.id.startsWith(`${lockId}-`)) {
+                            conn.remove();
+                            activeConnections.delete(conn);
+                        }
+                    });
+                }
+            });
+        }
+
+        function checkLockKeyProximity(lock, key) {
+            const lockRect = lock.getBoundingClientRect();
+            const keyRect = key.getBoundingClientRect();
+            
+            const dx = (keyRect.left + keyRect.width/2) - (lockRect.left + lockRect.width/2);
+            const dy = (keyRect.top + keyRect.height/2) - (lockRect.top + lockRect.height/2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            return distance <= 200;
+        }
+
+        function updateLockKeyConnections(lock, key) {
+            const lockRect = lock.getBoundingClientRect();
+            const keyRect = key.getBoundingClientRect();
+            
+            const connectionId = `${lock.dataset.lockId}-${key.id}`;
+            let connection = document.getElementById(connectionId);
+            
+            if (!connection) {
+                connection = document.createElement('div');
+                connection.id = connectionId;
+                connection.className = 'soul-connection';  // Reusing soul styles
+                document.body.appendChild(connection);
+            }
+            
+            const dx = keyRect.left - lockRect.left;
+            const dy = keyRect.top - lockRect.top;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            connection.style.width = `${distance}px`;
+            connection.style.left = `${lockRect.left + lockRect.width / 2}px`;
+            connection.style.top = `${lockRect.top + lockRect.height / 2}px`;
+            connection.style.transform = `rotate(${angle}deg)`;
+            
+            return connection;
+        }
+
+        function checkLockProximity(lock, key) {
+            const lockRect = lock.getBoundingClientRect();
+            const keyRect = key.getBoundingClientRect();
+            
+            const dx = (keyRect.left + keyRect.width/2) - (lockRect.left + lockRect.width/2);
+            const dy = (keyRect.top + keyRect.height/2) - (lockRect.top + lockRect.height/2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 100px is the radius (half of the 200px diameter)
+            return distance <= 100;
+        }
+
+        function updateLockConnections(lock, key) {
+            const lockRect = lock.getBoundingClientRect();
+            const keyRect = key.getBoundingClientRect();
+            
+            const connectionId = `lock-${lock.id}-${key.id}`;
+            let connection = document.getElementById(connectionId);
+            
+            if (!connection) {
+                connection = document.createElement('div');
+                connection.id = connectionId;
+                connection.className = 'lock-connection';
+                document.body.appendChild(connection);
+            }
+            
+            const dx = keyRect.left - lockRect.left;
+            const dy = keyRect.top - lockRect.top;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            connection.style.width = `${distance}px`;
+            connection.style.left = `${lockRect.left + lockRect.width / 2}px`;
+            connection.style.top = `${lockRect.top + lockRect.height / 2}px`;
+            connection.style.transform = `rotate(${angle}deg)`;
+            
+            return connection;
+        }
+
+        function updateLockEffects() {
+            document.querySelectorAll('[data-type="lock"]').forEach(lock => {
+                if (!lock || lock.dataset.secretType === 'soul') return; // Skip souls and invalid locks
+                
+                const radius = lock.querySelector('.lock-radius');
+                if (!radius) return; // Skip if radius not found
+                
+                let hasNearbyKey = false;
+                let hasValidKey = false;
+                
+                document.querySelectorAll('[data-type="key"]').forEach(key => {
+                    if (!key || !key.querySelector('.metadata')) return; // Skip invalid keys
+                    
+                    if (checkLockProximity(lock, key)) {
+                        hasNearbyKey = true;
+                        const connection = updateLockConnections(lock, key);
+                        if (connection) activeConnections.add(connection);
+                        
+                        const metadata = lock.querySelector('.metadata');
+                        if (!metadata) return;
+                        
+                        try {
+                            const keyString = key.querySelector('.metadata').textContent;
+                            const encryptedData = metadata.textContent;
+                            const decrypted = decryptData(encryptedData, keyString);
+                            if (decrypted) hasValidKey = true;
+                        } catch (e) {
+                            console.error('Error processing lock:', e);
+                        }
+                    }
+                });
+                
+                radius.classList.toggle('active', hasNearbyKey);
+                
+                // Update lock state based on key proximity
+                if (hasValidKey && lock.classList.contains('locked')) {
+                    const metadata = lock.querySelector('.metadata');
+                    lock.textContent = '';  // Clear all children
+                    lock.appendChild(document.createTextNode('🔓'));
+                    if (metadata) lock.appendChild(metadata);
+                    lock.classList.remove('locked');
+                    lock.classList.add('unlock-animation');
+                    showStatus('Lock opened! 🔓');
+                } else if (!hasValidKey && !lock.classList.contains('locked')) {
+                    const metadata = lock.querySelector('.metadata');
+                    lock.textContent = '';  // Clear all children
+                    lock.appendChild(document.createTextNode('🔒'));
+                    if (metadata) lock.appendChild(metadata);
+                    lock.classList.add('locked', 'lock-animation');
+                    showStatus('Lock secured! 🔒');
+                }
+                
+                // Clean up inactive connections
+                if (!hasNearbyKey) {
+                    activeConnections.forEach(conn => {
+                        if (conn.id.startsWith(`lock-${lock.id}`)) {
+                            conn.remove();
+                            activeConnections.delete(conn);
+                        }
+                    });
+                }
+                
+                // Add radius back if it was removed
+                if (!lock.querySelector('.lock-radius')) {
+                    const newRadius = document.createElement('div');
+                    newRadius.className = 'lock-radius';
+                    lock.appendChild(newRadius);
+                }
+            });
         }
 
         function createDraggable(emoji, data, x, y) {
@@ -410,7 +781,7 @@
                     
                     // Add key to soul requirements
                     const requirements = soulRequirements.get(elem1.dataset.soulId);
-                    requirements.add(elem2.dataset.keyIndex);
+                    requirements.add(parseInt(elem2.dataset.keyIndex));
                     
                     // Check if all keys are present
                     if (requirements.size === 2) {
@@ -450,8 +821,10 @@
                     activeDraggable.style.left = boundedX + 'px';
                     activeDraggable.style.top = boundedY + 'px';
 
-                    // Update soul effects
+                    // Update effects
                     updateSoulEffects();
+                    updateLockEffects();
+                    updateLockKeyEffects();
                 });
             }
         });
