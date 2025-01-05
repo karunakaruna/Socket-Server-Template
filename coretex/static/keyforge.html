@@ -1,59 +1,577 @@
 <!DOCTYPE html>
-<!-- Previous HTML and styles remain the same until the showContextMenu function -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyforge</title>
+    <link rel="stylesheet" href="keyforge.css">
+</head>
+<body>
+    <a href="index.html" class="nav-link">← Back to Interface</a>
+    <div id="statusMessage" class="status-message"></div>
 
-<script>
-    // Previous code remains the same until showContextMenu
+    <script>
+        let activeDraggable = null;
+        let lastHovered = null;
+        let dragStartTime = 0;
+        const DRAG_THRESHOLD = 150; // ms to consider a click vs drag
 
-    function showContextMenu(x, y) {
-        removeContextMenu();
-        
-        const menu = document.createElement('div');
-        menu.className = 'context-menu';
-        menu.innerHTML = `
-            <div class="context-menu-item" onclick="createKey(${x}, ${y})">Create Key 🔑</div>
-            <div class="context-menu-item" onclick="createChest(${x}, ${y})">Create Chest 🔒</div>
-            <div class="context-menu-item" onclick="createSecret(${x}, ${y})">Create Secret 📄</div>
-        `;
-        
-        const menuX = x + menu.offsetWidth > window.innerWidth ? window.innerWidth - menu.offsetWidth : x;
-        const menuY = y + menu.offsetHeight > window.innerHeight ? window.innerHeight - menu.offsetHeight : y;
-        
-        menu.style.left = menuX + 'px';
-        menu.style.top = menuY + 'px';
-        document.body.appendChild(menu);
-    }
-
-    function generateFeatherKey() {
-        const length = Math.floor(Math.random() * 7) + 9; // 9-15 characters
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let key = 'f'; // Always starts with f
-        for (let i = 1; i < length; i++) {
-            key += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return key;
-    }
-
-    function createSecret(x, y) {
-        const featherKey = generateFeatherKey();
-        const secretData = {
-            id: generateId(),
-            content: "Secret message",
-            created: new Date().toISOString()
+        const ENCODINGS = {
+            'a': 'ascii',
+            'u': 'utf8',
+            'b': 'base64',
+            'h': 'hex'
         };
-        
-        const encryptedData = encryptData(secretData, featherKey);
-        const page = createDraggable('📄', encryptedData, x, y);
-        page.classList.add('locked');
-        page.dataset.encrypted = 'true';
-        page.dataset.type = 'lock'; // Reuse lock type for compatibility
-        
-        const feather = createDraggable('🪶', featherKey, x + 70, y);
-        feather.dataset.type = 'key'; // Reuse key type for compatibility
-        
-        showStatus('Secret created with feather key! 📄🪶');
-    }
 
-    // Rest of the code remains the same
-</script>
+        function showStatus(message, duration = 2000) {
+            const status = document.getElementById('statusMessage');
+            status.textContent = message;
+            status.classList.add('show');
+            setTimeout(() => status.classList.remove('show'), duration);
+        }
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            showContextMenu(e.clientX, e.clientY);
+        });
+
+        function showContextMenu(x, y) {
+            removeContextMenu();
+            
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.innerHTML = `
+                <div class="context-menu-item" onclick="createKey(${x}, ${y})">Create Key 🔑</div>
+                <div class="context-menu-item" onclick="createChest(${x}, ${y})">Create Chest 🔒</div>
+                <div class="context-menu-item" onclick="createSecret(${x}, ${y})">Create Secret 📜</div>
+                <div class="context-menu-item" onclick="createSoul(${x}, ${y})">Create Soul 👻</div>
+            `;
+            
+            const menuX = x + menu.offsetWidth > window.innerWidth ? window.innerWidth - menu.offsetWidth : x;
+            const menuY = y + menu.offsetHeight > window.innerHeight ? window.innerHeight - menu.offsetHeight : y;
+            
+            menu.style.left = menuX + 'px';
+            menu.style.top = menuY + 'px';
+            document.body.appendChild(menu);
+        }
+
+        function removeContextMenu() {
+            const existingMenu = document.querySelector('.context-menu');
+            if (existingMenu) existingMenu.remove();
+        }
+
+        document.addEventListener('click', removeContextMenu);
+
+        function generateId() {
+            return crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+        }
+
+        function generateKeyString() {
+            const encoding = Object.keys(ENCODINGS)[Math.floor(Math.random() * Object.keys(ENCODINGS).length)];
+            return `{${encoding}${generateId()}}`;
+        }
+
+        function generateFeatherKey() {
+            const length = Math.floor(Math.random() * 7) + 9; // 9-15 characters
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let key = 'f'; // Always starts with f
+            for (let i = 1; i < length; i++) {
+                key += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return key;
+        }
+
+        function encryptData(data, keyString) {
+            const key = keyString.replace(/[{}]/g, '');
+            return btoa(JSON.stringify(data).split('').map((char, i) => 
+                String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length))
+            ).join(''));
+        }
+
+        function decryptData(encrypted, keyString) {
+            try {
+                const key = keyString.replace(/[{}]/g, '');
+                const decrypted = atob(encrypted).split('').map((char, i) =>
+                    String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length))
+                ).join('');
+                return JSON.parse(decrypted);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function createKey(x, y) {
+            const keyString = generateKeyString();
+            createDraggable('🔑', keyString, x, y);
+            showStatus('Key forged! 🔑');
+        }
+
+        function createChest(x, y) {
+            const keyString = generateKeyString();
+            const chestData = {
+                id: generateId(),
+                content: "Secret chest content",
+                created: new Date().toISOString()
+            };
+            
+            const encryptedData = encryptData(chestData, keyString);
+            const lock = createDraggable('🔒', encryptedData, x, y);
+            lock.classList.add('locked');
+            lock.dataset.encrypted = 'true';
+            lock.dataset.type = 'lock';
+            
+            createDraggable('🔑', keyString, x + 70, y);
+            showStatus('Chest created with matching key! 🔒');
+        }
+
+        function createSecret(x, y) {
+            const featherKey = generateFeatherKey();
+            const secretData = {
+                id: generateId(),
+                content: "Secret message",
+                created: new Date().toISOString()
+            };
+            
+            const encryptedData = encryptData(secretData, featherKey);
+            const scroll = createDraggable('📜', encryptedData, x, y);
+            scroll.classList.add('locked');
+            scroll.dataset.encrypted = 'true';
+            scroll.dataset.type = 'lock';
+            scroll.dataset.secretType = 'scroll';
+            
+            const feather = createDraggable('🪶', featherKey, x + 70, y);
+            feather.dataset.type = 'key';
+            
+            showStatus('Secret created with feather key! 📜🪶');
+        }
+
+        // Soul key storage
+        const soulKeyStore = new Map();
+        const soulRequirements = new Map();
+        const activeConnections = new Set();
+
+        function generateSoulKey() {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+            let key = '';
+            for (let i = 0; i < 64; i++) {
+                key += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return key;
+        }
+
+        function createSoul(x, y) {
+            const soulId = generateId();
+            const soulKey1 = generateSoulKey();
+            const soulKey2 = generateSoulKey();
+            
+            const soulData = {
+                id: soulId,
+                essence: "Bound spirit",
+                created: new Date().toISOString(),
+                requiresKeys: 2
+            };
+            
+            soulKeyStore.set(soulId, [soulKey1, soulKey2]);
+            soulRequirements.set(soulId, new Set());
+            
+            const encryptedData = encryptData(soulData, soulKey1 + soulKey2);
+            const soul = createDraggable('✨', encryptedData, x, y);
+            soul.classList.add('locked');
+            soul.dataset.encrypted = 'true';
+            soul.dataset.type = 'lock';
+            soul.dataset.secretType = 'soul';
+            soul.dataset.soulId = soulId;
+            
+            // Add interaction radius
+            const radius = document.createElement('div');
+            radius.className = 'soul-radius';
+            soul.appendChild(radius);
+            
+            createSoulKey(soulKey1, x + 70, y - 30, soulId, 1);
+            createSoulKey(soulKey2, x + 70, y + 30, soulId, 2);
+            
+            showStatus('Soul created with two keys! ✨🔮');
+            return soul;
+        }
+
+        function checkSoulProximity(soul, key) {
+            const soulRect = soul.getBoundingClientRect();
+            const keyRect = key.getBoundingClientRect();
+            
+            const dx = (keyRect.left + keyRect.width/2) - (soulRect.left + soulRect.width/2);
+            const dy = (keyRect.top + keyRect.height/2) - (soulRect.top + soulRect.height/2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 200px is the radius (half of the 400px diameter)
+            return distance <= 200;
+        }
+
+        function updateSoulEffects() {
+            document.querySelectorAll('[data-secret-type="soul"]').forEach(soul => {
+                const radius = soul.querySelector('.soul-radius');
+                const soulId = soul.dataset.soulId;
+                let hasNearbyKey = false;
+                
+                document.querySelectorAll('[data-type="soul-key"]').forEach(key => {
+                    if (key.dataset.soulId === soulId && checkSoulProximity(soul, key)) {
+                        hasNearbyKey = true;
+                        const connection = updateSoulConnections(soul, key);
+                        activeConnections.add(connection);
+                        
+                        // Add key to soul requirements
+                        const requirements = soulRequirements.get(soulId);
+                        requirements.add(parseInt(key.dataset.keyIndex));
+                    }
+                });
+                
+                if (radius) {
+                    radius.classList.toggle('active', hasNearbyKey);
+                }
+                
+                // Check for soul release or lock
+                const requirements = soulRequirements.get(soulId);
+                if (requirements) {
+                    if (requirements.size === 2) {
+                        const soulKeys = soulKeyStore.get(soulId);
+                        const combinedKey = soulKeys.join('');
+                        const encrypted = soul.querySelector('.metadata').textContent;
+                        const decrypted = decryptData(encrypted, combinedKey);
+                        
+                        if (decrypted) {
+                            // Remove all children except metadata
+                            const metadata = soul.querySelector('.metadata');
+                            soul.textContent = '';  // Clear all children
+                            soul.appendChild(document.createTextNode('💫'));
+                            
+                            // Update metadata with decrypted content
+                            metadata.textContent = JSON.stringify(decrypted, null, 2);
+                            metadata.classList.add('decrypted');
+                            soul.appendChild(metadata);
+                            
+                            // Add new radius
+                            const radius = document.createElement('div');
+                            radius.className = 'soul-radius';
+                            soul.appendChild(radius);
+                            showStatus('Soul released! 💫');
+                        }
+                    } else if (soul.childNodes[0]?.nodeValue === '💫') {
+                        // Lock the soul when a key is removed
+                        const metadata = soul.querySelector('.metadata');
+                        soul.textContent = '';  // Clear all children
+                        soul.appendChild(document.createTextNode('✨'));
+                        
+                        // Reset metadata to encrypted state
+                        metadata.classList.remove('decrypted');
+                        const soulKeys = soulKeyStore.get(soulId);
+                        const combinedKey = soulKeys.join('');
+                        const decrypted = JSON.parse(metadata.textContent);
+                        metadata.textContent = encryptData(decrypted, combinedKey);
+                        soul.appendChild(metadata);
+                        
+                        // Add new radius
+                        const radius = document.createElement('div');
+                        radius.className = 'soul-radius';
+                        soul.appendChild(radius);
+                        showStatus('Soul bound! ✨');
+                    }
+                }
+            });
+        }
+
+        function createSoulKey(key, x, y, soulId, keyIndex) {
+            const keyElement = createDraggable('🔮', 'soul-key', x, y);
+            keyElement.dataset.type = 'soul-key';
+            keyElement.dataset.soulId = soulId;
+            keyElement.dataset.keyIndex = keyIndex;
+            
+            // Store the actual key only in memory
+            soulKeyStore.set(keyElement.id, key);
+        }
+
+        function updateSoulConnections(soul, key) {
+            const soulRect = soul.getBoundingClientRect();
+            const keyRect = key.getBoundingClientRect();
+            
+            const connectionId = `${soul.dataset.soulId}-${key.id}`;
+            let connection = document.getElementById(connectionId);
+            
+            if (!connection) {
+                connection = document.createElement('div');
+                connection.id = connectionId;
+                connection.className = 'soul-connection';
+                document.body.appendChild(connection);
+            }
+            
+            const dx = keyRect.left - soulRect.left;
+            const dy = keyRect.top - soulRect.top;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            connection.style.width = `${distance}px`;
+            connection.style.left = `${soulRect.left + soulRect.width / 2}px`;
+            connection.style.top = `${soulRect.top + soulRect.height / 2}px`;
+            connection.style.transform = `rotate(${angle}deg)`;
+            
+            return connection;
+        }
+
+        function createDraggable(emoji, data, x, y) {
+            const element = document.createElement('div');
+            element.className = 'draggable';
+            
+            if (emoji === '🪶') {
+                const img = document.createElement('img');
+                img.src = 'feather_1fab6.png';
+                img.alt = 'Feather Key';
+                img.draggable = false; // Prevent default drag behavior
+                element.appendChild(img);
+            } else {
+                element.textContent = emoji;
+            }
+            
+            element.dataset.type = emoji === '🔑' || emoji === '🪶' ? 'key' : 'lock';
+            
+            // Position from center
+            element.style.transform = `translate(-50%, -50%)`;
+            element.style.left = x + 'px';
+            element.style.top = y + 'px';
+
+            const metadata = document.createElement('div');
+            metadata.className = 'metadata';
+            metadata.textContent = data;
+            element.appendChild(metadata);
+
+            let isDragging = false;
+
+            const handleMouseDown = (e) => {
+                isDragging = false;
+                dragStartTime = Date.now();
+                activeDraggable = element;
+                element.classList.add('dragging');
+                element.style.zIndex = 1000;
+                document.body.style.cursor = 'grabbing';
+                e.preventDefault(); // Prevent text selection
+            };
+
+            const handleMouseUp = (e) => {
+                const dragDuration = Date.now() - dragStartTime;
+                if (dragDuration < DRAG_THRESHOLD) {
+                    const metadata = element.querySelector('.metadata');
+                    const isShowing = metadata.classList.contains('show');
+                    toggleMetadata(element, !isShowing);
+                }
+                isDragging = false;
+            };
+
+            // Add event listeners to both the element and the img
+            element.addEventListener('mousedown', handleMouseDown);
+            element.addEventListener('mouseup', handleMouseUp);
+            
+            const img = element.querySelector('img');
+            if (img) {
+                img.addEventListener('mousedown', handleMouseDown);
+                img.addEventListener('mouseup', handleMouseUp);
+            }
+
+            document.body.appendChild(element);
+            return element;
+        }
+
+        function toggleMetadata(element, show) {
+            const metadata = element.querySelector('.metadata');
+            if (!metadata) return; // Guard against null metadata
+            
+            if (show) {
+                metadata.style.display = 'block';
+                setTimeout(() => metadata.classList.add('show'), 0);
+            } else {
+                metadata.classList.remove('show');
+                metadata.style.display = 'none';
+            }
+        }
+
+        function checkCollision(elem1, elem2) {
+            if (!elem1 || !elem2) return false;
+            
+            const rect1 = elem1.getBoundingClientRect();
+            const rect2 = elem2.getBoundingClientRect();
+            
+            const collision = !(rect1.right < rect2.left || 
+                            rect1.left > rect2.right || 
+                            rect1.bottom < rect2.top || 
+                            rect1.top > rect2.bottom);
+            
+            if (collision) {
+                // Handle soul key interactions
+                if (elem1.dataset.secretType === 'soul' && elem2.dataset.type === 'soul-key' &&
+                    elem1.dataset.soulId === elem2.dataset.soulId) {
+                    const connection = updateSoulConnections(elem1, elem2);
+                    activeConnections.add(connection);
+                    
+                    // Add key to soul requirements
+                    const requirements = soulRequirements.get(elem1.dataset.soulId);
+                    requirements.add(elem2.dataset.keyIndex);
+                    
+                    // Check if all keys are present
+                    if (requirements.size === 2) {
+                        const soulKeys = soulKeyStore.get(elem1.dataset.soulId);
+                        const combinedKey = soulKeys.join('');
+                        const encrypted = elem1.querySelector('.metadata').textContent;
+                        const decrypted = decryptData(encrypted, combinedKey);
+                        
+                        if (decrypted) {
+                            elem1.textContent = '💫';
+                            showStatus('Soul released! 💫');
+                            
+                            // Clear connections
+                            activeConnections.forEach(conn => conn.remove());
+                            activeConnections.clear();
+                            requirements.clear();
+                        }
+                    }
+                }
+            }
+            
+            return collision;
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (activeDraggable) {
+                isDragging = true;
+                requestAnimationFrame(() => {
+                    const x = e.clientX;
+                    const y = e.clientY;
+                    
+                    const maxX = window.innerWidth;
+                    const maxY = window.innerHeight;
+                    const boundedX = Math.min(Math.max(0, x), maxX);
+                    const boundedY = Math.min(Math.max(0, y), maxY);
+                    
+                    activeDraggable.style.left = boundedX + 'px';
+                    activeDraggable.style.top = boundedY + 'px';
+
+                    // Update soul effects
+                    updateSoulEffects();
+                });
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (activeDraggable) {
+                // ... existing dragging code ...
+
+                // Remove inactive connections
+                if (activeDraggable.dataset.type === 'soul-key') {
+                    const soulId = activeDraggable.dataset.soulId;
+                    const soul = document.querySelector(`[data-soul-id="${soulId}"]`);
+                    
+                    if (!checkSoulProximity(activeDraggable, soul)) {
+                        const requirements = soulRequirements.get(soulId);
+                        requirements.delete(parseInt(activeDraggable.dataset.keyIndex));
+                        
+                        // Remove connection
+                        const connectionId = `${soulId}-${activeDraggable.id}`;
+                        const connection = document.getElementById(connectionId);
+                        if (connection) {
+                            connection.remove();
+                            activeConnections.delete(connection);
+                        }
+                    }
+                }
+            }
+            // ... rest of mousemove handler
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (activeDraggable) {
+                const dragged = activeDraggable;
+                const draggedType = dragged.dataset.type;
+
+                dragged.classList.remove('dragging');
+                document.body.style.cursor = '';
+
+                if (lastHovered && draggedType === 'key') {
+                    const keyString = dragged.querySelector('.metadata').textContent;
+                    const lock = lastHovered;
+                    const encryptedData = lock.querySelector('.metadata').textContent;
+
+                    if (lock.classList.contains('locked')) {
+                        const decrypted = decryptData(encryptedData, keyString);
+                        
+                        if (decrypted) {
+                            lock.classList.remove('locked');
+                            lock.classList.add('unlock-animation');
+                            lock.dataset.encrypted = 'false';
+                            lock.querySelector('.metadata').textContent = JSON.stringify(decrypted, null, 2);
+                            
+                            if (lock.dataset.secretType === 'scroll') {
+                                const metadata = lock.querySelector('.metadata');
+                                lock.textContent = '📄';
+                                lock.appendChild(metadata);
+                                showStatus('Scroll unrolled! 📄');
+                            } else if (lock.dataset.secretType === 'soul') {
+                                const metadata = lock.querySelector('.metadata');
+                                lock.textContent = '✨';
+                                lock.appendChild(metadata);
+                                showStatus('Soul bound! ✨');
+                            } else {
+                                showStatus('Lock opened! 🔓');
+                            }
+                        } else {
+                            showStatus('Wrong key! 🚫');
+                        }
+                    } else {
+                        const data = JSON.parse(lock.querySelector('.metadata').textContent);
+                        const encrypted = encryptData(data, keyString);
+                        
+                        lock.classList.add('locked', 'lock-animation');
+                        lock.dataset.encrypted = 'true';
+                        lock.querySelector('.metadata').textContent = encrypted;
+                        
+                        if (lock.dataset.secretType === 'scroll') {
+                            const metadata = lock.querySelector('.metadata');
+                            lock.textContent = '📜';
+                            lock.appendChild(metadata);
+                            showStatus('Scroll sealed! 📜');
+                        } else if (lock.dataset.secretType === 'soul') {
+                            const metadata = lock.querySelector('.metadata');
+                            lock.textContent = '✨';
+                            lock.appendChild(metadata);
+                            showStatus('Soul bound! ✨');
+                        } else {
+                            showStatus('Lock secured! 🔒');
+                        }
+                    }
+                }
+
+                dragged.classList.remove('key-hover');
+                if (lastHovered) {
+                    lastHovered.classList.remove('lock-hover');
+                }
+                
+                dragged.style.zIndex = '';
+                activeDraggable = null;
+                lastHovered = null;
+            }
+            if (activeDraggable && activeDraggable.dataset.type === 'soul-key') {
+                const soulId = activeDraggable.dataset.soulId;
+                const soul = document.querySelector(`[data-soul-id="${soulId}"]`);
+                
+                if (!checkSoulProximity(activeDraggable, soul)) {
+                    const requirements = soulRequirements.get(soulId);
+                    requirements.delete(parseInt(activeDraggable.dataset.keyIndex));
+                    
+                    // Remove connection
+                    const connectionId = `${soulId}-${activeDraggable.id}`;
+                    const connection = document.getElementById(connectionId);
+                    if (connection) {
+                        connection.remove();
+                        activeConnections.delete(connection);
+                    }
+                }
+            }
+            // ... rest of mouseup handler
+        });
+    </script>
 </body>
 </html>

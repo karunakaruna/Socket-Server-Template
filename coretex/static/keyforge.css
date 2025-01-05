@@ -1,0 +1,194 @@
+body {
+    margin: 0;
+    padding: 20px;
+    background: #1e1e1e;
+    color: #fff;
+    font-family: monospace;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.forge-container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.context-menu {
+    position: fixed;
+    background: #2d2d2d;
+    border: 1px solid #0984e3;
+    border-radius: 4px;
+    padding: 5px 0;
+    z-index: 1000;
+}
+
+.context-menu-item {
+    padding: 8px 20px;
+    cursor: pointer;
+    color: #fff;
+}
+
+.context-menu-item:hover {
+    background: #0984e3;
+}
+
+.draggable {
+    position: absolute;
+    user-select: none;
+    cursor: grab;
+    font-size: 48px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+    transform: translate(-50%, -50%);
+    touch-action: none;
+}
+
+.draggable img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
+.draggable.dragging {
+    cursor: grabbing;
+}
+
+.draggable:not(.dragging) {
+    transition: transform 0.2s ease-out, filter 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.draggable:hover:not(.dragging) {
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+.draggable.key-hover {
+    box-shadow: 0 0 20px #0984e3;
+}
+
+.draggable.lock-hover {
+    box-shadow: 0 0 20px #00b894;
+}
+
+.metadata {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.95);
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: monospace;
+    white-space: pre;
+    display: none;
+    z-index: 1000;
+    border: 1px solid #0984e3;
+    color: #0984e3;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    max-width: 300px;
+    word-wrap: break-word;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+}
+
+.metadata.show {
+    opacity: 1;
+}
+
+.metadata.decrypted {
+    color: #00ffff;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.nav-link {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: #0984e3;
+    text-decoration: none;
+    font-family: sans-serif;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
+}
+
+.locked {
+    filter: grayscale(1);
+}
+
+.unlock-animation {
+    animation: unlockEffect 0.5s ease-out;
+}
+
+.lock-animation {
+    animation: lockEffect 0.5s ease-out;
+}
+
+@keyframes unlockEffect {
+    0% { transform: translate(-50%, -50%) scale(1); filter: grayscale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.5); filter: grayscale(0.5); }
+    100% { transform: translate(-50%, -50%) scale(1); filter: grayscale(0); }
+}
+
+@keyframes lockEffect {
+    0% { transform: translate(-50%, -50%) scale(1); filter: grayscale(0); }
+    50% { transform: translate(-50%, -50%) scale(1.5); filter: grayscale(0.5); }
+    100% { transform: translate(-50%, -50%) scale(1); filter: grayscale(1); }
+}
+
+.status-message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.status-message.show {
+    opacity: 1;
+}
+
+.soul-radius {
+    position: absolute;
+    pointer-events: none;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    width: 400px;
+    height: 400px;
+    transform: translate(-50%, -50%);
+    transition: border-color 0.3s ease;
+    left: 50%;
+    top: 50%;
+}
+
+.soul-radius.active {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.soul-connection {
+    position: absolute;
+    pointer-events: none;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+    transform-origin: left center;
+    animation: connectionPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes connectionPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+}
