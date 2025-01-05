@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dream Seal 💫</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        .dreamscape {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 50%, rgba(147, 51, 234, 0.2), transparent 50%),
+                radial-gradient(circle at 70% 50%, rgba(236, 72, 153, 0.2), transparent 50%),
+                radial-gradient(circle at 50% 30%, rgba(59, 130, 246, 0.2), transparent 50%);
+            filter: blur(50px);
+            animation: dream-shift 20s infinite alternate;
+        }
+
+        .dream-particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            opacity: 0.5;
+        }
+
+        .dream-hud {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(236, 72, 153, 0.5);
+            z-index: 2;
+            text-align: center;
+        }
+
+        .dream-data {
+            color: rgba(236, 72, 153, 1);
+            margin: 5px 0;
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(236, 72, 153, 0.5);
+        }
+
+        .dream-key {
+            position: fixed;
+            cursor: grab;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.8));
+            transition: all 0.3s ease;
+        }
+
+        .dream-seal {
+            position: fixed;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px rgba(147, 51, 234, 0.8));
+        }
+
+        .dream-trail {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            mix-blend-mode: screen;
+            animation: trail-fade 1s forwards;
+        }
+
+        @keyframes dream-shift {
+            0% { transform: scale(1); filter: blur(50px) hue-rotate(0deg); }
+            100% { transform: scale(1.1); filter: blur(70px) hue-rotate(180deg); }
+        }
+
+        @keyframes trail-fade {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .dream-symbol {
+            position: fixed;
+            font-size: 24px;
+            pointer-events: none;
+            animation: float-away 4s forwards;
+            z-index: 1;
+        }
+
+        @keyframes float-away {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dreamscape"></div>
+    <div class="dream-particles"></div>
+    <div class="dream-hud">
+        <div class="dream-data">DREAM DEPTH: <span id="depth">∞</span></div>
+        <div class="dream-data">REALITY ANCHOR: <span id="anchor">STABLE</span></div>
+        <div class="dream-data">LUCIDITY: <span id="lucidity">97%</span></div>
+    </div>
+
+    <script>
+        const dreamSymbols = ['✨', '🌙', '⭐', '🌟', '💫', '🌠', '🎆', '✴️', '⚡'];
+
+        function createDreamKey() {
+            const key = document.createElement('div');
+            key.className = 'dream-key';
+            key.textContent = '💫';
+            key.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            key.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            key.addEventListener('mousedown', startDragging);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+
+            function createTrail(x, y) {
+                const trail = document.createElement('div');
+                trail.className = 'dream-trail';
+                trail.style.left = x + 'px';
+                trail.style.top = y + 'px';
+                trail.style.width = '20px';
+                trail.style.height = '20px';
+                trail.style.background = `hsl(${Math.random() * 360}, 100%, 75%)`;
+                document.body.appendChild(trail);
+
+                setTimeout(() => trail.remove(), 1000);
+            }
+
+            function createDreamSymbol(x, y) {
+                const symbol = document.createElement('div');
+                symbol.className = 'dream-symbol';
+                symbol.textContent = dreamSymbols[Math.floor(Math.random() * dreamSymbols.length)];
+                symbol.style.left = x + 'px';
+                symbol.style.top = y + 'px';
+                symbol.style.setProperty('--tx', (Math.random() * 200 - 100) + 'px');
+                symbol.style.setProperty('--ty', (Math.random() * -200 - 100) + 'px');
+                symbol.style.setProperty('--tr', (Math.random() * 360) + 'deg');
+                document.body.appendChild(symbol);
+
+                setTimeout(() => symbol.remove(), 4000);
+            }
+
+            function startDragging(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === key) {
+                    isDragging = true;
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    key.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                    
+                    createTrail(e.clientX, e.clientY);
+                    if (Math.random() < 0.1) {
+                        createDreamSymbol(e.clientX, e.clientY);
+                    }
+                    updateHUD();
+                }
+            }
+
+            function stopDragging() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            document.body.appendChild(key);
+        }
+
+        function createDreamSeal() {
+            const seal = document.createElement('div');
+            seal.className = 'dream-seal';
+            seal.textContent = '🌌';
+            seal.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            seal.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            document.body.appendChild(seal);
+        }
+
+        function updateHUD() {
+            document.getElementById('depth').textContent = ['∞', '∞+1', '∞-1', '∞±i'][Math.floor(Math.random() * 4)];
+            document.getElementById('anchor').textContent = ['STABLE', 'DRIFTING', 'DREAMING'][Math.floor(Math.random() * 3)];
+            document.getElementById('lucidity').textContent = Math.floor(90 + Math.random() * 10) + '%';
+        }
+
+        // Create some dream elements
+        for (let i = 0; i < 3; i++) {
+            createDreamKey();
+            createDreamSeal();
+        }
+
+        // Update HUD periodically
+        setInterval(updateHUD, 2000);
+    </script>
+</body>
+</html>

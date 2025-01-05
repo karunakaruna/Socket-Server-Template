@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nebula Keys 🌌</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        .nebula {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 50%, rgba(123, 31, 162, 0.5), transparent 30%),
+                radial-gradient(circle at 70% 50%, rgba(49, 27, 146, 0.5), transparent 30%),
+                radial-gradient(circle at 50% 50%, rgba(26, 35, 126, 0.5), transparent 40%);
+            filter: blur(30px);
+            animation: nebula-shift 20s infinite alternate;
+        }
+
+        .stars {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 50% 50%, #fff, transparent),
+                radial-gradient(1px 1px at 30% 30%, #fff, transparent),
+                radial-gradient(2px 2px at 70% 70%, #fff, transparent);
+            background-size: 200px 200px;
+            animation: stars-rotate 100s infinite linear;
+        }
+
+        .nebula-hud {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            background: rgba(26, 35, 126, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #4a148c;
+            z-index: 2;
+        }
+
+        .nebula-data {
+            color: #b388ff;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .cosmic-key {
+            position: fixed;
+            cursor: grab;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px #7c4dff);
+            transition: all 0.3s ease;
+        }
+
+        .cosmic-lock {
+            position: fixed;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px #4a148c);
+        }
+
+        @keyframes nebula-shift {
+            0% { transform: scale(1); filter: blur(30px) hue-rotate(0deg); }
+            100% { transform: scale(1.1); filter: blur(40px) hue-rotate(90deg); }
+        }
+
+        @keyframes stars-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .cosmic-trail {
+            position: absolute;
+            pointer-events: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #7c4dff;
+            filter: blur(5px);
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="nebula"></div>
+    <div class="stars"></div>
+    <div class="nebula-hud">
+        <div class="nebula-data">COSMIC FLUX: <span id="flux">∞</span></div>
+        <div class="nebula-data">VOID RESONANCE: <span id="resonance">93%</span></div>
+        <div class="nebula-data">ASTRAL ALIGNMENT: <span id="alignment">PERFECT</span></div>
+    </div>
+
+    <script>
+        function createCosmicKey() {
+            const key = document.createElement('div');
+            key.className = 'cosmic-key';
+            key.textContent = '🌠';
+            key.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            key.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+            let trail = [];
+
+            key.addEventListener('mousedown', startDragging);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+
+            function createTrail(x, y) {
+                const particle = document.createElement('div');
+                particle.className = 'cosmic-trail';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                document.body.appendChild(particle);
+                
+                requestAnimationFrame(() => {
+                    particle.style.opacity = '0.5';
+                });
+
+                setTimeout(() => {
+                    particle.remove();
+                }, 1000);
+
+                trail.push(particle);
+                if (trail.length > 20) {
+                    const old = trail.shift();
+                    old.remove();
+                }
+            }
+
+            function startDragging(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === key) {
+                    isDragging = true;
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    key.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                    
+                    createTrail(e.clientX, e.clientY);
+                    updateHUD();
+                }
+            }
+
+            function stopDragging() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+                
+                // Clear trails
+                trail.forEach(p => p.remove());
+                trail = [];
+            }
+
+            document.body.appendChild(key);
+        }
+
+        function createCosmicLock() {
+            const lock = document.createElement('div');
+            lock.className = 'cosmic-lock';
+            lock.textContent = '🌌';
+            lock.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            lock.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            document.body.appendChild(lock);
+        }
+
+        function updateHUD() {
+            document.getElementById('flux').textContent = ['∞', '∞+1', '∞-1'][Math.floor(Math.random() * 3)];
+            document.getElementById('resonance').textContent = Math.floor(90 + Math.random() * 10) + '%';
+            document.getElementById('alignment').textContent = ['PERFECT', 'COSMIC', 'ASTRAL'][Math.floor(Math.random() * 3)];
+        }
+
+        // Create some cosmic elements
+        for (let i = 0; i < 3; i++) {
+            createCosmicKey();
+            createCosmicLock();
+        }
+
+        // Update HUD periodically
+        setInterval(updateHUD, 2000);
+    </script>
+</body>
+</html>

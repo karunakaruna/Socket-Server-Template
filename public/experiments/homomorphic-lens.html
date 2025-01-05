@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Homomorphic Lens 🔍</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000, #1a1a2e);
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .fhe-container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .encryption-area, .computation-area {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .data-cell {
+            aspect-ratio: 1;
+            background: rgba(147, 51, 234, 0.1);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .data-cell:hover {
+            background: rgba(147, 51, 234, 0.2);
+            transform: scale(1.1);
+        }
+
+        .data-cell::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(147, 51, 234, 0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+
+        .data-cell:hover::before {
+            transform: translateX(100%);
+        }
+
+        .encrypted {
+            color: rgba(147, 51, 234, 0.8);
+            text-shadow: 0 0 5px rgba(147, 51, 234, 0.5);
+        }
+
+        .computation-display {
+            height: 300px;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .computation-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: rgba(147, 51, 234, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .operation-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(147, 51, 234, 0.6);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: monospace;
+        }
+
+        button:hover {
+            background: rgba(147, 51, 234, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .result-display {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            color: rgba(147, 51, 234, 0.8);
+            margin-top: 0.5rem;
+        }
+
+        @keyframes compute {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .lens {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border: 2px solid rgba(147, 51, 234, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            backdrop-filter: blur(5px);
+            display: none;
+        }
+
+        .lens::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle at center,
+                transparent 0%,
+                rgba(147, 51, 234, 0.1) 50%,
+                rgba(147, 51, 234, 0.2) 100%
+            );
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Homomorphic Lens</h1>
+    <div class="fhe-container">
+        <div class="encryption-area">
+            <h2>Data Encryption</h2>
+            <div class="data-grid" id="input-grid">
+                <!-- Grid cells will be generated dynamically -->
+            </div>
+            <div class="metrics">
+                <div class="metric">
+                    <div>Encryption Level</div>
+                    <div class="metric-value" id="encryption-level">0%</div>
+                </div>
+                <div class="metric">
+                    <div>Data Size</div>
+                    <div class="metric-value" id="data-size">0 bytes</div>
+                </div>
+            </div>
+            <button onclick="encryptData()">Encrypt Data</button>
+        </div>
+        <div class="computation-area">
+            <h2>Homomorphic Computation</h2>
+            <div class="computation-display" id="computation-display">
+                <div class="lens"></div>
+            </div>
+            <div class="operation-buttons">
+                <button onclick="performOperation('add')">Add</button>
+                <button onclick="performOperation('multiply')">Multiply</button>
+                <button onclick="performOperation('rotate')">Rotate</button>
+                <button onclick="performOperation('aggregate')">Aggregate</button>
+            </div>
+            <div class="result-display" id="result">
+                Result will appear here...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let encryptedData = [];
+        let isEncrypted = false;
+
+        // Initialize input grid
+        const inputGrid = document.getElementById('input-grid');
+        for (let i = 0; i < 64; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'data-cell';
+            cell.textContent = Math.floor(Math.random() * 10);
+            cell.addEventListener('click', () => toggleCell(cell));
+            inputGrid.appendChild(cell);
+        }
+
+        function toggleCell(cell) {
+            if (!isEncrypted) {
+                cell.textContent = Math.floor(Math.random() * 10);
+            }
+        }
+
+        function encryptData() {
+            isEncrypted = true;
+            let encryptionProgress = 0;
+            const cells = document.querySelectorAll('.data-cell');
+            
+            cells.forEach((cell, index) => {
+                setTimeout(() => {
+                    // Simulate encryption
+                    const originalValue = parseInt(cell.textContent);
+                    const encrypted = btoa(originalValue.toString()).substr(0, 4);
+                    cell.textContent = encrypted;
+                    cell.classList.add('encrypted');
+                    
+                    // Update metrics
+                    encryptionProgress = ((index + 1) / cells.length * 100).toFixed(0);
+                    document.getElementById('encryption-level').textContent = `${encryptionProgress}%`;
+                    document.getElementById('data-size').textContent = 
+                        `${(index + 1) * 32} bytes`;
+                    
+                    // Store encrypted value
+                    encryptedData[index] = encrypted;
+                }, index * 50);
+            });
+        }
+
+        // Setup computation display interactions
+        const display = document.getElementById('computation-display');
+        const lens = document.querySelector('.lens');
+
+        display.addEventListener('mousemove', (e) => {
+            if (!isEncrypted) return;
+            
+            const rect = display.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            lens.style.display = 'block';
+            lens.style.left = `${x}px`;
+            lens.style.top = `${y}px`;
+            
+            // Create computation particle
+            if (Math.random() < 0.1) {
+                createComputationParticle(x, y);
+            }
+        });
+
+        display.addEventListener('mouseleave', () => {
+            lens.style.display = 'none';
+        });
+
+        function createComputationParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'computation-particle';
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            
+            display.appendChild(particle);
+            
+            // Animate particle
+            particle.style.animation = 'compute 1s forwards';
+            setTimeout(() => particle.remove(), 1000);
+        }
+
+        function performOperation(type) {
+            if (!isEncrypted) {
+                alert('Please encrypt the data first!');
+                return;
+            }
+
+            const result = document.getElementById('result');
+            result.textContent = 'Computing...';
+
+            // Simulate homomorphic computation
+            const particles = 20;
+            for (let i = 0; i < particles; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * display.offsetWidth;
+                    const y = Math.random() * display.offsetHeight;
+                    createComputationParticle(x, y);
+                }, i * 100);
+            }
+
+            setTimeout(() => {
+                let computedResult;
+                switch(type) {
+                    case 'add':
+                        computedResult = 'E(' + btoa(Math.random().toString()).substr(0, 8) + ')';
+                        break;
+                    case 'multiply':
+                        computedResult = 'E(' + btoa(Math.random().toString()).substr(0, 12) + ')';
+                        break;
+                    case 'rotate':
+                        computedResult = 'E(' + btoa(Math.random().toString()).substr(0, 10) + ')';
+                        break;
+                    case 'aggregate':
+                        computedResult = 'E(' + btoa(Math.random().toString()).substr(0, 16) + ')';
+                        break;
+                }
+                
+                result.textContent = `Result: ${computedResult}`;
+                result.style.color = 'rgba(147, 51, 234, 0.8)';
+                
+                // Update metrics
+                document.getElementById('data-size').textContent = 
+                    `${(encryptedData.length * 32 + computedResult.length)} bytes`;
+            }, particles * 100 + 500);
+        }
+    </script>
+</body>
+</html>

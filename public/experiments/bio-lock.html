@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bio-Lock 🧬</title>
+    <style>
+        body {
+            margin: 0;
+            background: #001a00;
+            color: #00ff00;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        .dna-helix {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 45%, #004d00 45%, #004d00 55%, transparent 55%),
+                linear-gradient(-45deg, transparent 45%, #004d00 45%, #004d00 55%, transparent 55%);
+            background-size: 30px 30px;
+            animation: dna-scroll 10s linear infinite;
+            opacity: 0.3;
+        }
+
+        .bio-hud {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 26, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ff00;
+            z-index: 2;
+        }
+
+        .bio-data {
+            color: #00ff00;
+            margin: 5px 0;
+            font-size: 14px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .bio-emoji {
+            position: fixed;
+            cursor: grab;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            transition: transform 0.1s linear;
+            will-change: transform;
+        }
+
+        .bio-emoji[data-type="dna"] {
+            filter: drop-shadow(0 0 10px #00ff00);
+        }
+
+        .bio-emoji[data-type="cell"] {
+            filter: drop-shadow(0 0 10px #ff00ff);
+        }
+
+        .bio-emoji[data-type="virus"] {
+            filter: drop-shadow(0 0 10px #ff0000);
+        }
+
+        .bio-emoji[data-type="protein"] {
+            filter: drop-shadow(0 0 10px #00ffff);
+        }
+
+        .bio-pulsar {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #00ff00 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 2;
+            animation: pulse 2s ease-in-out infinite;
+            filter: blur(5px);
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+        }
+
+        .bio-particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            z-index: 1;
+            animation: float-particle 3s ease-out forwards;
+        }
+
+        @keyframes float-particle {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+            100% { transform: scale(0) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes dna-scroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 30px 30px; }
+        }
+
+        .bio-sequence {
+            position: fixed;
+            font-size: 12px;
+            color: #00ff00;
+            opacity: 0.3;
+            pointer-events: none;
+            white-space: nowrap;
+            animation: fade-out 2s forwards;
+            z-index: 4;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        @keyframes fade-out {
+            0% { opacity: 0.8; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-20px) scale(0.5); }
+        }
+
+        .path-point {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.5;
+            z-index: 2;
+            transition: opacity 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="dna-helix"></div>
+    <div class="bio-pulsar"></div>
+    <div class="bio-hud">
+        <div class="bio-data">DNA SEQUENCE: <span id="sequence">ATCG-GCTA</span></div>
+        <div class="bio-data">MUTATION RATE: <span id="mutation">0.001%</span></div>
+        <div class="bio-data">PROTEIN MATCH: <span id="match">STABLE</span></div>
+        <div class="bio-data">PULSAR STRENGTH: <span id="pulsar">100%</span></div>
+    </div>
+
+    <script>
+        const emojiTypes = [
+            { type: 'dna', emoji: '🧬', color: '#00ff00', particleCount: 5, sequenceRate: 0.3, delay: 0 },
+            { type: 'cell', emoji: '🦠', color: '#ff00ff', particleCount: 3, sequenceRate: 0.2, delay: 5 },
+            { type: 'virus', emoji: '🔬', color: '#ff0000', particleCount: 4, sequenceRate: 0.1, delay: 10 },
+            { type: 'protein', emoji: '🧪', color: '#00ffff', particleCount: 6, sequenceRate: 0.15, delay: 15 }
+        ];
+
+        let activeEmojis = [];
+        const pulsar = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            strength: 100
+        };
+
+        let mouseX = 0;
+        let mouseY = 0;
+        let pathPoints = [];
+        const MAX_PATH_POINTS = 50;
+
+        // Track mouse position and create path
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            // Add new path point
+            pathPoints.push({
+                x: mouseX,
+                y: mouseY,
+                timestamp: Date.now()
+            });
+
+            // Limit path length
+            if (pathPoints.length > MAX_PATH_POINTS) {
+                pathPoints.shift();
+            }
+
+            // Visualize path point
+            const point = document.createElement('div');
+            point.className = 'path-point';
+            point.style.left = mouseX + 'px';
+            point.style.top = mouseY + 'px';
+            point.style.background = `hsl(${Math.random() * 360}, 100%, 75%)`;
+            document.body.appendChild(point);
+
+            // Remove point after animation
+            setTimeout(() => point.remove(), 500);
+        });
+
+        function createBioEmoji(type) {
+            const emojiConfig = emojiTypes.find(e => e.type === type);
+            const emoji = document.createElement('div');
+            emoji.className = 'bio-emoji';
+            emoji.setAttribute('data-type', type);
+            emoji.textContent = emojiConfig.emoji;
+            emoji.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            emoji.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+            let velocity = { x: 0, y: 0 };
+            let isFollowingCursor = false;
+            let pathIndex = 0;
+
+            function followPath() {
+                if (!isFollowingCursor || pathPoints.length === 0) return;
+
+                // Get target point based on emoji's delay
+                const targetIndex = Math.max(0, pathPoints.length - 1 - emojiConfig.delay);
+                const targetPoint = pathPoints[targetIndex];
+                
+                if (targetPoint) {
+                    const rect = emoji.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+
+                    // Calculate distance to target
+                    const dx = targetPoint.x - centerX;
+                    const dy = targetPoint.y - centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Adjust speed based on distance
+                    const speed = Math.min(1, distance / 100);
+                    xOffset += dx * speed;
+                    yOffset += dy * speed;
+
+                    // Update position
+                    emoji.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+
+                    // Emit effects based on movement
+                    if (distance > 5) {
+                        if (Math.random() < 0.2) {
+                            emitParticles(centerX, centerY, emojiConfig);
+                        }
+                        if (Math.random() < emojiConfig.sequenceRate * 0.3) {
+                            createSequence(centerX, centerY);
+                        }
+                    }
+                }
+            }
+
+            function createSequence(x, y) {
+                const sequence = document.createElement('div');
+                sequence.className = 'bio-sequence';
+                sequence.textContent = generateDNASequence();
+                sequence.style.left = x + 'px';
+                sequence.style.top = y + 'px';
+                document.body.appendChild(sequence);
+
+                setTimeout(() => sequence.remove(), 2000);
+            }
+
+            function startDragging(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === emoji) {
+                    isDragging = true;
+                }
+
+                // Double click to toggle cursor following
+                if (e.detail === 2) {
+                    isFollowingCursor = !isFollowingCursor;
+                    emoji.style.filter = isFollowingCursor ? 
+                        `drop-shadow(0 0 10px ${emojiConfig.color}) drop-shadow(0 0 20px white)` :
+                        `drop-shadow(0 0 10px ${emojiConfig.color})`;
+                    
+                    // Reset path index when starting to follow
+                    if (isFollowingCursor) {
+                        pathIndex = 0;
+                    }
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+
+                    velocity.x = e.movementX;
+                    velocity.y = e.movementY;
+
+                    updatePosition();
+                    emitParticles(e.clientX, e.clientY, emojiConfig);
+                    
+                    // Emit sequences based on type's rate
+                    if (Math.random() < emojiConfig.sequenceRate) {
+                        createSequence(e.clientX, e.clientY);
+                    }
+                    
+                    updateHUD();
+                }
+            }
+
+            function updatePosition() {
+                if (isFollowingCursor) {
+                    followPath();
+                } else {
+                    // Original pulsar behavior
+                    const rect = emoji.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+
+                    const dx = pulsar.x - centerX;
+                    const dy = pulsar.y - centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const pulsarForce = Math.max(0, 1 - distance / 300) * (pulsar.strength / 100);
+
+                    if (!isDragging) {
+                        velocity.x += dx * pulsarForce * 0.01;
+                        velocity.y += dy * pulsarForce * 0.01;
+                        velocity.x *= 0.98;
+                        velocity.y *= 0.98;
+                        xOffset += velocity.x;
+                        yOffset += velocity.y;
+                    }
+
+                    emoji.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+                }
+            }
+
+            function stopDragging() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            function emitParticles(x, y, config) {
+                for (let i = 0; i < config.particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'bio-particle';
+                    particle.style.left = x + 'px';
+                    particle.style.top = y + 'px';
+                    particle.style.background = config.color;
+                    particle.style.width = Math.random() * 5 + 3 + 'px';
+                    particle.style.height = particle.style.width;
+
+                    // Random direction
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 50 + 20;
+                    particle.style.setProperty('--tx', Math.cos(angle) * speed + 'px');
+                    particle.style.setProperty('--ty', Math.sin(angle) * speed + 'px');
+
+                    document.body.appendChild(particle);
+                    setTimeout(() => particle.remove(), 3000);
+                }
+            }
+
+            emoji.addEventListener('mousedown', startDragging);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+
+            // Update position at 60fps
+            setInterval(updatePosition, 16);
+
+            document.body.appendChild(emoji);
+            activeEmojis.push({
+                element: emoji,
+                config: emojiConfig,
+                velocity,
+                updatePosition
+            });
+
+            return emoji;
+        }
+
+        function updatePulsar() {
+            pulsar.strength = 75 + Math.sin(Date.now() / 1000) * 25;
+            document.getElementById('pulsar').textContent = Math.round(pulsar.strength) + '%';
+
+            // Update all emoji positions
+            activeEmojis.forEach(emoji => emoji.updatePosition());
+        }
+
+        function generateDNASequence() {
+            const bases = ['A', 'T', 'C', 'G'];
+            return Array.from({length: 8}, () => bases[Math.floor(Math.random() * bases.length)]).join('-');
+        }
+
+        function updateHUD() {
+            document.getElementById('sequence').textContent = generateDNASequence();
+            document.getElementById('mutation').textContent = (Math.random() * 0.01).toFixed(4) + '%';
+            document.getElementById('match').textContent = ['STABLE', 'MUTATING', 'EVOLVING'][Math.floor(Math.random() * 3)];
+        }
+
+        // Create initial emojis
+        emojiTypes.forEach(type => {
+            for (let i = 0; i < 2; i++) {
+                createBioEmoji(type.type);
+            }
+        });
+
+        // Update systems
+        setInterval(updateHUD, 2000);
+        setInterval(updatePulsar, 50);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            pulsar.x = window.innerWidth / 2;
+            pulsar.y = window.innerHeight / 2;
+        });
+    </script>
+</body>
+</html>

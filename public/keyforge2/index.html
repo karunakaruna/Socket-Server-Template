@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KeyForge2 🔮</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --quantum-primary: #7B2FBE;
+            --neural-primary: #FF3CAC;
+            --temporal-primary: #784BA0;
+            --crystal-primary: #2B86C5;
+            --bio-primary: #3FBF3F;
+            --bg-dark: #0a0a0f;
+            --bg-gradient: linear-gradient(135deg, #0a0a0f, #1a1a2e);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg-gradient);
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .object-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+        }
+
+        .visualization {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metadata-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .object-card {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .object-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .object-card.quantum { border-color: var(--quantum-primary); }
+        .object-card.neural { border-color: var(--neural-primary); }
+        .object-card.temporal { border-color: var(--temporal-primary); }
+        .object-card.crystal { border-color: var(--crystal-primary); }
+        .object-card.bio { border-color: var(--bio-primary); }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .metadata-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .metadata-value {
+            font-size: 1.2rem;
+            color: var(--quantum-primary);
+            margin-top: 0.3rem;
+        }
+
+        .object-type {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .type-quantum { background: var(--quantum-primary); }
+        .type-neural { background: var(--neural-primary); }
+        .type-temporal { background: var(--temporal-primary); }
+        .type-crystal { background: var(--crystal-primary); }
+        .type-bio { background: var(--bio-primary); }
+
+        .visualization-overlay {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            margin-top: 0.3rem;
+        }
+
+        .quantum-value { color: var(--quantum-primary); }
+        .neural-value { color: var(--neural-primary); }
+        .temporal-value { color: var(--temporal-primary); }
+        .crystal-value { color: var(--crystal-primary); }
+        .bio-value { color: var(--bio-primary); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🔮 KeyForge2</h1>
+            <div class="system-status">
+                Quantum Network: Online | Neural Core: Active | Temporal Sync: Stable
+            </div>
+        </header>
+
+        <div class="object-panel">
+            <h2>Enhanced Objects</h2>
+            <div class="object-card quantum">
+                <span class="object-type type-quantum">⚛️ Quantum</span>
+                <h3>Entangled Key Pair</h3>
+                <div class="metadata-grid">
+                    <div class="metadata-item">Entropy: 256 bits</div>
+                    <div class="metadata-item">State: |ψ⟩</div>
+                </div>
+            </div>
+
+            <div class="object-card neural">
+                <span class="object-type type-neural">🧠 Neural</span>
+                <h3>Adaptive Container</h3>
+                <div class="metadata-grid">
+                    <div class="metadata-item">Patterns: 12</div>
+                    <div class="metadata-item">Evolution: Gen 3</div>
+                </div>
+            </div>
+
+            <div class="object-card temporal">
+                <span class="object-type type-temporal">⌛ Temporal</span>
+                <h3>Time-Locked Vault</h3>
+                <div class="metadata-grid">
+                    <div class="metadata-item">Lock: T+24h</div>
+                    <div class="metadata-item">Chain: Valid</div>
+                </div>
+            </div>
+
+            <div class="object-card crystal">
+                <span class="object-type type-crystal">💎 Crystal</span>
+                <h3>Holographic Store</h3>
+                <div class="metadata-grid">
+                    <div class="metadata-item">Density: 89%</div>
+                    <div class="metadata-item">Integrity: 100%</div>
+                </div>
+            </div>
+
+            <div class="object-card bio">
+                <span class="object-type type-bio">🌱 Biomorphic</span>
+                <h3>Living Container</h3>
+                <div class="metadata-grid">
+                    <div class="metadata-item">Growth: Active</div>
+                    <div class="metadata-item">Health: 98%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="visualization">
+            <canvas id="visualizer"></canvas>
+            <div class="visualization-overlay">
+                <h3>System Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric">
+                        <div>Quantum Coherence</div>
+                        <div class="metric-value quantum-value">98%</div>
+                    </div>
+                    <div class="metric">
+                        <div>Neural Activity</div>
+                        <div class="metric-value neural-value">1.2M ops</div>
+                    </div>
+                    <div class="metric">
+                        <div>Temporal Flow</div>
+                        <div class="metric-value temporal-value">Stable</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metadata-panel">
+            <h2>Enhanced Metadata</h2>
+            <div class="metadata-grid">
+                <div class="metadata-item">
+                    <div>Quantum State</div>
+                    <div class="metadata-value quantum-value">|ψ⟩ = α|0⟩ + β|1⟩</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Neural Patterns</div>
+                    <div class="metadata-value neural-value">12,345</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Temporal Chain</div>
+                    <div class="metadata-value temporal-value">T+1024</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Crystal Density</div>
+                    <div class="metadata-value crystal-value">89%</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Bio Evolution</div>
+                    <div class="metadata-value bio-value">Gen 3.1</div>
+                </div>
+            </div>
+
+            <h3>Active Properties</h3>
+            <div class="metadata-grid">
+                <div class="metadata-item">
+                    <div>Entanglement</div>
+                    <div class="metadata-value">Active</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Learning Rate</div>
+                    <div class="metadata-value">0.0001</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Time Lock</div>
+                    <div class="metadata-value">24h</div>
+                </div>
+                <div class="metadata-item">
+                    <div>Compression</div>
+                    <div class="metadata-value">Fractal</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class KeyForge2 {
+            constructor() {
+                this.initializeVisualizer();
+                this.startMetricsUpdate();
+                this.initializeObjectInteractions();
+            }
+
+            initializeVisualizer() {
+                const canvas = document.getElementById('visualizer');
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+
+                camera.position.z = 5;
+
+                // Create quantum object representation
+                const geometry = new THREE.IcosahedronGeometry(1, 2);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x7B2FBE,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const quantum = new THREE.Mesh(geometry, material);
+                scene.add(quantum);
+
+                // Add ambient light
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambientLight);
+
+                // Add point light
+                const pointLight = new THREE.PointLight(0x7B2FBE, 1);
+                pointLight.position.set(5, 5, 5);
+                scene.add(pointLight);
+
+                // Animation loop
+                function animate() {
+                    requestAnimationFrame(animate);
+                    quantum.rotation.x += 0.01;
+                    quantum.rotation.y += 0.01;
+                    renderer.render(scene, camera);
+                }
+
+                // Handle resize
+                function onResize() {
+                    const container = canvas.parentElement;
+                    const width = container.clientWidth;
+                    const height = container.clientHeight;
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(width, height, false);
+                }
+
+                window.addEventListener('resize', onResize);
+                onResize();
+                animate();
+            }
+
+            startMetricsUpdate() {
+                setInterval(() => {
+                    // Update quantum coherence
+                    const coherence = 95 + Math.random() * 5;
+                    document.querySelector('.quantum-value').textContent = `${coherence.toFixed(1)}%`;
+
+                    // Update neural activity
+                    const activity = Math.floor(1 + Math.random() * 0.4);
+                    document.querySelector('.neural-value').textContent = `${activity}M ops`;
+
+                    // Random temporal flow status
+                    const flows = ['Stable', 'Flowing', 'Synced'];
+                    document.querySelector('.temporal-value').textContent = 
+                        flows[Math.floor(Math.random() * flows.length)];
+                }, 1000);
+            }
+
+            initializeObjectInteractions() {
+                document.querySelectorAll('.object-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        card.classList.add('pulse');
+                        setTimeout(() => card.classList.remove('pulse'), 2000);
+
+                        // Update metadata panel with object details
+                        this.updateMetadata(card.querySelector('.object-type').textContent);
+                    });
+                });
+            }
+
+            updateMetadata(type) {
+                const metadataValues = {
+                    '⚛️ Quantum': {
+                        state: '|ψ⟩ = α|0⟩ + β|1⟩',
+                        entropy: '256 bits',
+                        coherence: '98%',
+                        entanglement: 'Active'
+                    },
+                    '🧠 Neural': {
+                        patterns: '12,345',
+                        evolution: 'Gen 3.1',
+                        learning: '0.0001',
+                        memory: 'Optimized'
+                    },
+                    '⌛ Temporal': {
+                        chain: 'T+1024',
+                        lock: '24h',
+                        flow: 'Stable',
+                        sync: 'Valid'
+                    }
+                };
+
+                const data = metadataValues[type] || {};
+                document.querySelectorAll('.metadata-value').forEach(value => {
+                    value.textContent = Object.values(data)[Math.floor(Math.random() * Object.values(data).length)];
+                });
+            }
+        }
+
+        // Initialize KeyForge2
+        const forge = new KeyForge2();
+    </script>
+</body>
+</html>

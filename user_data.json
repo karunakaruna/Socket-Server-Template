@@ -2747,20 +2747,27 @@
       "afk": false,
       "textstream": "",
       "lastActivity": 1735996178905
+    },
+    "6d0cbc01-d57d-42fe-9cd8-eb11b80ee0ff": {
+      "id": "6d0cbc01-d57d-42fe-9cd8-eb11b80ee0ff",
+      "username": "User_6d0cb",
+      "listeningTo": [],
+      "description": "",
+      "tx": 0,
+      "ty": 0,
+      "tz": 0,
+      "afk": false,
+      "textstream": "",
+      "lastActivity": 1736074303903
     }
   },
   "secrets": [
     [
-      "35aad65e",
-      "b8f9a55b-17f0-4177-8361-ea34fabcb545"
-    ],
-    [
-      "babc2e00",
-      "9f3c028b-5f32-46e9-9ce8-6f1d185eb55b"
+      "b9e9c9f3",
+      "6d0cbc01-d57d-42fe-9cd8-eb11b80ee0ff"
     ]
   ],
   "timestamps": {
-    "35aad65e": 1735995551598,
-    "babc2e00": 1735996158945
+    "b9e9c9f3": 1736074290735
   }
 }

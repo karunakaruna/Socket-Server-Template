@@ -1,11 +1,13 @@
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 import json
 import uuid
 import base64
 import os
+import threading
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-from encoders import EncoderRegistry
+import asyncio
+import websockets
 
 class Coretex:
     def __init__(self, master_key):
@@ -14,35 +16,29 @@ class Coretex:
         self.ephemera_store = {}
         self.whisper_store = {}
         self.current_time = "2025-01-04T20:28:36-08:00"
-        self.default_encoder = "ascii"  # Use ASCII encoder by default
+        self.default_encoder = "ascii"
+        self.ws_thread = None
 
     def _encrypt(self, data, encryption_key):
-        """Encrypt data using the specified encoder"""
-        # Combine master key and encryption key
-        combined_key = self.master_key + encryption_key
-        
-        # Add encryption metadata
-        data_with_key = {
-            "data": data,
-            "key": encryption_key,
-            "timestamp": self.current_time
-        }
-        
-        # Get encoder and encode
-        encoder = EncoderRegistry.get_encoder(self.default_encoder)
-        return encoder.encode(data_with_key)
+        """Encrypt data using base64"""
+        try:
+            combined = f"{data}:{encryption_key}"
+            return base64.b64encode(combined.encode()).decode()
+        except Exception as e:
+            print(f"Encryption error: {e}")
+            raise
 
-    def _decrypt(self, glyphs, encryption_key):
-        """Decrypt data using the specified encoder"""
-        # Get encoder and decode
-        encoder = EncoderRegistry.get_encoder(self.default_encoder)
-        decoded = encoder.decode(glyphs)
-        
-        # Verify encryption key
-        if decoded["key"] != encryption_key:
-            raise ValueError("Invalid encryption key")
-            
-        return decoded["data"]
+    def _decrypt(self, encrypted_data, decryption_key):
+        """Decrypt data using base64"""
+        try:
+            decoded = base64.b64decode(encrypted_data).decode()
+            data, key = decoded.split(":")
+            if key != decryption_key:
+                raise ValueError("Invalid key")
+            return data
+        except Exception as e:
+            print(f"Decryption error: {e}")
+            raise
 
     def generate_encryption_key(self):
         # Generate a secure random key
@@ -76,7 +72,7 @@ class Coretex:
                     "checksum": "sha256_" + uuid.uuid4().hex
                 }
             }
-            encrypted_data = self._encrypt(obj_data, encryption_key)
+            encrypted_data = self._encrypt(json.dumps(obj_data), encryption_key)
             self.store[obj_uuid] = {
                 "data": encrypted_data, 
                 "type": "object",
@@ -111,7 +107,7 @@ class Coretex:
                 }
             }
             ephemera_id = str(uuid.uuid4())
-            encrypted_data = self._encrypt(obj_data, encryption_key)
+            encrypted_data = self._encrypt(json.dumps(obj_data), encryption_key)
             self.ephemera_store[ephemera_id] = {
                 "data": encrypted_data, 
                 "type": "ephemera",
@@ -146,7 +142,7 @@ class Coretex:
                 }
             }
             whisper_id = str(uuid.uuid4())
-            encrypted_data = self._encrypt(obj_data, encryption_key)
+            encrypted_data = self._encrypt(json.dumps(obj_data), encryption_key)
             self.whisper_store[whisper_id] = {
                 "data": encrypted_data, 
                 "type": "whisper",
@@ -175,7 +171,7 @@ class Coretex:
             return {"error": "Invalid encryption key"}
 
         try:
-            obj = self._decrypt(stored_obj["data"], encryption_key)
+            obj = json.loads(self._decrypt(stored_obj["data"], encryption_key))
         except Exception:
             return {"error": "Decryption failed"}
 
@@ -187,7 +183,7 @@ class Coretex:
             if obj["data"]["current_access_count"] >= obj["data"]["access_limit"]:
                 del self.ephemera_store[obj_uuid]
                 return {"message": "Final access", "data": obj}
-            encrypted_data = self._encrypt(obj, encryption_key)
+            encrypted_data = self._encrypt(json.dumps(obj), encryption_key)
             stored_obj["data"] = encrypted_data
             return obj
 
@@ -214,7 +210,7 @@ class Coretex:
             return {"error": "Invalid encryption key"}
 
         try:
-            obj = self._decrypt(stored_obj["data"], encryption_key)
+            obj = json.loads(self._decrypt(stored_obj["data"], encryption_key))
         except Exception:
             return {"error": "Decryption failed"}
         
@@ -228,13 +224,64 @@ class Coretex:
             "keys": list(modifications.keys())
         })
 
-        encrypted_data = self._encrypt(obj, encryption_key)
+        encrypted_data = self._encrypt(json.dumps(obj), encryption_key)
         stored_obj["data"] = encrypted_data
         return obj
 
+    def start_websocket_client(self):
+        """Start WebSocket client in a separate thread"""
+        async def run_websocket():
+            uri = "ws://localhost:3001"
+            while True:
+                try:
+                    async with websockets.connect(uri) as websocket:
+                        print("Connected to Node.js server")
+                        await websocket.send(json.dumps({
+                            "type": "connect",
+                            "service": "coretex"
+                        }))
+                        
+                        while True:
+                            try:
+                                message = await websocket.recv()
+                                data = json.loads(message)
+                                if data.get('type') == 'lock_update':
+                                    lock_id = data.get('lock_id')
+                                    if lock_id in self.store:
+                                        await websocket.send(json.dumps({
+                                            'type': 'lock_state',
+                                            'lock_id': lock_id,
+                                            'encrypted': self.store[lock_id]['encrypted']
+                                        }))
+                            except Exception as e:
+                                print(f"Error handling message: {e}")
+                                break
+                except websockets.exceptions.ConnectionClosed:
+                    print("Connection to Node.js server closed")
+                    await asyncio.sleep(5)  # Wait before reconnecting
+                except Exception as e:
+                    print(f"WebSocket error: {e}")
+                    await asyncio.sleep(5)  # Wait before reconnecting
+
+        def run_async_loop():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(run_websocket())
+
+        if self.ws_thread is None or not self.ws_thread.is_alive():
+            self.ws_thread = threading.Thread(target=run_async_loop, daemon=True)
+            self.ws_thread.start()
+
 # Initialize Flask app and Coretex instance
 app = Flask(__name__, static_url_path='', static_folder='static')
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
 master_key = "CORETEX_MASTER_KEY_2025"
 coretex = Coretex(master_key)
 
@@ -242,118 +289,88 @@ coretex = Coretex(master_key)
 def index():
     return app.send_static_file('index.html')
 
-@app.route('/encoders', methods=['GET'])
-def list_encoders():
-    """List available encoders"""
-    return jsonify(EncoderRegistry.list_encoders())
+# Start WebSocket client when the app starts
+@app.before_request
+def before_request():
+    if not hasattr(app, '_websocket_started'):
+        app._websocket_started = True
+        coretex.start_websocket_client()
 
-@app.route('/create', methods=['POST'])
-def create():
+@app.route('/api/lock/create', methods=['POST', 'OPTIONS'])
+def create_lock():
+    if request.method == 'OPTIONS':
+        return '', 204
+        
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-        
-        # Get encoder preference
-        encoder_type = data.pop("encoder", "box")
-        if encoder_type not in EncoderRegistry.list_encoders():
-            return jsonify({"error": "Invalid encoder type"}), 400
+        if not data or 'message' not in data or 'key' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required fields'
+            }), 400
             
-        coretex.default_encoder = encoder_type
+        message = data['message']
+        key = data['key']
         
-        obj_type = data.pop("type", "object")
-        result = coretex.create_object(data, obj_type)
+        lock_id = str(uuid.uuid4())
+        encrypted_data = coretex._encrypt(message, key)
         
-        # Add example of how the encoded data looks
-        if "uuid" in result:
-            obj = coretex.store.get(result["uuid"])
-            if obj:
-                result["example"] = obj["data"]  # Remove truncation
+        # Store the lock data
+        coretex.store[lock_id] = {
+            'encrypted': encrypted_data,
+            'key': key,
+            'created': coretex.current_time
+        }
         
-        return jsonify(result), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/retrieve/<uuid>', methods=['GET'])
-def retrieve(uuid):
-    try:
-        obj_type = request.args.get('type', 'object')
-        encryption_key = request.args.get('key')
-        if not encryption_key:
-            return jsonify({"error": "Encryption key required"}), 400
-
-        result = coretex.retrieve_object(uuid, encryption_key, obj_type)
-        if not result:
-            return jsonify({"error": "Object not found"}), 404
-        if "error" in result:
-            return jsonify(result), 403
-        return jsonify(result), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/modify/<uuid>', methods=['POST'])
-def modify(uuid):
-    try:
-        modifications = request.get_json()
-        if not modifications:
-            return jsonify({"error": "No modifications provided"}), 400
-        
-        encryption_key = request.args.get('key')
-        if not encryption_key:
-            return jsonify({"error": "Encryption key required"}), 400
-
-        result = coretex.modify_object(uuid, encryption_key, modifications)
-        if not result:
-            return jsonify({"error": "Object not found"}), 404
-        if "error" in result:
-            return jsonify(result), 403
-        return jsonify(result), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/analyze', methods=['POST'])
-def analyze_glyphs():
-    """Analyze encoded glyph message"""
-    try:
-        data = request.get_json()
-        glyphs = data.get('glyphs')
-        if not glyphs:
-            return jsonify({"error": "No glyphs provided"}), 400
-            
-        # Try each encoder
-        results = {}
-        for name in EncoderRegistry.list_encoders():
-            try:
-                encoder = EncoderRegistry.get_encoder(name)
-                decoded = encoder.decode(glyphs)
-                results[name] = {
-                    "success": True,
-                    "decoded": decoded,
-                    "length": {
-                        "glyphs": len(glyphs),
-                        "bytes": len(glyphs.encode('utf-8')),
-                        "chars": sum(1 for c in glyphs if not c.isspace())
-                    }
-                }
-            except:
-                results[name] = {
-                    "success": False,
-                    "error": "Failed to decode with this encoder"
-                }
-                
         return jsonify({
-            "results": results,
-            "analysis": {
-                "total_length": len(glyphs),
-                "byte_length": len(glyphs.encode('utf-8')),
-                "char_count": sum(1 for c in glyphs if not c.isspace()),
-                "unicode_ranges": [
-                    f"U+{ord(c):04X}" for c in sorted(set(glyphs))
-                ]
-            }
-        }), 200
+            'status': 'success',
+            'lock_id': lock_id,
+            'encrypted': encrypted_data
+        })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error creating lock: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
+
+@app.route('/api/lock/<lock_id>/decrypt', methods=['POST', 'OPTIONS'])
+def decrypt_lock(lock_id):
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    try:
+        data = request.get_json()
+        if not data or 'key' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing key'
+            }), 400
+            
+        lock_data = coretex.store.get(lock_id)
+        if not lock_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Lock not found'
+            }), 404
+            
+        decrypted = coretex._decrypt(lock_data['encrypted'], data['key'])
+        
+        return jsonify({
+            'status': 'success',
+            'decrypted': decrypted
+        })
+    except ValueError as e:
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid key'
+        }), 403
+    except Exception as e:
+        print(f"Error decrypting lock: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)

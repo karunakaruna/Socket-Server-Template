@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quantum Vault 🌌</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        #particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .quantum-hud {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #0ff;
+            z-index: 2;
+            font-size: 14px;
+        }
+
+        .quantum-data {
+            color: #0ff;
+            margin: 5px 0;
+        }
+
+        .quantum-key {
+            position: fixed;
+            cursor: grab;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px #0ff);
+            transition: transform 0.3s ease;
+        }
+
+        .quantum-key:hover {
+            transform: scale(1.2) rotate(10deg);
+        }
+
+        .quantum-lock {
+            position: fixed;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px #f0f);
+        }
+
+        .particle {
+            position: absolute;
+            background: #0ff;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+
+        @keyframes quantum-pulse {
+            0% { filter: drop-shadow(0 0 5px #0ff); }
+            50% { filter: drop-shadow(0 0 20px #0ff); }
+            100% { filter: drop-shadow(0 0 5px #0ff); }
+        }
+    </style>
+</head>
+<body>
+    <div id="particles"></div>
+    <div class="quantum-hud">
+        <div class="quantum-data">QUANTUM STATE: <span id="state">SUPERPOSITION</span></div>
+        <div class="quantum-data">ENTANGLEMENT: <span id="entanglement">72%</span></div>
+        <div class="quantum-data">DECOHERENCE: <span id="decoherence">0.03ms</span></div>
+    </div>
+
+    <script>
+        // Particle system
+        const particles = [];
+        const particleCount = 100;
+        const particleContainer = document.getElementById('particles');
+
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.width = Math.random() * 4 + 'px';
+            particle.style.height = particle.style.width;
+            resetParticle(particle);
+            particleContainer.appendChild(particle);
+            particles.push(particle);
+        }
+
+        function resetParticle(particle) {
+            particle.style.left = Math.random() * 100 + 'vw';
+            particle.style.top = Math.random() * 100 + 'vh';
+            particle.style.opacity = Math.random() * 0.5 + 0.2;
+            particle.velocity = {
+                x: (Math.random() - 0.5) * 2,
+                y: (Math.random() - 0.5) * 2
+            };
+        }
+
+        function updateParticles() {
+            particles.forEach(particle => {
+                const x = parseFloat(particle.style.left);
+                const y = parseFloat(particle.style.top);
+
+                let newX = x + particle.velocity.x;
+                let newY = y + particle.velocity.y;
+
+                if (newX < 0 || newX > window.innerWidth) particle.velocity.x *= -1;
+                if (newY < 0 || newY > window.innerHeight) particle.velocity.y *= -1;
+
+                particle.style.left = newX + 'px';
+                particle.style.top = newY + 'px';
+            });
+            requestAnimationFrame(updateParticles);
+        }
+
+        // Initialize particles
+        for (let i = 0; i < particleCount; i++) {
+            createParticle();
+        }
+        updateParticles();
+
+        // Create draggable quantum keys
+        function createQuantumKey() {
+            const key = document.createElement('div');
+            key.className = 'quantum-key';
+            key.textContent = '🔮';
+            key.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            key.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            key.addEventListener('mousedown', startDragging);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+
+            function startDragging(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === key) {
+                    isDragging = true;
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    key.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                    updateHUD();
+                }
+            }
+
+            function stopDragging() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            document.body.appendChild(key);
+        }
+
+        // Create quantum locks
+        function createQuantumLock() {
+            const lock = document.createElement('div');
+            lock.className = 'quantum-lock';
+            lock.textContent = '🌌';
+            lock.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            lock.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            document.body.appendChild(lock);
+        }
+
+        // Update HUD with random quantum data
+        function updateHUD() {
+            document.getElementById('state').textContent = ['SUPERPOSITION', 'ENTANGLED', 'COLLAPSED'][Math.floor(Math.random() * 3)];
+            document.getElementById('entanglement').textContent = Math.floor(Math.random() * 100) + '%';
+            document.getElementById('decoherence').textContent = (Math.random() * 0.1).toFixed(3) + 'ms';
+        }
+
+        // Initialize some keys and locks
+        for (let i = 0; i < 3; i++) {
+            createQuantumKey();
+            createQuantumLock();
+        }
+
+        // Update HUD periodically
+        setInterval(updateHUD, 2000);
+    </script>
+</body>
+</html>

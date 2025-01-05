@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encryption Experiments 🔮</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000, #1a1a2e);
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .experiments {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            max-width: 1200px;
+        }
+
+        .experiment {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .experiment:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .emoji {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ Encryption Experiments ✨</h1>
+        <div class="experiments">
+            <a href="quantum-vault.html" class="experiment">
+                <span class="emoji">🌌</span>
+                <div class="title">Quantum Vault</div>
+                <div class="description">Quantum-based encryption with particle entanglement visualization</div>
+            </a>
+            <a href="crystal-cipher.html" class="experiment">
+                <span class="emoji">💎</span>
+                <div class="title">Crystal Cipher</div>
+                <div class="description">Crystalline-based encryption with geometric patterns</div>
+            </a>
+            <a href="nebula-keys.html" class="experiment">
+                <span class="emoji">🌠</span>
+                <div class="title">Nebula Keys</div>
+                <div class="description">Cosmic-themed encryption with nebula effects</div>
+            </a>
+            <a href="bio-lock.html" class="experiment">
+                <span class="emoji">🧬</span>
+                <div class="title">Bio-Lock</div>
+                <div class="description">DNA-based encryption with genetic patterns</div>
+            </a>
+            <a href="dream-seal.html" class="experiment">
+                <span class="emoji">💫</span>
+                <div class="title">Dream Seal</div>
+                <div class="description">Ethereal encryption with reality-bending effects</div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

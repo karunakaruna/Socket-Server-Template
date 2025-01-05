@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neural Forge 🧠</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000, #1a1a2e);
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .neural-container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .training-area, .key-generation {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .neural-network {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            margin-top: 1rem;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .neuron {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(147, 51, 234, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .neuron.active {
+            box-shadow: 0 0 20px rgba(147, 51, 234, 0.8);
+            background: rgba(147, 51, 234, 0.8);
+        }
+
+        .synapse {
+            position: absolute;
+            background: rgba(147, 51, 234, 0.2);
+            height: 2px;
+            transform-origin: left center;
+            transition: all 0.3s ease;
+        }
+
+        .synapse.active {
+            background: rgba(147, 51, 234, 0.8);
+            box-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+        }
+
+        .training-data {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            height: 200px;
+            overflow-y: auto;
+        }
+
+        .data-point {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .key-display {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: rgba(147, 51, 234, 0.8);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(147, 51, 234, 0.6);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: monospace;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: rgba(147, 51, 234, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            color: rgba(147, 51, 234, 0.8);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧠 Neural Forge</h1>
+    <div class="neural-container">
+        <div class="training-area">
+            <h2>Neural Network Training</h2>
+            <div class="neural-network">
+                <!-- Neurons and synapses will be dynamically generated -->
+            </div>
+            <div class="metrics">
+                <div class="metric">
+                    <div>Entropy</div>
+                    <div class="metric-value" id="entropy">0 bits</div>
+                </div>
+                <div class="metric">
+                    <div>Loss</div>
+                    <div class="metric-value" id="loss">0.000</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+            <button onclick="startTraining()">Start Training</button>
+        </div>
+        <div class="key-generation">
+            <h2>Key Generation</h2>
+            <div class="training-data">
+                <!-- Training data points will appear here -->
+            </div>
+            <div class="key-display">
+                Generated Key: <span id="key">Waiting for training...</span>
+            </div>
+            <button onclick="generateKey()" disabled id="generate-btn">Generate Key</button>
+        </div>
+    </div>
+
+    <script>
+        // Neural network visualization
+        const network = document.querySelector('.neural-network');
+        const layers = [4, 8, 16, 8, 4]; // Network architecture
+        let neurons = [];
+        let synapses = [];
+
+        function createNeuralNetwork() {
+            // Create neurons
+            let xOffset = 50;
+            layers.forEach((count, layerIndex) => {
+                const layerNeurons = [];
+                const spacing = network.offsetHeight / (count + 1);
+                for (let i = 0; i < count; i++) {
+                    const neuron = document.createElement('div');
+                    neuron.className = 'neuron';
+                    neuron.style.left = `${xOffset}px`;
+                    neuron.style.top = `${spacing * (i + 1)}px`;
+                    network.appendChild(neuron);
+                    layerNeurons.push(neuron);
+                }
+                neurons.push(layerNeurons);
+                xOffset += network.offsetWidth / (layers.length + 1);
+            });
+
+            // Create synapses
+            for (let i = 0; i < layers.length - 1; i++) {
+                const layerSynapses = [];
+                neurons[i].forEach(sourceNeuron => {
+                    neurons[i + 1].forEach(targetNeuron => {
+                        const synapse = document.createElement('div');
+                        synapse.className = 'synapse';
+                        const dx = targetNeuron.offsetLeft - sourceNeuron.offsetLeft;
+                        const dy = targetNeuron.offsetTop - sourceNeuron.offsetTop;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const angle = Math.atan2(dy, dx);
+                        
+                        synapse.style.width = `${length}px`;
+                        synapse.style.left = `${sourceNeuron.offsetLeft + 10}px`;
+                        synapse.style.top = `${sourceNeuron.offsetTop + 10}px`;
+                        synapse.style.transform = `rotate(${angle}rad)`;
+                        
+                        network.appendChild(synapse);
+                        layerSynapses.push(synapse);
+                    });
+                });
+                synapses.push(layerSynapses);
+            }
+        }
+
+        // TensorFlow.js model
+        let model;
+
+        async function createModel() {
+            model = tf.sequential();
+            model.add(tf.layers.dense({units: 8, activation: 'relu', inputShape: [4]}));
+            model.add(tf.layers.dense({units: 16, activation: 'relu'}));
+            model.add(tf.layers.dense({units: 8, activation: 'relu'}));
+            model.add(tf.layers.dense({units: 4, activation: 'sigmoid'}));
+            
+            model.compile({
+                optimizer: tf.train.adam(0.01),
+                loss: 'binaryCrossentropy',
+                metrics: ['accuracy']
+            });
+        }
+
+        let trainingData = [];
+        let isTraining = false;
+
+        async function startTraining() {
+            if (isTraining) return;
+            isTraining = true;
+            
+            // Generate training data
+            trainingData = [];
+            for (let i = 0; i < 100; i++) {
+                const input = tf.randomUniform([4]).arraySync();
+                const target = input.map(x => x > 0.5 ? 1 : 0);
+                trainingData.push({input, target});
+                
+                // Display in training data area
+                const dataPoint = document.createElement('div');
+                dataPoint.className = 'data-point';
+                dataPoint.textContent = `Input: [${input.map(x => x.toFixed(2))}] → Target: [${target}]`;
+                document.querySelector('.training-data').appendChild(dataPoint);
+            }
+
+            // Train the model
+            const xs = tf.stack(trainingData.map(d => tf.tensor(d.input)));
+            const ys = tf.stack(trainingData.map(d => tf.tensor(d.target)));
+
+            for (let epoch = 0; epoch < 100; epoch++) {
+                const result = await model.fit(xs, ys, {
+                    epochs: 1,
+                    shuffle: true,
+                    callbacks: {
+                        onEpochEnd: async (epoch, logs) => {
+                            // Update progress bar
+                            document.querySelector('.progress').style.width = `${epoch + 1}%`;
+                            
+                            // Update metrics
+                            document.getElementById('loss').textContent = logs.loss.toFixed(3);
+                            const entropy = calculateEntropy(await model.predict(xs).array());
+                            document.getElementById('entropy').textContent = `${entropy.toFixed(1)} bits`;
+
+                            // Animate network
+                            animateNetwork();
+                        }
+                    }
+                });
+            }
+
+            document.getElementById('generate-btn').disabled = false;
+            isTraining = false;
+        }
+
+        function calculateEntropy(predictions) {
+            const flatPreds = predictions.flat();
+            return -flatPreds.reduce((sum, p) => sum + (p * Math.log2(p + 1e-10)), 0);
+        }
+
+        function animateNetwork() {
+            // Randomly activate neurons and synapses
+            neurons.forEach(layer => {
+                layer.forEach(neuron => {
+                    if (Math.random() < 0.3) {
+                        neuron.classList.add('active');
+                        setTimeout(() => neuron.classList.remove('active'), 300);
+                    }
+                });
+            });
+
+            synapses.forEach(layer => {
+                layer.forEach(synapse => {
+                    if (Math.random() < 0.3) {
+                        synapse.classList.add('active');
+                        setTimeout(() => synapse.classList.remove('active'), 300);
+                    }
+                });
+            });
+        }
+
+        async function generateKey() {
+            const input = tf.randomUniform([1, 4]);
+            const prediction = await model.predict(input).array();
+            const key = prediction[0].map(p => p.toString(16).substr(2, 2)).join('');
+            document.getElementById('key').textContent = key;
+
+            // Animate key generation
+            const keyDisplay = document.querySelector('.key-display');
+            keyDisplay.style.background = 'rgba(147, 51, 234, 0.3)';
+            setTimeout(() => keyDisplay.style.background = '', 500);
+        }
+
+        // Initialize
+        createModel();
+        createNeuralNetwork();
+    </script>
+</body>
+</html>

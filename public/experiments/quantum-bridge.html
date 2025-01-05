@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quantum Bridge 🌌</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qiskit/0.8.0/qiskit.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000, #1a1a2e);
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .quantum-container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .circuit-builder, .visualization {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .quantum-gate {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            border: 2px solid rgba(147, 51, 234, 0.5);
+            border-radius: 10px;
+            background: rgba(147, 51, 234, 0.2);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quantum-gate:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(147, 51, 234, 0.5);
+        }
+
+        .circuit-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .grid-cell:hover {
+            background: rgba(147, 51, 234, 0.1);
+        }
+
+        .bloch-sphere {
+            width: 100%;
+            height: 400px;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sphere {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(147, 51, 234, 0.6), rgba(0, 0, 0, 0.8));
+            box-shadow: 0 0 30px rgba(147, 51, 234, 0.3);
+            animation: rotate 10s linear infinite;
+        }
+
+        .quantum-state {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #fff;
+        }
+
+        @keyframes rotate {
+            from { transform: translate(-50%, -50%) rotate3d(1, 1, 1, 0deg); }
+            to { transform: translate(-50%, -50%) rotate3d(1, 1, 1, 360deg); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(147, 51, 234, 0.6);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: monospace;
+        }
+
+        button:hover {
+            background: rgba(147, 51, 234, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .measurement {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-family: monospace;
+        }
+
+        .probability-bar {
+            height: 20px;
+            background: linear-gradient(90deg, rgba(147, 51, 234, 0.8) var(--prob), transparent var(--prob));
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚛️ Quantum Bridge</h1>
+    <div class="quantum-container">
+        <div class="circuit-builder">
+            <h2>Quantum Circuit</h2>
+            <div class="gates">
+                <div class="quantum-gate" data-gate="H">H</div>
+                <div class="quantum-gate" data-gate="X">X</div>
+                <div class="quantum-gate" data-gate="Y">Y</div>
+                <div class="quantum-gate" data-gate="Z">Z</div>
+                <div class="quantum-gate" data-gate="CNOT">CNOT</div>
+            </div>
+            <div class="circuit-grid">
+                <!-- Grid cells will be dynamically generated -->
+            </div>
+            <div class="controls">
+                <button onclick="runCircuit()">Run Circuit</button>
+                <button onclick="clearCircuit()">Clear</button>
+            </div>
+        </div>
+        <div class="visualization">
+            <h2>Quantum State</h2>
+            <div class="bloch-sphere">
+                <div class="sphere">
+                    <div class="quantum-state"></div>
+                </div>
+            </div>
+            <div class="measurement">
+                <h3>Measurement Results</h3>
+                <div class="probability-bar" style="--prob: 0%">|0⟩: 0%</div>
+                <div class="probability-bar" style="--prob: 0%">|1⟩: 0%</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedGate = null;
+        let circuit = Array(8).fill(null);
+        let qstate = { theta: 0, phi: 0 };
+
+        // Initialize circuit grid
+        const grid = document.querySelector('.circuit-grid');
+        for (let i = 0; i < 8; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.dataset.position = i;
+            cell.addEventListener('click', () => placeGate(i));
+            grid.appendChild(cell);
+        }
+
+        // Gate selection
+        document.querySelectorAll('.quantum-gate').forEach(gate => {
+            gate.addEventListener('click', () => {
+                selectedGate = gate.dataset.gate;
+                document.querySelectorAll('.quantum-gate').forEach(g => 
+                    g.style.boxShadow = g === gate ? '0 0 15px rgba(147, 51, 234, 0.8)' : 'none'
+                );
+            });
+        });
+
+        function placeGate(position) {
+            if (!selectedGate) return;
+            
+            const cell = grid.children[position];
+            cell.textContent = selectedGate;
+            cell.style.background = 'rgba(147, 51, 234, 0.2)';
+            circuit[position] = selectedGate;
+            
+            updateQuantumState();
+        }
+
+        function clearCircuit() {
+            circuit = Array(8).fill(null);
+            document.querySelectorAll('.grid-cell').forEach(cell => {
+                cell.textContent = '';
+                cell.style.background = 'transparent';
+            });
+            updateQuantumState();
+        }
+
+        function updateQuantumState() {
+            // Simulate quantum state evolution
+            circuit.forEach(gate => {
+                if (!gate) return;
+                switch(gate) {
+                    case 'H':
+                        qstate.theta = Math.PI / 2;
+                        qstate.phi += Math.PI;
+                        break;
+                    case 'X':
+                        qstate.theta = Math.PI - qstate.theta;
+                        break;
+                    case 'Y':
+                        qstate.phi += Math.PI;
+                        break;
+                    case 'Z':
+                        qstate.phi += Math.PI / 2;
+                        break;
+                }
+            });
+
+            // Update Bloch sphere visualization
+            const state = document.querySelector('.quantum-state');
+            const r = 80; // radius
+            const x = r * Math.sin(qstate.theta) * Math.cos(qstate.phi);
+            const y = r * Math.sin(qstate.theta) * Math.sin(qstate.phi);
+            const z = r * Math.cos(qstate.theta);
+            
+            state.style.transform = `translate(${x}px, ${y}px)`;
+            state.style.boxShadow = `0 0 ${10 + Math.abs(z/10)}px #fff`;
+            
+            // Calculate probabilities
+            const prob0 = Math.cos(qstate.theta/2) ** 2;
+            const prob1 = Math.sin(qstate.theta/2) ** 2;
+            
+            document.querySelectorAll('.probability-bar').forEach((bar, i) => {
+                const prob = i === 0 ? prob0 : prob1;
+                bar.style.setProperty('--prob', `${prob * 100}%`);
+                bar.textContent = `|${i}⟩: ${(prob * 100).toFixed(1)}%`;
+            });
+        }
+
+        async function runCircuit() {
+            // Animate running state
+            document.querySelectorAll('.grid-cell').forEach((cell, i) => {
+                setTimeout(() => {
+                    cell.style.background = 'rgba(147, 51, 234, 0.4)';
+                    setTimeout(() => {
+                        cell.style.background = circuit[i] ? 'rgba(147, 51, 234, 0.2)' : 'transparent';
+                    }, 300);
+                }, i * 100);
+            });
+
+            // Final measurement animation
+            setTimeout(() => {
+                const measurement = Math.random() < Math.cos(qstate.theta/2) ** 2 ? 0 : 1;
+                document.querySelectorAll('.probability-bar')[measurement].style.background = 
+                    'linear-gradient(90deg, rgba(255, 255, 255, 0.8) var(--prob), transparent var(--prob))';
+                setTimeout(() => {
+                    document.querySelectorAll('.probability-bar')[measurement].style.background = '';
+                }, 500);
+            }, 1000);
+        }
+
+        // Initialize
+        updateQuantumState();
+    </script>
+</body>
+</html>

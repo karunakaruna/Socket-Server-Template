@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encryption Experiments 🔮</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000, #1a1a2e);
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        h1, h2 {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin: 2rem 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .experiments {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .experiment {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .experiment:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .experiment::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+
+        .experiment:hover::before {
+            transform: translateX(100%);
+        }
+
+        .emoji {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .v2 {
+            border: 1px solid rgba(147, 51, 234, 0.5);
+        }
+
+        .v2 .emoji {
+            filter: drop-shadow(0 0 10px rgba(147, 51, 234, 0.5));
+        }
+
+        .v2 .tag {
+            background: rgba(147, 51, 234, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ Encryption Experiments ✨</h1>
+        
+        <div class="section">
+            <h2>Core Experiments</h2>
+            <div class="experiments">
+                <a href="quantum-vault.html" class="experiment">
+                    <span class="emoji">🌌</span>
+                    <div class="title">Quantum Vault</div>
+                    <div class="description">Quantum-based encryption with particle entanglement visualization</div>
+                    <div class="tags">
+                        <span class="tag">Quantum</span>
+                        <span class="tag">Particles</span>
+                    </div>
+                </a>
+                <a href="crystal-cipher.html" class="experiment">
+                    <span class="emoji">💎</span>
+                    <div class="title">Crystal Cipher</div>
+                    <div class="description">Crystalline-based encryption with geometric patterns</div>
+                    <div class="tags">
+                        <span class="tag">Geometric</span>
+                        <span class="tag">Patterns</span>
+                    </div>
+                </a>
+                <a href="nebula-keys.html" class="experiment">
+                    <span class="emoji">🌠</span>
+                    <div class="title">Nebula Keys</div>
+                    <div class="description">Cosmic-themed encryption with nebula effects</div>
+                    <div class="tags">
+                        <span class="tag">Cosmic</span>
+                        <span class="tag">Fluid</span>
+                    </div>
+                </a>
+                <a href="bio-lock.html" class="experiment">
+                    <span class="emoji">🧬</span>
+                    <div class="title">Bio-Lock</div>
+                    <div class="description">DNA-based encryption with genetic patterns</div>
+                    <div class="tags">
+                        <span class="tag">Biology</span>
+                        <span class="tag">DNA</span>
+                    </div>
+                </a>
+                <a href="dream-seal.html" class="experiment">
+                    <span class="emoji">💫</span>
+                    <div class="title">Dream Seal</div>
+                    <div class="description">Ethereal encryption with reality-bending effects</div>
+                    <div class="tags">
+                        <span class="tag">Ethereal</span>
+                        <span class="tag">Dreams</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Advanced Experiments v2</h2>
+            <div class="experiments">
+                <a href="quantum-bridge.html" class="experiment v2">
+                    <span class="emoji">⚛️</span>
+                    <div class="title">Quantum Bridge</div>
+                    <div class="description">Real quantum circuit simulation with IBM Qiskit integration</div>
+                    <div class="tags">
+                        <span class="tag">Quantum Computing</span>
+                        <span class="tag">Qiskit</span>
+                    </div>
+                </a>
+                <a href="neural-forge.html" class="experiment v2">
+                    <span class="emoji">🧠</span>
+                    <div class="title">Neural Forge</div>
+                    <div class="description">Neural network-based key generation with visual training</div>
+                    <div class="tags">
+                        <span class="tag">AI</span>
+                        <span class="tag">Neural Nets</span>
+                    </div>
+                </a>
+                <a href="blockchain-nexus.html" class="experiment v2">
+                    <span class="emoji">⛓️</span>
+                    <div class="title">Blockchain Nexus</div>
+                    <div class="description">Interactive blockchain visualization with real-time mining</div>
+                    <div class="tags">
+                        <span class="tag">Blockchain</span>
+                        <span class="tag">Mining</span>
+                    </div>
+                </a>
+                <a href="zero-knowledge.html" class="experiment v2">
+                    <span class="emoji">🎭</span>
+                    <div class="title">Zero Knowledge</div>
+                    <div class="description">ZK-SNARK proof visualization and interaction</div>
+                    <div class="tags">
+                        <span class="tag">ZK-Proofs</span>
+                        <span class="tag">Privacy</span>
+                    </div>
+                </a>
+                <a href="homomorphic-lens.html" class="experiment v2">
+                    <span class="emoji">🔍</span>
+                    <div class="title">Homomorphic Lens</div>
+                    <div class="description">Visual FHE computation on encrypted data</div>
+                    <div class="tags">
+                        <span class="tag">FHE</span>
+                        <span class="tag">Privacy</span>
+                    </div>
+                </a>
+                <a href="nexus-sync.html" class="experiment v2">
+                    <span class="emoji">🌐</span>
+                    <div class="title">NexusSync</div>
+                    <div class="description">Quantum-neural encrypted networking with zero-knowledge proofs</div>
+                    <div class="tags">
+                        <span class="tag">Quantum</span>
+                        <span class="tag">Neural</span>
+                        <span class="tag">ZK</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

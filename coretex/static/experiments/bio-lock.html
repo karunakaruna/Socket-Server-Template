@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bio-Lock 🧬</title>
+    <style>
+        body {
+            margin: 0;
+            background: #001a00;
+            color: #00ff00;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        .dna-helix {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 45%, #004d00 45%, #004d00 55%, transparent 55%),
+                linear-gradient(-45deg, transparent 45%, #004d00 45%, #004d00 55%, transparent 55%);
+            background-size: 30px 30px;
+            animation: dna-scroll 10s linear infinite;
+            opacity: 0.3;
+        }
+
+        .bio-hud {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 26, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ff00;
+            z-index: 2;
+        }
+
+        .bio-data {
+            color: #00ff00;
+            margin: 5px 0;
+            font-size: 14px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .bio-key {
+            position: fixed;
+            cursor: grab;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px #00ff00);
+            transition: all 0.3s ease;
+        }
+
+        .bio-lock {
+            position: fixed;
+            font-size: 48px;
+            user-select: none;
+            z-index: 3;
+            filter: drop-shadow(0 0 10px #008000);
+        }
+
+        .bio-pattern {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #00ff00;
+            border-radius: 50%;
+            opacity: 0.5;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+
+        @keyframes dna-scroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 30px 30px; }
+        }
+
+        .bio-sequence {
+            position: fixed;
+            font-size: 12px;
+            color: #00ff00;
+            opacity: 0.3;
+            pointer-events: none;
+            white-space: nowrap;
+            animation: fade-out 2s forwards;
+        }
+
+        @keyframes fade-out {
+            0% { opacity: 0.8; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dna-helix"></div>
+    <div class="bio-hud">
+        <div class="bio-data">DNA SEQUENCE: <span id="sequence">ATCG-GCTA</span></div>
+        <div class="bio-data">MUTATION RATE: <span id="mutation">0.001%</span></div>
+        <div class="bio-data">PROTEIN MATCH: <span id="match">STABLE</span></div>
+    </div>
+
+    <script>
+        function createBioKey() {
+            const key = document.createElement('div');
+            key.className = 'bio-key';
+            key.textContent = '🧬';
+            key.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            key.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            key.addEventListener('mousedown', startDragging);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+
+            function createSequence(x, y) {
+                const sequence = document.createElement('div');
+                sequence.className = 'bio-sequence';
+                sequence.textContent = generateDNASequence();
+                sequence.style.left = x + 'px';
+                sequence.style.top = y + 'px';
+                document.body.appendChild(sequence);
+
+                setTimeout(() => sequence.remove(), 2000);
+            }
+
+            function generateDNASequence() {
+                const bases = ['A', 'T', 'C', 'G'];
+                let sequence = '';
+                for (let i = 0; i < 8; i++) {
+                    sequence += bases[Math.floor(Math.random() * bases.length)];
+                }
+                return sequence;
+            }
+
+            function startDragging(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === key) {
+                    isDragging = true;
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    key.style.transform = `translate(${currentX}px, ${currentY}px)`;
+                    
+                    if (Math.random() < 0.1) {
+                        createSequence(e.clientX, e.clientY);
+                    }
+                    updateHUD();
+                }
+            }
+
+            function stopDragging() {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+
+            document.body.appendChild(key);
+        }
+
+        function createBioLock() {
+            const lock = document.createElement('div');
+            lock.className = 'bio-lock';
+            lock.textContent = '🦠';
+            lock.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
+            lock.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
+            document.body.appendChild(lock);
+        }
+
+        function updateHUD() {
+            document.getElementById('sequence').textContent = generateDNASequence();
+            document.getElementById('mutation').textContent = (Math.random() * 0.01).toFixed(4) + '%';
+            document.getElementById('match').textContent = ['STABLE', 'MUTATING', 'EVOLVING'][Math.floor(Math.random() * 3)];
+        }
+
+        function generateDNASequence() {
+            const bases = ['A', 'T', 'C', 'G'];
+            return Array.from({length: 8}, () => bases[Math.floor(Math.random() * bases.length)]).join('-');
+        }
+
+        // Create some bio elements
+        for (let i = 0; i < 3; i++) {
+            createBioKey();
+            createBioLock();
+        }
+
+        // Update HUD periodically
+        setInterval(updateHUD, 2000);
+    </script>
+</body>
+</html>

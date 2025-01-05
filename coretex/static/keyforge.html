@@ -4,7 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Keyforge</title>
-    <link rel="stylesheet" href="keyforge.css">
+    <link rel="stylesheet" type="text/css" href="/coretex/keyforge.css">
+    <style>
+        /* Fallback styles in case CSS file doesn't load */
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .soul-radius {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: border-color 0.3s;
+        }
+        .soul-radius.active {
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        .soul-connection {
+            position: absolute;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.5);
+            transform-origin: left center;
+            pointer-events: none;
+        }
+        .metadata {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: pre;
+            pointer-events: none;
+        }
+        .metadata.decrypted {
+            color: #4CAF50;
+        }
+    </style>
 </head>
 <body>
     <a href="index.html" class="nav-link">← Back to Interface</a>
@@ -67,8 +111,13 @@
         }
 
         function generateKeyString() {
-            const encoding = Object.keys(ENCODINGS)[Math.floor(Math.random() * Object.keys(ENCODINGS).length)];
-            return `{${encoding}${generateId()}}`;
+            const length = 16;
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
 
         function generateFeatherKey() {
@@ -393,52 +442,98 @@
         const lockKeyStore = new Map();
         const lockRequirements = new Map();
 
-        function generateLockKey() {
-            const data = {
-                id: generateId(),
-                essence: "Sealed secret",
-                created: new Date().toISOString(),
-                message: "This is a secret message! 🤫"
-            };
-            return data;
+        async function createLockOnServer(message, key) {
+            try {
+                const response = await fetch(`${API_URL}/lock/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message, key })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error('Server error:', error);
+                    throw new Error(error.message || 'Failed to create lock');
+                }
+                
+                return await response.json();
+            } catch (e) {
+                console.error('Error creating lock:', e);
+                throw e;
+            }
         }
 
-        function createLock(x, y) {
-            const lockData = generateLockKey();
-            const keyString = generateKeyString();
-            const encryptedData = encryptData(lockData, keyString);
-            
-            if (!encryptedData) {
-                showStatus('Failed to create lock! ❌');
-                return;
+        async function createLock(x, y) {
+            try {
+                const lockData = generateLockKey();
+                const keyString = generateKeyString();
+                
+                // Create lock on server
+                const result = await createLockOnServer(lockData.message, keyString);
+                if (!result || !result.lock_id) {
+                    throw new Error('Invalid server response');
+                }
+                
+                // Create lock element
+                const lock = document.createElement('div');
+                lock.className = 'draggable lock';
+                lock.dataset.type = 'lock';
+                lock.dataset.lockId = result.lock_id;
+                lock.style.left = x + 'px';
+                lock.style.top = y + 'px';
+                
+                // Add lock content
+                const lockContent = document.createElement('div');
+                lockContent.className = 'lock-content';
+                lockContent.textContent = '🔒';
+                lock.appendChild(lockContent);
+                
+                // Add metadata
+                const metadata = document.createElement('div');
+                metadata.className = 'metadata';
+                metadata.textContent = result.encrypted;
+                lock.appendChild(metadata);
+                
+                // Add to document
+                document.body.appendChild(lock);
+                
+                // Make draggable
+                makeDraggable(lock);
+                
+                return lock;
+            } catch (e) {
+                console.error('Failed to create lock:', e);
+                return null;
             }
-            
-            // Create the lock with encrypted data
-            const element = createDraggable('🔒', encryptedData, x, y);
-            element.dataset.type = 'lock';
-            element.dataset.lockId = lockData.id;
-            element.dataset.secretType = 'lock';
-            
-            // Add lock radius
-            const radius = document.createElement('div');
-            radius.className = 'soul-radius';  // Reusing soul styles
-            element.appendChild(radius);
-            
-            // Add metadata (encrypted)
-            const metadata = document.createElement('div');
-            metadata.className = 'metadata';
-            metadata.textContent = encryptedData;
-            element.appendChild(metadata);
-            
-            // Create the matching key outside the radius
-            const angle = Math.random() * 2 * Math.PI;
-            const distance = 250; // Place key outside the radius
-            const keyX = x + Math.cos(angle) * distance;
-            const keyY = y + Math.sin(angle) * distance;
-            createLockKey(keyX, keyY, lockData.id, keyString);
-            
-            showStatus('Lock manifested! 🔒');
-            return element;
+        }
+
+        function generateLockKey() {
+            const messages = [
+                "A whispered secret",
+                "An ancient memory",
+                "A hidden truth",
+                "A forgotten dream",
+                "A sacred oath",
+                "A cryptic message",
+                "A lost story",
+                "A guarded secret"
+            ];
+            return {
+                message: messages[Math.floor(Math.random() * messages.length)],
+                type: 'lock'
+            };
+        }
+
+        function generateKeyString() {
+            const length = 16;
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
 
         function createLockKey(x, y, lockId, keyString) {
@@ -461,7 +556,7 @@
         }
 
         function updateLockKeyEffects() {
-            document.querySelectorAll('[data-type="lock"]').forEach(lock => {
+            document.querySelectorAll('[data-type="lock"]').forEach(async lock => {
                 if (!lock.dataset.lockId) return;
                 
                 const lockId = lock.dataset.lockId;
@@ -481,6 +576,10 @@
                         nearbyKey = key;
                         const connection = updateLockKeyConnections(lock, key);
                         if (connection) activeConnections.add(connection);
+                        
+                        // Add key to lock requirements
+                        const requirements = lockRequirements.get(lockId);
+                        requirements.add(parseInt(key.dataset.keyIndex));
                     }
                 });
                 
@@ -494,29 +593,29 @@
                     if (validKeyNearby && !lock.classList.contains('decrypted')) {
                         // Decrypt the data using the nearby key
                         const keyString = nearbyKey.querySelector('.metadata').textContent;
-                        const decryptedData = decryptData(metadata.textContent, keyString);
+                        const serverResponse = await decryptLockOnServer(lockId, keyString);
                         
-                        if (decryptedData) {
+                        if (serverResponse && serverResponse.status === 'success') {
                             lock.textContent = '🔓';
                             lock.classList.add('decrypted');
                             metadata.classList.add('decrypted');
-                            metadata.textContent = JSON.stringify(decryptedData, null, 2);
+                            metadata.textContent = JSON.stringify(serverResponse.decrypted, null, 2);
                             lock.appendChild(metadata);
                             lock.appendChild(radius);
                             showStatus('Lock opened! 🔓');
                         }
                     } else if (!validKeyNearby && lock.classList.contains('decrypted')) {
-                        // Re-encrypt the data when key moves away
-                        const keyString = document.querySelector(`[data-type="lock-key"][data-lock-id="${lockId}"]`)
-                            .querySelector('.metadata').textContent;
-                        const data = JSON.parse(metadata.textContent);
-                        const encryptedData = encryptData(data, keyString);
+                        // Show encrypted version when key moves away
+                        const serverResponse = await createLockOnServer(
+                            JSON.parse(metadata.textContent),
+                            nearbyKey.querySelector('.metadata').textContent
+                        );
                         
-                        if (encryptedData) {
+                        if (serverResponse && serverResponse.status === 'success') {
                             lock.textContent = '🔒';
                             lock.classList.remove('decrypted');
                             metadata.classList.remove('decrypted');
-                            metadata.textContent = encryptedData;
+                            metadata.textContent = serverResponse.encrypted;
                             lock.appendChild(metadata);
                             lock.appendChild(radius);
                             showStatus('Lock secured! 🔒');
@@ -692,7 +791,7 @@
             
             if (emoji === '🪶') {
                 const img = document.createElement('img');
-                img.src = 'feather_1fab6.png';
+                img.src = '/coretex/feather_1fab6.png';
                 img.alt = 'Feather Key';
                 img.draggable = false; // Prevent default drag behavior
                 element.appendChild(img);
@@ -945,6 +1044,51 @@
             }
             // ... rest of mouseup handler
         });
+
+        // Backend API - now using same port as WebSocket
+        const API_URL = '/api';
+        let ws;
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            ws = new WebSocket(`${protocol}//${host}`);
+            
+            ws.onopen = () => {
+                console.log('Connected to server');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'lock_state') {
+                        // Update lock state in UI
+                        const lock = document.querySelector(`[data-type="lock"][data-lock-id="${message.lock_id}"]`);
+                        if (lock) {
+                            const metadata = lock.querySelector('.metadata');
+                            if (metadata && !lock.classList.contains('decrypted')) {
+                                metadata.textContent = message.encrypted;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error handling WebSocket message:', e);
+                }
+            };
+            
+            ws.onclose = () => {
+                console.log('Disconnected from server');
+                // Reconnect after a delay
+                setTimeout(connectWebSocket, 5000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Connect to WebSocket server
+        connectWebSocket();
     </script>
 </body>
 </html>

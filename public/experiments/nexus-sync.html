@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NexusSync 🌐</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qiskit/0.8.0/qiskit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --primary: rgb(147, 51, 234);
+            --primary-glow: rgba(147, 51, 234, 0.5);
+            --bg-dark: #0a0a0f;
+            --bg-light: #1a1a2e;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-dark), var(--bg-light));
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        .nexus-container {
+            width: 100%;
+            max-width: 1400px;
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: auto 1fr;
+            height: calc(100vh - 100px);
+        }
+
+        .connection-panel {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            grid-row: span 2;
+        }
+
+        .quantum-neural-status {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .network-graph {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .node:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 30px var(--primary);
+        }
+
+        .edge {
+            position: absolute;
+            height: 2px;
+            background: var(--primary-glow);
+            transform-origin: left center;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .quantum-packet {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            filter: blur(2px);
+            box-shadow: 0 0 10px #fff;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .status-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-top: 0.5rem;
+        }
+
+        .connection-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        input, button {
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-family: monospace;
+        }
+
+        button {
+            background: var(--primary-glow);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .quantum-circuit {
+            height: 100px;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            margin: 1rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-gate {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: var(--primary-glow);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .neural-activity {
+            height: 100px;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            margin: 1rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .neuron {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .synapse {
+            position: absolute;
+            height: 1px;
+            background: var(--primary-glow);
+            transform-origin: left center;
+        }
+
+        .proof-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .connected-peers {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .peer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .peer-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .network-stats {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        .encryption-level {
+            height: 4px;
+            background: rgba(147, 51, 234, 0.2);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .encryption-progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .planet-view {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1rem;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.8rem;
+            z-index: 100;
+        }
+
+        .global-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .quantum-nodes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .quantum-node {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        .entanglement-line {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            transform-origin: left center;
+            opacity: 0.3;
+        }
+
+        @keyframes pulse-wave {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.5); opacity: 0.2; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        .quantum-wave {
+            position: absolute;
+            border: 1px solid var(--primary);
+            border-radius: 50%;
+            animation: pulse-wave 3s infinite;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌐 NexusSync</h1>
+    <div class="nexus-container">
+        <div class="connection-panel">
+            <h2>Connection Hub</h2>
+            <div class="connection-form">
+                <input type="text" id="peer-id" placeholder="Enter Peer ID">
+                <button onclick="connectToPeer()">Connect</button>
+            </div>
+            <div class="quantum-circuit">
+                <!-- Quantum gates will be added here -->
+            </div>
+            <div class="neural-activity">
+                <!-- Neural network visualization -->
+            </div>
+            <div class="proof-status">
+                ZK Proof Status: <span id="proof-status">Waiting</span>
+            </div>
+            <div class="connected-peers">
+                <h3>Connected Peers</h3>
+                <!-- Peers will be added here -->
+            </div>
+        </div>
+        <div class="quantum-neural-status">
+            <h2>System Status</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div>Quantum State</div>
+                    <div class="status-value" id="quantum-state">|ψ⟩</div>
+                </div>
+                <div class="status-item">
+                    <div>Neural Entropy</div>
+                    <div class="status-value" id="neural-entropy">0 bits</div>
+                </div>
+                <div class="status-item">
+                    <div>Active Connections</div>
+                    <div class="status-value" id="connection-count">0</div>
+                </div>
+                <div class="status-item">
+                    <div>Network Latency</div>
+                    <div class="status-value" id="network-latency">0ms</div>
+                </div>
+            </div>
+        </div>
+        <div class="network-graph">
+            <div class="quantum-nodes"></div>
+            <div class="planet-view">
+                <h3>🌍 Planetary Quantum Network</h3>
+                <div class="global-stats">
+                    <div>Active Nodes: <span id="global-nodes">0</span></div>
+                    <div>Qubits: <span id="global-qubits">0</span></div>
+                    <div>Entangled Pairs: <span id="entangled-pairs">0</span></div>
+                    <div>Processing Power: <span id="quantum-power">0</span> QPS</div>
+                </div>
+            </div>
+            <!-- Network visualization will be rendered here -->
+            <div class="network-stats">
+                <div>Encryption Level</div>
+                <div class="encryption-level">
+                    <div class="encryption-progress"></div>
+                </div>
+                <div>Packets/sec: <span id="packet-rate">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class NexusSync {
+            constructor() {
+                this.nodes = [];
+                this.edges = [];
+                this.quantumCircuit = [];
+                this.neuralNetwork = null;
+                this.peers = new Set();
+                this.packetCount = 0;
+                this.lastPacketCount = 0;
+                this.globalNodes = 0;
+                this.globalQubits = 0;
+                this.entangledPairs = 0;
+                this.quantumPower = 0;
+                
+                this.initializeNetwork();
+                this.initializeQuantumCircuit();
+                this.initializeNeuralNetwork();
+                this.startAnimations();
+                this.startMetricsUpdate();
+                this.initializePlanetaryNetwork();
+                this.startGlobalMetrics();
+            }
+
+            initializeNetwork() {
+                const graph = document.querySelector('.network-graph');
+                
+                // Create central node
+                this.createNode(graph.offsetWidth / 2, graph.offsetHeight / 2, '🌐');
+
+                // Create satellite nodes
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i / 5) * Math.PI * 2;
+                    const radius = Math.min(graph.offsetWidth, graph.offsetHeight) * 0.3;
+                    const x = graph.offsetWidth / 2 + Math.cos(angle) * radius;
+                    const y = graph.offsetHeight / 2 + Math.sin(angle) * radius;
+                    this.createNode(x, y, ['🔮', '⚡', '🌟', '💫', '⭐'][i]);
+                }
+
+                // Connect nodes
+                for (let i = 1; i < this.nodes.length; i++) {
+                    this.createEdge(this.nodes[0], this.nodes[i]);
+                }
+            }
+
+            createNode(x, y, emoji) {
+                const node = document.createElement('div');
+                node.className = 'node floating';
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
+                node.textContent = emoji;
+                document.querySelector('.network-graph').appendChild(node);
+                this.nodes.push(node);
+
+                node.addEventListener('click', () => this.activateNode(node));
+            }
+
+            createEdge(node1, node2) {
+                const edge = document.createElement('div');
+                edge.className = 'edge';
+                
+                const x1 = parseInt(node1.style.left) + 20;
+                const y1 = parseInt(node1.style.top) + 20;
+                const x2 = parseInt(node2.style.left) + 20;
+                const y2 = parseInt(node2.style.top) + 20;
+                
+                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                
+                edge.style.width = `${length}px`;
+                edge.style.left = `${x1}px`;
+                edge.style.top = `${y1}px`;
+                edge.style.transform = `rotate(${angle}rad)`;
+                
+                document.querySelector('.network-graph').appendChild(edge);
+                this.edges.push(edge);
+            }
+
+            initializeQuantumCircuit() {
+                const circuit = document.querySelector('.quantum-circuit');
+                const gates = ['H', 'X', 'Y', 'Z'];
+                
+                gates.forEach((gate, i) => {
+                    const quantum_gate = document.createElement('div');
+                    quantum_gate.className = 'quantum-gate';
+                    quantum_gate.style.left = `${30 + i * 40}px`;
+                    quantum_gate.style.top = '35px';
+                    quantum_gate.textContent = gate;
+                    circuit.appendChild(quantum_gate);
+                    this.quantumCircuit.push(quantum_gate);
+                });
+            }
+
+            initializeNeuralNetwork() {
+                const container = document.querySelector('.neural-activity');
+                const layers = [4, 8, 4];
+                let neurons = [];
+                
+                layers.forEach((count, layerIndex) => {
+                    const layer = [];
+                    const x = (layerIndex + 1) * (container.offsetWidth / (layers.length + 1));
+                    
+                    for (let i = 0; i < count; i++) {
+                        const neuron = document.createElement('div');
+                        neuron.className = 'neuron';
+                        neuron.style.left = `${x}px`;
+                        neuron.style.top = `${(i + 1) * (container.offsetHeight / (count + 1))}px`;
+                        container.appendChild(neuron);
+                        layer.push(neuron);
+                        
+                        if (layerIndex > 0) {
+                            neurons[layerIndex - 1].forEach(prevNeuron => {
+                                const synapse = document.createElement('div');
+                                synapse.className = 'synapse';
+                                
+                                const x1 = parseInt(prevNeuron.style.left);
+                                const y1 = parseInt(prevNeuron.style.top) + 5;
+                                const x2 = parseInt(neuron.style.left);
+                                const y2 = parseInt(neuron.style.top) + 5;
+                                
+                                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                                const angle = Math.atan2(y2 - y1, x2 - x1);
+                                
+                                synapse.style.width = `${length}px`;
+                                synapse.style.left = `${x1}px`;
+                                synapse.style.top = `${y1}px`;
+                                synapse.style.transform = `rotate(${angle}rad)`;
+                                
+                                container.appendChild(synapse);
+                            });
+                        }
+                    }
+                    neurons.push(layer);
+                });
+            }
+
+            initializePlanetaryNetwork() {
+                const container = document.querySelector('.quantum-nodes');
+                
+                // Create random quantum nodes across the "planet"
+                for (let i = 0; i < 200; i++) {
+                    const node = document.createElement('div');
+                    node.className = 'quantum-node';
+                    node.style.left = `${Math.random() * 100}%`;
+                    node.style.top = `${Math.random() * 100}%`;
+                    container.appendChild(node);
+                }
+
+                // Create quantum waves
+                for (let i = 0; i < 3; i++) {
+                    const wave = document.createElement('div');
+                    wave.className = 'quantum-wave';
+                    wave.style.width = `${i * 30 + 50}px`;
+                    wave.style.height = `${i * 30 + 50}px`;
+                    wave.style.left = `calc(50% - ${(i * 30 + 50)/2}px)`;
+                    wave.style.top = `calc(50% - ${(i * 30 + 50)/2}px)`;
+                    wave.style.animationDelay = `${i * 0.5}s`;
+                    container.appendChild(wave);
+                }
+
+                // Create random entanglement lines
+                setInterval(() => {
+                    const line = document.createElement('div');
+                    line.className = 'entanglement-line';
+                    
+                    const x1 = Math.random() * container.offsetWidth;
+                    const y1 = Math.random() * container.offsetHeight;
+                    const x2 = Math.random() * container.offsetWidth;
+                    const y2 = Math.random() * container.offsetHeight;
+                    
+                    const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                    const angle = Math.atan2(y2 - y1, x2 - x1);
+                    
+                    line.style.width = `${length}px`;
+                    line.style.left = `${x1}px`;
+                    line.style.top = `${y1}px`;
+                    line.style.transform = `rotate(${angle}rad)`;
+                    
+                    container.appendChild(line);
+                    setTimeout(() => line.remove(), 2000);
+                }, 100);
+            }
+
+            activateNode(node) {
+                // Create quantum packet
+                const packet = document.createElement('div');
+                packet.className = 'quantum-packet';
+                packet.style.left = `${parseInt(node.style.left) + 20}px`;
+                packet.style.top = `${parseInt(node.style.top) + 20}px`;
+                document.querySelector('.network-graph').appendChild(packet);
+
+                // Animate to random connected node
+                const targetNode = this.nodes[Math.floor(Math.random() * this.nodes.length)];
+                const x2 = parseInt(targetNode.style.left) + 20;
+                const y2 = parseInt(targetNode.style.top) + 20;
+
+                packet.style.transition = 'all 1s ease';
+                setTimeout(() => {
+                    packet.style.left = `${x2}px`;
+                    packet.style.top = `${y2}px`;
+                }, 50);
+
+                setTimeout(() => packet.remove(), 1000);
+                this.packetCount++;
+            }
+
+            connectToPeer() {
+                const peerId = document.getElementById('peer-id').value;
+                if (!peerId) return;
+
+                const peersList = document.querySelector('.connected-peers');
+                const peer = document.createElement('div');
+                peer.className = 'peer';
+                peer.innerHTML = `
+                    <span>${peerId}</span>
+                    <span class="peer-status"></span>
+                `;
+                peersList.appendChild(peer);
+                this.peers.add(peerId);
+
+                // Update connection count
+                document.getElementById('connection-count').textContent = this.peers.size;
+
+                // Animate quantum circuit
+                this.quantumCircuit.forEach((gate, i) => {
+                    setTimeout(() => {
+                        gate.style.background = 'var(--primary)';
+                        setTimeout(() => {
+                            gate.style.background = 'var(--primary-glow)';
+                        }, 200);
+                    }, i * 200);
+                });
+
+                // Update encryption level
+                const progress = document.querySelector('.encryption-progress');
+                progress.style.width = `${Math.min(100, this.peers.size * 20)}%`;
+            }
+
+            startAnimations() {
+                // Animate neural network
+                setInterval(() => {
+                    document.querySelectorAll('.neuron').forEach(neuron => {
+                        if (Math.random() < 0.1) {
+                            neuron.style.transform = 'scale(1.5)';
+                            neuron.style.boxShadow = '0 0 10px var(--primary)';
+                            setTimeout(() => {
+                                neuron.style.transform = 'scale(1)';
+                                neuron.style.boxShadow = 'none';
+                            }, 200);
+                        }
+                    });
+                }, 100);
+
+                // Update quantum state
+                setInterval(() => {
+                    const states = ['|ψ⟩', '|φ⟩', '|+⟩', '|-⟩'];
+                    document.getElementById('quantum-state').textContent = 
+                        states[Math.floor(Math.random() * states.length)];
+                }, 2000);
+            }
+
+            startMetricsUpdate() {
+                setInterval(() => {
+                    // Update packet rate
+                    const packetsPerSec = this.packetCount - this.lastPacketCount;
+                    document.getElementById('packet-rate').textContent = packetsPerSec;
+                    this.lastPacketCount = this.packetCount;
+
+                    // Update neural entropy
+                    const entropy = Math.floor(Math.random() * 100);
+                    document.getElementById('neural-entropy').textContent = `${entropy} bits`;
+
+                    // Update network latency
+                    const latency = Math.floor(Math.random() * 50);
+                    document.getElementById('network-latency').textContent = `${latency}ms`;
+
+                    // Update proof status
+                    const proofStates = ['Verifying...', 'Valid ✓', 'Generating...'];
+                    document.getElementById('proof-status').textContent = 
+                        proofStates[Math.floor(Math.random() * proofStates.length)];
+                }, 1000);
+            }
+
+            startGlobalMetrics() {
+                setInterval(() => {
+                    // Simulate exponential growth of the network
+                    this.globalNodes = Math.min(1000000000, Math.floor(this.globalNodes * 1.01) + 1000);
+                    this.globalQubits = this.globalNodes * 100;
+                    this.entangledPairs = Math.floor(this.globalQubits * 0.3);
+                    this.quantumPower = this.globalNodes * 1000;
+
+                    // Update display with formatted numbers
+                    document.getElementById('global-nodes').textContent = 
+                        this.formatNumber(this.globalNodes);
+                    document.getElementById('global-qubits').textContent = 
+                        this.formatNumber(this.globalQubits);
+                    document.getElementById('entangled-pairs').textContent = 
+                        this.formatNumber(this.entangledPairs);
+                    document.getElementById('quantum-power').textContent = 
+                        this.formatNumber(this.quantumPower);
+                }, 1000);
+            }
+
+            formatNumber(num) {
+                if (num >= 1e9) return `${(num/1e9).toFixed(1)}B`;
+                if (num >= 1e6) return `${(num/1e6).toFixed(1)}M`;
+                if (num >= 1e3) return `${(num/1e3).toFixed(1)}K`;
+                return num.toString();
+            }
+        }
+
+        // Initialize NexusSync
+        const nexus = new NexusSync();
+
+        // Connect to peer handler
+        function connectToPeer() {
+            nexus.connectToPeer();
+        }
+    </script>
+</body>
+</html>

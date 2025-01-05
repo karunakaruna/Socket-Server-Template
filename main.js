@@ -3,11 +3,56 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require("ws");
 const fs = require("fs");
-const crypto = require('crypto'); // Add crypto for secure random generation
-const path = require('path'); // Add path for audio streaming
+const crypto = require('crypto');
+const path = require('path');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
+
+// Proxy /api requests to Python server
+app.use('/api', createProxyMiddleware({ 
+    target: 'http://localhost:5000',
+    changeOrigin: true
+}));
+
+// Serve static files from public directory
 app.use(express.static("public"));
+
+// Serve coretex static files with proper MIME types
+app.use('/coretex', (req, res, next) => {
+    const filePath = path.join(__dirname, 'coretex/static', req.path);
+    const ext = path.extname(filePath);
+    
+    // Set proper MIME types
+    const mimeTypes = {
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.gif': 'image/gif'
+    };
+    
+    if (mimeTypes[ext]) {
+        res.type(mimeTypes[ext]);
+    }
+    
+    // Check if file exists
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        next();
+    }
+});
+
+// Add route for keyforge
+app.get('/keyforge', (req, res) => {
+    res.sendFile(path.join(__dirname, 'coretex/static/keyforge.html'), {
+        headers: {
+            'Content-Type': 'text/html'
+        }
+    });
+});
 
 // Get port from environment variable
 const serverPort = process.env.PORT || 3001;
@@ -30,6 +75,11 @@ app.get('/dashboard.html', (req, res) => {
 // Add route for dashmerge
 app.get('/dashmerge.html', (req, res) => {
   res.sendFile(__dirname + '/public/dashmerge.html');
+});
+
+// Add routes for encryption experiments
+app.get('/experiments', (req, res) => {
+    res.sendFile(path.join(__dirname, 'coretex/static/experiments/index.html'));
 });
 
 // Create HTTP server
@@ -305,6 +355,112 @@ function startAudioStream() {
     });
 }
 
+// Track active locks
+const activeLocks = new Map();
+
+// Track experiment states
+const experimentStates = new Map();
+
+// WebSocket message handler for experiments
+function handleExperimentMessage(ws, message) {
+    switch (message.type) {
+        case 'quantum_state':
+            // Handle quantum state updates
+            const quantumState = {
+                id: message.id,
+                state: message.state,
+                entanglement: Math.random(),  // Simulated entanglement value
+                timestamp: Date.now()
+            };
+            experimentStates.set(message.id, quantumState);
+            wss.clients.forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'quantum_update',
+                        data: quantumState
+                    }));
+                }
+            });
+            break;
+
+        case 'crystal_resonance':
+            // Handle crystal resonance updates
+            const resonanceState = {
+                id: message.id,
+                frequency: message.frequency,
+                amplitude: message.amplitude,
+                timestamp: Date.now()
+            };
+            experimentStates.set(message.id, resonanceState);
+            wss.clients.forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'crystal_update',
+                        data: resonanceState
+                    }));
+                }
+            });
+            break;
+
+        case 'nebula_shift':
+            // Handle nebula pattern shifts
+            const nebulaState = {
+                id: message.id,
+                pattern: message.pattern,
+                intensity: message.intensity,
+                timestamp: Date.now()
+            };
+            experimentStates.set(message.id, nebulaState);
+            wss.clients.forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'nebula_update',
+                        data: nebulaState
+                    }));
+                }
+            });
+            break;
+
+        case 'bio_mutation':
+            // Handle bio-pattern mutations
+            const bioState = {
+                id: message.id,
+                sequence: message.sequence,
+                mutationRate: message.mutationRate,
+                timestamp: Date.now()
+            };
+            experimentStates.set(message.id, bioState);
+            wss.clients.forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'bio_update',
+                        data: bioState
+                    }));
+                }
+            });
+            break;
+
+        case 'dream_sync':
+            // Handle dream synchronization
+            const dreamState = {
+                id: message.id,
+                pattern: message.pattern,
+                lucidity: message.lucidity,
+                timestamp: Date.now()
+            };
+            experimentStates.set(message.id, dreamState);
+            wss.clients.forEach(client => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'dream_update',
+                        data: dreamState
+                    }));
+                }
+            });
+            break;
+    }
+}
+
 // WebSocket connection handler
 wss.on("connection", (ws) => {
   console.log("New WebSocket connection established");
@@ -575,6 +731,49 @@ wss.on("connection", (ws) => {
             );
           }
           break;
+
+      case "connect":
+        if (message.service === "coretex") {
+          console.log("Coretex service connected");
+          ws.isCoretex = true;
+        }
+        break;
+
+      case "lock_update":
+        console.log("Lock update received:", message.lock_id);
+        // Store lock state
+        activeLocks.set(message.lock_id, {
+          encrypted: message.encrypted,
+          timestamp: Date.now()
+        });
+        // Broadcast to all clients except Coretex
+        wss.clients.forEach(client => {
+          if (client !== ws && client.readyState === WebSocket.OPEN && !client.isCoretex) {
+            client.send(JSON.stringify({
+              type: 'lock_state',
+              lock_id: message.lock_id,
+              encrypted: message.encrypted
+            }));
+          }
+        });
+        break;
+
+      case "lock_state":
+        // Forward lock state to all clients
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN && !client.isCoretex) {
+            client.send(JSON.stringify(message));
+          }
+        });
+        break;
+
+      case "quantum_state":
+      case "crystal_resonance":
+      case "nebula_shift":
+      case "bio_mutation":
+      case "dream_sync":
+        handleExperimentMessage(ws, message);
+        break;
 
       default:
         console.error(`Unhandled message type "${message.type}" from user ${ws.userId}:`, message);
