@@ -1,11 +1,10 @@
 module.exports = {
-    root: '.',  // Serve from project root
+    root: 'public',  // Remove the ./ to make it absolute from project root
     open: true,
     injectBody: true,
     navigate: true,
     host: '0.0.0.0',
     mount: {
-        '/': './public',           // Serve public files at root
-        '/coretex': './coretex/static'  // Serve coretex files at /coretex
+        '/coretex': './coretex/static'  // Keep path relative to project root
     }
 };

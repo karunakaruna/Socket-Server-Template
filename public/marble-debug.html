@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marble Debug View</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #fff;
+            overflow: hidden;
+            touch-action: none;
+            width: 100vw;
+            height: 100vh;
+        }
+        #touch-area {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: #2d2d2d;
+            overflow: hidden;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+        .draggable-marble {
+            position: absolute;
+            font-size: 48px;
+            user-select: none;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            z-index: 100;
+            transition: transform 0.1s ease-out;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        
+        .marble-shadow {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.3), transparent 70%);
+            transform: translateY(2px) rotateX(90deg);
+            pointer-events: none;
+        }
+        
+        .marble-body {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(255,255,255,0.9),
+                rgba(255,255,255,0.2) 60%,
+                rgba(0,0,0,0.2) 80%);
+            pointer-events: none;
+            transform-style: preserve-3d;
+        }
+        
+        .being-dragged .marble-body {
+            transform: scale(1.2);
+        }
+
+        .velocity-indicator {
+            position: absolute;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.5);
+            transform-origin: left center;
+            pointer-events: none;
+            mix-blend-mode: plus-lighter;
+        }
+        
+        #debug-console {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            width: 400px;
+            max-height: calc(100vh - 40px);
+            background: rgba(45, 45, 45, 0.4);
+            border-radius: 8px;
+            overflow-y: auto;
+            font-family: monospace;
+            padding: 10px;
+            pointer-events: none;
+            mix-blend-mode: plus-lighter;
+            font-size: 14px;
+            z-index: 1000;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .debug-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid rgba(102, 102, 102, 0.8);
+        }
+        .debug-entry.touch-start { border-left-color: rgba(76, 175, 80, 0.8); }
+        .debug-entry.touch-move { border-left-color: rgba(33, 150, 243, 0.8); }
+        .debug-entry.touch-end { border-left-color: rgba(244, 67, 54, 0.8); }
+        .debug-entry.hold { border-left-color: rgba(255, 152, 0, 0.8); }
+    </style>
+</head>
+<body>
+    <div id="touch-area">
+        <div id="marble-container"></div>
+    </div>
+    <div id="debug-console"></div>
+
+    <script>
+        const touchArea = document.getElementById('touch-area');
+        const debugConsole = document.getElementById('debug-console');
+        const marbleContainer = document.getElementById('marble-container');
+        const activePoints = new Map();
+        const holdTimers = new Map();
+        const HOLD_THRESHOLD = 500; // ms
+        const GRAVITY = 980; // pixels per second squared
+        const ROLLING_FRICTION = 0.98; // Rolling friction coefficient
+        const COLLISION_DAMPING = 0.8; // Energy loss in collisions
+        const MARBLE_RADIUS = 24; // pixels
+
+        // Marble handling
+        const marbleColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#9B59B6', '#3498DB'];
+        const draggableElements = new Map(); // touchId -> element
+        const elementVelocities = new Map(); // element -> {x, y, vx, vy, angularVel}
+        let lastFrameTime = performance.now();
+        
+        function createDraggableMarble(touch) {
+            const marble = document.createElement('div');
+            marble.className = 'draggable-marble';
+            
+            // Create marble shadow
+            const shadow = document.createElement('div');
+            shadow.className = 'marble-shadow';
+            
+            // Create marble body with random color
+            const body = document.createElement('div');
+            body.className = 'marble-body';
+            body.style.background = `radial-gradient(circle at 30% 30%, 
+                rgba(255,255,255,0.9),
+                ${marbleColors[Math.floor(Math.random() * marbleColors.length)]} 60%,
+                rgba(0,0,0,0.2) 80%)`;
+            
+            marble.appendChild(shadow);
+            marble.appendChild(body);
+            
+            marble.style.left = `${touch.pageX}px`;
+            marble.style.top = `${touch.pageY}px`;
+            marbleContainer.appendChild(marble);
+            
+            // Create velocity indicator
+            const velocityIndicator = document.createElement('div');
+            velocityIndicator.className = 'velocity-indicator';
+            velocityIndicator.style.left = `${touch.pageX}px`;
+            velocityIndicator.style.top = `${touch.pageY}px`;
+            marbleContainer.appendChild(velocityIndicator);
+            
+            return {
+                marble,
+                velocityIndicator,
+                lastX: touch.pageX,
+                lastY: touch.pageY,
+                lastTime: performance.now(),
+                vx: 0,
+                vy: 0,
+                angularVel: 0
+            };
+        }
+
+        function updateDraggableMarble(touch, dragData) {
+            const currentTime = performance.now();
+            const dt = (currentTime - dragData.lastTime) / 1000; // Convert to seconds
+            
+            // Calculate velocity
+            dragData.vx = (touch.pageX - dragData.lastX) / dt;
+            dragData.vy = (touch.pageY - dragData.lastY) / dt;
+            
+            // Calculate angular velocity based on horizontal movement
+            dragData.angularVel = (dragData.vx / MARBLE_RADIUS);
+            
+            // Update position
+            dragData.marble.style.left = `${touch.pageX}px`;
+            dragData.marble.style.top = `${touch.pageY}px`;
+            
+            // Apply rotation based on movement
+            const rotation = (parseFloat(dragData.marble.dataset.rotation) || 0) + dragData.angularVel * dt * 57.2958; // Convert to degrees
+            dragData.marble.dataset.rotation = rotation;
+            dragData.marble.style.transform = `translate(-50%, -50%) rotateZ(${rotation}deg)`;
+            
+            // Update velocity indicator
+            const speed = Math.sqrt(dragData.vx * dragData.vx + dragData.vy * dragData.vy);
+            const angle = Math.atan2(dragData.vy, dragData.vx);
+            dragData.velocityIndicator.style.left = `${touch.pageX}px`;
+            dragData.velocityIndicator.style.top = `${touch.pageY}px`;
+            dragData.velocityIndicator.style.width = `${Math.min(speed * 0.1, 100)}px`;
+            dragData.velocityIndicator.style.transform = `rotate(${angle}rad)`;
+            
+            // Store current position and time for next frame
+            dragData.lastX = touch.pageX;
+            dragData.lastY = touch.pageY;
+            dragData.lastTime = currentTime;
+        }
+
+        function removeDraggableMarble(dragData) {
+            if (dragData.marble && dragData.marble.parentNode) {
+                // Start inertial movement
+                elementVelocities.set(dragData.marble, {
+                    vx: dragData.vx,
+                    vy: dragData.vy,
+                    angularVel: dragData.angularVel,
+                    x: parseFloat(dragData.marble.style.left),
+                    y: parseFloat(dragData.marble.style.top),
+                    rotation: parseFloat(dragData.marble.dataset.rotation) || 0
+                });
+                
+                // Remove velocity indicator
+                dragData.velocityIndicator.remove();
+            }
+        }
+
+        function updateInertialMovement() {
+            const currentTime = performance.now();
+            const dt = (currentTime - lastFrameTime) / 1000;
+            lastFrameTime = currentTime;
+
+            const marbles = Array.from(elementVelocities.entries());
+            
+            // Update positions first
+            marbles.forEach(([marble, data]) => {
+                // Apply rolling friction
+                data.vx *= ROLLING_FRICTION;
+                data.vy *= ROLLING_FRICTION;
+                data.vy += GRAVITY * dt; // Apply gravity
+                
+                // Update position
+                data.x += data.vx * dt;
+                data.y += data.vy * dt;
+                
+                // Update rotation
+                data.angularVel *= ROLLING_FRICTION;
+                data.rotation += data.angularVel * dt * 57.2958;
+                
+                // Apply position and rotation
+                marble.style.left = `${data.x}px`;
+                marble.style.top = `${data.y}px`;
+                marble.style.transform = `translate(-50%, -50%) rotateZ(${data.rotation}deg)`;
+            });
+            
+            // Check for collisions
+            for (let i = 0; i < marbles.length; i++) {
+                const [marble1, data1] = marbles[i];
+                const x1 = data1.x;
+                const y1 = data1.y;
+                
+                // Bounce off edges
+                const bounds = touchArea.getBoundingClientRect();
+                if (x1 < MARBLE_RADIUS || x1 > bounds.width - MARBLE_RADIUS) {
+                    data1.vx *= -COLLISION_DAMPING;
+                    data1.x = x1 < MARBLE_RADIUS ? MARBLE_RADIUS : bounds.width - MARBLE_RADIUS;
+                    data1.angularVel = -data1.vx / MARBLE_RADIUS; // Reverse spin
+                }
+                if (y1 < MARBLE_RADIUS || y1 > bounds.height - MARBLE_RADIUS) {
+                    data1.vy *= -COLLISION_DAMPING;
+                    data1.y = y1 < MARBLE_RADIUS ? MARBLE_RADIUS : bounds.height - MARBLE_RADIUS;
+                }
+                
+                // Check collisions with other marbles
+                for (let j = i + 1; j < marbles.length; j++) {
+                    const [marble2, data2] = marbles[j];
+                    const dx = data2.x - x1;
+                    const dy = data2.y - y1;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < MARBLE_RADIUS * 2) {
+                        // Collision response
+                        const angle = Math.atan2(dy, dx);
+                        const sin = Math.sin(angle);
+                        const cos = Math.cos(angle);
+                        
+                        // Rotate velocities
+                        const vx1 = data1.vx * cos + data1.vy * sin;
+                        const vy1 = -data1.vx * sin + data1.vy * cos;
+                        const vx2 = data2.vx * cos + data2.vy * sin;
+                        const vy2 = -data2.vx * sin + data2.vy * cos;
+                        
+                        // Collision
+                        const finalVx1 = vx2 * COLLISION_DAMPING;
+                        const finalVx2 = vx1 * COLLISION_DAMPING;
+                        
+                        // Rotate back
+                        data1.vx = finalVx1 * cos - vy1 * sin;
+                        data1.vy = finalVx1 * sin + vy1 * cos;
+                        data2.vx = finalVx2 * cos - vy2 * sin;
+                        data2.vy = finalVx2 * sin + vy2 * cos;
+                        
+                        // Update angular velocities
+                        data1.angularVel = -data1.vx / MARBLE_RADIUS;
+                        data2.angularVel = -data2.vx / MARBLE_RADIUS;
+                        
+                        // Separate marbles
+                        const overlap = MARBLE_RADIUS * 2 - distance;
+                        const moveX = (overlap * cos) / 2;
+                        const moveY = (overlap * sin) / 2;
+                        data1.x -= moveX;
+                        data1.y -= moveY;
+                        data2.x += moveX;
+                        data2.y += moveY;
+                    }
+                }
+            }
+            
+            // Remove stopped marbles
+            elementVelocities.forEach((data, marble) => {
+                if (Math.abs(data.vx) < 1 && Math.abs(data.vy) < 1 && Math.abs(data.angularVel) < 0.1) {
+                    elementVelocities.delete(marble);
+                }
+            });
+            
+            if (elementVelocities.size > 0) {
+                requestAnimationFrame(updateInertialMovement);
+            }
+        }
+
+        function addDebugEntry(type, data) {
+            const entry = document.createElement('div');
+            entry.className = `debug-entry ${type}`;
+            entry.textContent = `${new Date().toISOString().substr(11, 12)} | ${type}: ${JSON.stringify(data)}`;
+            debugConsole.insertBefore(entry, debugConsole.firstChild);
+            if (debugConsole.children.length > 50) {
+                debugConsole.lastChild.remove();
+            }
+        }
+
+        function createTouchPoint(touch) {
+            const point = document.createElement('div');
+            point.className = 'touch-point';
+            point.id = `touch-${touch.identifier}`;
+            point.style.left = `${touch.pageX}px`;
+            point.style.top = `${touch.pageY}px`;
+            touchArea.appendChild(point);
+            return point;
+        }
+
+        function updateTouchPoint(touch) {
+            const point = activePoints.get(touch.identifier);
+            if (point) {
+                point.style.left = `${touch.pageX}px`;
+                point.style.top = `${touch.pageY}px`;
+            }
+        }
+
+        function removeTouchPoint(identifier) {
+            const point = activePoints.get(identifier);
+            if (point) {
+                point.remove();
+                activePoints.delete(identifier);
+            }
+        }
+
+        touchArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                const point = createTouchPoint(touch);
+                activePoints.set(touch.identifier, point);
+                
+                // Create draggable marble
+                const dragData = createDraggableMarble(touch);
+                draggableElements.set(touch.identifier, dragData);
+                dragData.marble.classList.add('being-dragged');
+                
+                addDebugEntry('touch-start', {
+                    id: touch.identifier,
+                    x: Math.round(touch.pageX),
+                    y: Math.round(touch.pageY)
+                });
+            }
+        });
+
+        touchArea.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                updateTouchPoint(touch);
+                
+                // Update draggable marble
+                const dragData = draggableElements.get(touch.identifier);
+                if (dragData) {
+                    updateDraggableMarble(touch, dragData);
+                }
+                
+                addDebugEntry('touch-move', {
+                    id: touch.identifier,
+                    x: Math.round(touch.pageX),
+                    y: Math.round(touch.pageY)
+                });
+            }
+        });
+
+        touchArea.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                removeTouchPoint(touch.identifier);
+                
+                // Handle draggable marble release
+                const dragData = draggableElements.get(touch.identifier);
+                if (dragData) {
+                    dragData.marble.classList.remove('being-dragged');
+                    removeDraggableMarble(dragData);
+                    draggableElements.delete(touch.identifier);
+                    requestAnimationFrame(updateInertialMovement);
+                }
+                
+                addDebugEntry('touch-end', {
+                    id: touch.identifier,
+                    x: Math.round(touch.pageX),
+                    y: Math.round(touch.pageY)
+                });
+            }
+        });
+
+        touchArea.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                removeTouchPoint(touch.identifier);
+                
+                // Clean up draggable marble
+                const dragData = draggableElements.get(touch.identifier);
+                if (dragData) {
+                    dragData.marble.remove();
+                    dragData.velocityIndicator.remove();
+                    draggableElements.delete(touch.identifier);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
