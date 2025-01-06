@@ -160,8 +160,12 @@
             <input type="range" id="point-brightness" min="0.1" max="2" step="0.1" value="1">
         </div>
         <div class="control-group">
-            <label for="rotation-speed">Auto Rotation <span class="value-display">0</span></label>
-            <input type="range" id="rotation-speed" min="0" max="0.02" step="0.001" value="0">
+            <label for="rotation-speed">Auto Rotation Speed <span class="value-display">0</span></label>
+            <input type="range" id="rotation-speed" min="0" max="0.02" step="0.0001" value="0">
+        </div>
+        <div class="control-group">
+            <label for="rotation-scale">Motion Scale <span class="value-display">1</span></label>
+            <input type="range" id="rotation-scale" min="0" max="5" step="0.001" value="1">
         </div>
     </div>
 
@@ -547,6 +551,7 @@
         const traceDepthControl = document.getElementById('trace-depth');
         const pointBrightnessControl = document.getElementById('point-brightness');
         const rotationSpeedControl = document.getElementById('rotation-speed');
+        const rotationScaleControl = document.getElementById('rotation-scale');
 
         // Update value displays and trigger change events
         document.querySelectorAll('input[type="range"]').forEach(input => {
@@ -571,7 +576,101 @@
         let currentGridSize = gridSize;
         let currentVolumeScale = 1;
 
+        // Initialize rotation animation state
+        let rotationState = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0,
+            time: 0,
+            lastTime: performance.now()
+        };
+
+        // Smooth wave generation with phase relationships
+        function generateHyperSmoothWave(time, baseFreq, phase, harmonics = 4) {
+            let wave = 0;
+            let amplitude = 1;
+            let freq = baseFreq;
+            
+            // Sum multiple harmonics with decreasing amplitude
+            for (let i = 0; i < harmonics; i++) {
+                wave += Math.sin(time * freq + phase * (i + 1)) * amplitude;
+                amplitude *= 0.35; // Decrease amplitude for each harmonic
+                freq *= 0.618; // Golden ratio for natural frequency progression
+            }
+            
+            return wave / 2; // Normalize
+        }
+
+        // Ultra-smooth easing function
+        function hyperSmoothStep(x, smoothness = 3) {
+            x = Math.max(0, Math.min(1, x));
+            let result = x;
+            
+            // Multiple passes of smoothstep for extra smoothness
+            for (let i = 0; i < smoothness; i++) {
+                result = result * result * (3 - 2 * result);
+            }
+            
+            return result;
+        }
+
+        function updateRotations(currentTime) {
+            const deltaTime = (currentTime - rotationState.lastTime) / 1000;
+            rotationState.lastTime = currentTime;
+            
+            const speed = parseFloat(document.getElementById('rotation-speed').value);
+            const rawScale = parseFloat(document.getElementById('rotation-scale').value);
+            
+            // Ultra-smooth logarithmic scale
+            const scaleBase = 0.0001; // Tiny base scale for super smooth start
+            const scale = scaleBase * Math.exp(Math.pow(rawScale, 1.5));
+            
+            if (speed > 0) {
+                rotationState.time += deltaTime * speed;
+                
+                // Base frequencies for natural motion
+                const baseFreqs = {
+                    wx: 0.1, wy: 0.12, wz: 0.15,
+                    xy: 0.13, xz: 0.11, yz: 0.14
+                };
+                
+                // Phase offsets for interesting relationships
+                const phases = {
+                    wx: 0, wy: 2.4, wz: 4.8,
+                    xy: 1.2, xz: 3.6, yz: 6.0
+                };
+                
+                // Update each rotation with compound waves
+                Object.entries(baseFreqs).forEach(([axis, freq]) => {
+                    const wave = generateHyperSmoothWave(
+                        rotationState.time,
+                        freq,
+                        phases[axis]
+                    );
+                    
+                    const currentValue = parseFloat(document.getElementById(`${axis}-rotation`).value);
+                    const smoothSpeed = hyperSmoothStep(speed * 50);
+                    const smoothMotion = wave * scale * smoothSpeed;
+                    
+                    document.getElementById(`${axis}-rotation`).value = 
+                        (currentValue + smoothMotion) % 6.28;
+                });
+                
+                // Update displays with appropriate precision
+                document.querySelectorAll('input[type="range"]').forEach(input => {
+                    const display = input.previousElementSibling.querySelector('.value-display');
+                    if (display) {
+                        const value = parseFloat(input.value);
+                        const precision = value < 0.001 ? 5 : value < 0.01 ? 4 : value < 0.1 ? 3 : 2;
+                        display.textContent = value.toFixed(precision);
+                    }
+                });
+            }
+        }
+
         function render() {
+            // Update rotations with current time
+            updateRotations(performance.now());
+            
             // Clear based on trace depth
             const traceDepth = parseFloat(traceDepthControl.value);
             gl.clearColor(0, 0, 0, 1 - traceDepth);

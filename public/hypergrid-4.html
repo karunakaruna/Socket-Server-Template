@@ -1,0 +1,338 @@
+[Previous content of hypergrid-3.html with the following modifications:]
+
+1. Change speed range:
+<input type="range" id="rotation-speed" min="0" max="0.002" step="0.00001" value="0">
+
+2. Adjust base frequencies:
+const baseFreqs = {
+    wx: 0.02, wy: 0.025, wz: 0.03,
+    xy: 0.015, xz: 0.035, yz: 0.022
+};
+
+3. Modify scale calculation:
+const scaleBase = 0.00005; // Even smaller base scale
+const scale = scaleBase * Math.exp(Math.pow(rawScale, 1.25));
+
+4. Update default presets:
+const defaultPresets = {
+    "🌌 Cosmic Drift": {
+        gridDensity: 20,
+        volumeScale: 1.2,
+        rotationScale: 2,
+        rotationSpeed: 0.0005,
+        wxRotation: 0,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 2.5,
+        cameraDistance: 2.8,
+        traceDepth: 0.9,
+        pointBrightness: 1.4
+    },
+    "🌊 Deep Current": {
+        gridDensity: 25,
+        volumeScale: 1.5,
+        rotationScale: 1.5,
+        rotationSpeed: 0.0003,
+        wxRotation: 1.57,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 2,
+        cameraDistance: 3.2,
+        traceDepth: 0.85,
+        pointBrightness: 1.3
+    },
+    "🔮 Time Crystal": {
+        gridDensity: 30,
+        volumeScale: 1.8,
+        rotationScale: 1.2,
+        rotationSpeed: 0.0002,
+        wxRotation: 3.14,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 1.8,
+        cameraDistance: 2.5,
+        traceDepth: 0.95,
+        pointBrightness: 1.6
+    },
+    "🌸 Quantum Flow": {
+        gridDensity: 15,
+        volumeScale: 1.3,
+        rotationScale: 0.8,
+        rotationSpeed: 0.0001,
+        wxRotation: 4.71,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 3,
+        cameraDistance: 3.8,
+        traceDepth: 0.92,
+        pointBrightness: 1.5
+    }
+};
+
+5. Update title:
+<title>HyperGrid 4 - Ultra Slow</title>
+
+6. Add more harmonics:
+function generateHyperSmoothWave(time, baseFreq, phase, harmonics = 6) {
+    let wave = 0;
+    let amplitude = 1;
+    let freq = baseFreq;
+    
+    // Sum multiple harmonics with decreasing amplitude
+    for (let i = 0; i < harmonics; i++) {
+        wave += Math.sin(time * freq + phase * (i + 1)) * amplitude;
+        amplitude *= 0.4; // Slower amplitude decay
+        freq *= 0.682; // Adjusted golden ratio for slower progression
+    }
+    
+    return wave / 2.5; // Further normalized
+}
+
+7. Increase smoothness:
+function hyperSmoothStep(x, smoothness = 4) {
+    x = Math.max(0, Math.min(1, x));
+    let result = x;
+    
+    // More passes of smoothstep
+    for (let i = 0; i < smoothness; i++) {
+        result = result * result * (3 - 2 * result);
+    }
+    
+    return result;
+}
+
+<div class="control-group">
+    <label for="rotation-speed">Hyperslow Rotation <span class="value-display">0</span></label>
+    <input type="range" id="rotation-speed" min="0" max="0.002" step="0.00001" value="0">
+</div>
+
+// Preset Management
+const defaultPresets = {
+    "🌌 Cosmic Drift": {
+        gridDensity: 20,
+        volumeScale: 1.2,
+        rotationScale: 2,
+        rotationSpeed: 0.0005,
+        wxRotation: 0,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 2.5,
+        cameraDistance: 2.8,
+        traceDepth: 0.9,
+        pointBrightness: 1.4
+    },
+    "🌊 Deep Current": {
+        gridDensity: 25,
+        volumeScale: 1.5,
+        rotationScale: 1.5,
+        rotationSpeed: 0.0003,
+        wxRotation: 1.57,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 2,
+        cameraDistance: 3.2,
+        traceDepth: 0.85,
+        pointBrightness: 1.3
+    },
+    "🔮 Time Crystal": {
+        gridDensity: 30,
+        volumeScale: 1.8,
+        rotationScale: 1.2,
+        rotationSpeed: 0.0002,
+        wxRotation: 3.14,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 1.8,
+        cameraDistance: 2.5,
+        traceDepth: 0.95,
+        pointBrightness: 1.6
+    },
+    "🌸 Quantum Flow": {
+        gridDensity: 15,
+        volumeScale: 1.3,
+        rotationScale: 0.8,
+        rotationSpeed: 0.0001,
+        wxRotation: 4.71,
+        wyRotation: 0,
+        wzRotation: 0,
+        xyRotation: 0,
+        xzRotation: 0,
+        yzRotation: 0,
+        pointSize: 3,
+        cameraDistance: 3.8,
+        traceDepth: 0.92,
+        pointBrightness: 1.5
+    }
+};
+
+// Initialize rotation animation state
+let rotationState = {
+    wx: 0, wy: 0, wz: 0,
+    xy: 0, xz: 0, yz: 0,
+    time: 0,
+    lastTime: performance.now()
+};
+
+// Load initial preset
+loadPreset("🌌 Cosmic Drift");
+
+function generateHyperSmoothWave(time, baseFreq, phase, harmonics = 6) {
+    let wave = 0;
+    let amplitude = 1;
+    let freq = baseFreq;
+    
+    // Sum multiple harmonics with decreasing amplitude
+    for (let i = 0; i < harmonics; i++) {
+        wave += Math.sin(time * freq + phase * (i + 1)) * amplitude;
+        amplitude *= 0.4; // Slower amplitude decay
+        freq *= 0.682; // Golden ratio for slower progression
+    }
+    
+    return wave / 2.5; // Normalize
+}
+
+function hyperSmoothStep(x, smoothness = 4) {
+    x = Math.max(0, Math.min(1, x));
+    let result = x;
+    
+    // Multiple passes of smoothstep
+    for (let i = 0; i < smoothness; i++) {
+        result = result * result * (3 - 2 * result);
+    }
+    
+    return result;
+}
+
+function updateRotations(currentTime) {
+    const deltaTime = (currentTime - rotationState.lastTime) / 1000;
+    rotationState.lastTime = currentTime;
+    
+    const speed = parseFloat(document.getElementById('rotation-speed').value);
+    const rawScale = parseFloat(document.getElementById('rotation-scale').value);
+    
+    // Ultra-smooth logarithmic scale
+    const scaleBase = 0.00005; // Even smaller base scale
+    const scale = scaleBase * Math.exp(Math.pow(rawScale, 1.25));
+    
+    if (speed > 0) {
+        rotationState.time += deltaTime * speed;
+        
+        // Base frequencies for ultra-slow natural motion
+        const baseFreqs = {
+            wx: 0.02, wy: 0.025, wz: 0.03,
+            xy: 0.015, xz: 0.035, yz: 0.022
+        };
+        
+        // Phase offsets for interesting relationships
+        const phases = {
+            wx: 0, wy: 2.4, wz: 4.8,
+            xy: 1.2, xz: 3.6, yz: 6.0
+        };
+        
+        // Update each rotation with compound waves
+        Object.entries(baseFreqs).forEach(([axis, freq]) => {
+            const wave = generateHyperSmoothWave(
+                rotationState.time,
+                freq,
+                phases[axis],
+                6 // More harmonics for smoother motion
+            );
+            
+            const currentValue = parseFloat(document.getElementById(`${axis}-rotation`).value);
+            const smoothSpeed = hyperSmoothStep(speed * 50);
+            const smoothMotion = wave * scale * smoothSpeed;
+            
+            document.getElementById(`${axis}-rotation`).value = 
+                (currentValue + smoothMotion) % 6.28;
+        });
+        
+        // Update displays with appropriate precision
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            const display = input.previousElementSibling.querySelector('.value-display');
+            if (display) {
+                const value = parseFloat(input.value);
+                const precision = value < 0.0001 ? 6 : value < 0.001 ? 5 : value < 0.01 ? 4 : value < 0.1 ? 3 : 2;
+                display.textContent = value.toFixed(precision);
+            }
+        });
+    }
+}
+
+function render() {
+    // Update rotations with current time
+    updateRotations(performance.now());
+    
+    // Clear based on trace depth
+    const traceDepth = parseFloat(traceDepthControl.value);
+    gl.clearColor(0, 0, 0, 1 - traceDepth);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Get all rotation angles
+    const wxRotation = parseFloat(document.getElementById('wx-rotation').value);
+    const wyRotation = parseFloat(document.getElementById('wy-rotation').value);
+    const wzRotation = parseFloat(document.getElementById('wz-rotation').value);
+    const xyRotation = parseFloat(document.getElementById('xy-rotation').value);
+    const xzRotation = parseFloat(document.getElementById('xz-rotation').value);
+    const yzRotation = parseFloat(document.getElementById('yz-rotation').value);
+
+    // Update grid if density or volume changed
+    const newGridSize = parseInt(gridDensityControl.value);
+    const volumeScale = parseFloat(volumeScaleControl.value);
+    
+    if (newGridSize !== currentGridSize || volumeScale !== currentVolumeScale) {
+        currentGridSize = newGridSize;
+        currentVolumeScale = volumeScale;
+        let { points: newPoints, colors: newColors, sizes: newSizes } = generatePoints(currentGridSize);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newPoints), gl.STATIC_DRAW);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newColors), gl.STATIC_DRAW);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newSizes), gl.STATIC_DRAW);
+        
+        points = newPoints;
+    }
+
+    // Update uniforms
+    const cameraDistance = parseFloat(cameraDistanceControl.value);
+    const brightness = parseFloat(pointBrightnessControl.value);
+    const pointSize = parseFloat(pointSizeControl.value);
+    
+    gl.uniformMatrix4fv(projectionLocation, false, getProjectionMatrix(angle));
+    gl.uniformMatrix4fv(rotation4dLocation, false, 
+        get4DRotationMatrix(wxRotation, wyRotation, wzRotation, 
+                          xyRotation, xzRotation, yzRotation));
+    gl.uniform1f(cameraDistanceLocation, cameraDistance);
+    gl.uniform1f(traceDepthLocation, traceDepth);
+    gl.uniform1f(brightnessLocation, brightness);
+    gl.uniform1f(pointSizeLocation, pointSize);
+
+    // Draw points
+    gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+    requestAnimationFrame(render);
+}
