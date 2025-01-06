@@ -637,23 +637,35 @@ Rate: ${obj.dataset.pulseRate}</div>
             return obj;
         }
 
-        // Modify event handlers for new create menu behavior
+        // Prevent default context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Mouse event handlers
         document.addEventListener('mousedown', (e) => {
             if (isTouchDevice) return;
 
-            if (!activeDraggable) {
+            // Right click for create menu
+            if (e.button === 2) {
+                const target = findDraggableTarget(e);
+                if (target) {
+                    createContextMenu(target, e.clientX, e.clientY);
+                } else {
+                    showCreateMenu(e.clientX, e.clientY);
+                }
+                return;
+            }
+
+            // Left click for dragging
+            if (e.button === 0 && !activeDraggable) {
                 const target = findDraggableTarget(e);
                 if (target) {
                     activeDraggable = target;
                     menuInteractionId = 'mouse';
                     dragStartTime = Date.now();
                     target.classList.add('being-dragged');
-                    startHoldTimer(e, target);
                     holdStartPosition = { x: e.pageX, y: e.pageY };
-                } else {
-                    // Start create menu timer
-                    createStartPosition = { x: e.pageX, y: e.pageY };
-                    startHoldTimer(e, { dataset: { type: 'create' } });
                 }
             }
         });
@@ -661,17 +673,7 @@ Rate: ${obj.dataset.pulseRate}</div>
         document.addEventListener('mousemove', (e) => {
             if (isTouchDevice) return;
 
-            if (createStartPosition && !createMenuActive) {
-                const dx = e.pageX - createStartPosition.x;
-                const dy = e.pageY - createStartPosition.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > 10) {
-                    cancelHoldTimer('mouse');
-                    createStartPosition = null;
-                }
-            }
-            else if (activeDraggable && !isHolding) {
+            if (activeDraggable) {
                 activeDraggable.style.left = `${e.pageX}px`;
                 activeDraggable.style.top = `${e.pageY}px`;
             }
@@ -680,48 +682,32 @@ Rate: ${obj.dataset.pulseRate}</div>
         document.addEventListener('mouseup', (e) => {
             if (isTouchDevice) return;
 
-            if (createMenuActive) {
+            // Handle create menu selection
+            if (createMenuActive && e.button === 2) {
                 const option = e.target.closest('.create-option');
                 if (option) {
                     const emoji = option.dataset.emoji;
                     createObjectAtPosition(emoji, e.pageX, e.pageY);
                 }
                 hideCreateMenu();
-                createStartPosition = null;
+                return;
             }
-            else if (activeDraggable) {
+
+            // Handle left click release
+            if (e.button === 0 && activeDraggable) {
                 const dragDuration = Date.now() - dragStartTime;
                 activeDraggable.classList.remove('being-dragged');
                 
-                if (!isHolding && dragDuration < DRAG_THRESHOLD) {
+                if (dragDuration < DRAG_THRESHOLD) {
                     toggleObjectState(activeDraggable);
                 }
                 
                 activeDraggable = null;
                 menuInteractionId = null;
             }
-            
-            cancelHoldTimer('mouse');
         });
 
-        // Modify hold timer for create menu
-        function startHoldTimer(point, target) {
-            const identifier = point.identifier ?? 'mouse';
-            cancelHoldTimer(identifier);
-            
-            const timer = setTimeout(() => {
-                isHolding = true;
-                if (target.dataset.type === 'create') {
-                    showCreateMenu(point.clientX, point.clientY);
-                } else {
-                    createContextMenu(target, point.clientX, point.clientY);
-                }
-            }, HOLD_THRESHOLD);
-            
-            holdTimers.set(identifier, timer);
-        }
-
-        // Add touch event handlers for create menu
+        // Touch event handlers - keep the hold behavior for touch devices
         document.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
