@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KeyForge Hybrid</title>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #fff;
+            touch-action: none;
+        }
+
+        #interaction-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        .draggable {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            transform: translate(-50%, -50%);
+            cursor: move;
+            z-index: 10;
+            transition: transform 0.2s ease;
+            touch-action: none;
+        }
+
+        .draggable.being-dragged {
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 100;
+        }
+
+        .interaction-point {
+            border: 4px solid rgba(0, 255, 0, 0.8);
+            border-radius: 50%;
+            mix-blend-mode: plus-lighter;
+            pointer-events: none;
+            touch-action: none;
+        }
+
+        .interaction-point::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: rgba(0, 255, 0, 0.8);
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .hold-indicator {
+            position: absolute;
+            border: 4px solid rgba(255, 0, 0, 0.8);
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: pulse 1s infinite;
+            mix-blend-mode: plus-lighter;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
+        #debug-console {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            width: 400px;
+            max-height: calc(100vh - 40px);
+            background: rgba(45, 45, 45, 0.4);
+            border-radius: 8px;
+            overflow-y: auto;
+            font-family: monospace;
+            padding: 10px;
+            pointer-events: none;
+            mix-blend-mode: plus-lighter;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .debug-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid rgba(102, 102, 102, 0.8);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .debug-entry.interaction-start { border-left-color: rgba(76, 175, 80, 0.8); }
+        .debug-entry.interaction-move { border-left-color: rgba(33, 150, 243, 0.8); }
+        .debug-entry.interaction-end { border-left-color: rgba(244, 67, 54, 0.8); }
+        .debug-entry.hold { border-left-color: rgba(255, 152, 0, 0.8); }
+
+        .create-menu {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1000;
+            cursor: pointer;
+            touch-action: none;
+        }
+
+        .menu-option {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(0.5);
+            cursor: pointer;
+        }
+
+        .menu-option.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .menu-option.selected {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .metadata {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            white-space: pre;
+            z-index: 1000;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        @media (hover: hover) {
+            .draggable:hover .metadata {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #debug-console {
+                width: calc(100vw - 40px);
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="interaction-area"></div>
+    <div id="debug-console"></div>
+    <div id="create-menu" class="create-menu">+</div>
+
+    <script>
+        const interactionArea = document.getElementById('interaction-area');
+        const debugConsole = document.getElementById('debug-console');
+        const activePoints = new Map();
+        const holdTimers = new Map();
+        const HOLD_THRESHOLD = 500; // ms
+        let activeDraggable = null;
+        let dragStartTime = 0;
+        const DRAG_THRESHOLD = 150; // ms
+        let objectCounter = 0;
+        let menuActive = false;
+        let menuInteractionId = null;
+        let selectedOption = null;
+        let isTouchDevice = false;
+
+        // Detect touch capability
+        window.addEventListener('touchstart', function onFirstTouch() {
+            isTouchDevice = true;
+            window.removeEventListener('touchstart', onFirstTouch);
+        });
+
+        function addDebugEntry(type, data) {
+            const entry = document.createElement('div');
+            entry.className = `debug-entry ${type}`;
+            entry.textContent = `${type}: ${JSON.stringify(data)}`;
+            debugConsole.appendChild(entry);
+            debugConsole.scrollTop = debugConsole.scrollHeight;
+            
+            if (debugConsole.childNodes.length > 50) {
+                debugConsole.removeChild(debugConsole.firstChild);
+            }
+        }
+
+        function createObject(emoji) {
+            const obj = document.createElement('div');
+            obj.className = 'draggable';
+            obj.dataset.type = 'object';
+            obj.dataset.id = `obj-${++objectCounter}`;
+            obj.style.left = `${window.innerWidth / 2}px`;
+            obj.style.top = `${window.innerHeight / 2}px`;
+            obj.innerHTML = `
+                <div style="font-size: 48px; text-align: center; line-height: 120px;">${emoji}</div>
+                <div class="metadata">ID: ${obj.dataset.id}
+Type: ${emoji}</div>
+            `;
+            interactionArea.appendChild(obj);
+            return obj;
+        }
+
+        function startHoldTimer(point, target) {
+            const identifier = point.identifier ?? 'mouse';
+            cancelHoldTimer(identifier);
+            
+            const timer = setTimeout(() => {
+                const indicator = document.createElement('div');
+                indicator.className = 'hold-indicator';
+                indicator.style.left = `${point.clientX}px`;
+                indicator.style.top = `${point.clientY}px`;
+                document.body.appendChild(indicator);
+                
+                holdTimers.set(identifier, { timer: null, indicator });
+                addDebugEntry('hold', { id: identifier });
+            }, HOLD_THRESHOLD);
+            
+            holdTimers.set(identifier, { timer, indicator: null });
+        }
+
+        function cancelHoldTimer(identifier) {
+            const hold = holdTimers.get(identifier);
+            if (hold) {
+                if (hold.timer) clearTimeout(hold.timer);
+                if (hold.indicator) hold.indicator.remove();
+                holdTimers.delete(identifier);
+            }
+        }
+
+        function findDraggableTarget(point) {
+            const elements = document.elementsFromPoint(point.clientX, point.clientY);
+            return elements.find(el => el.classList.contains('draggable'));
+        }
+
+        function createMenuOptions() {
+            const emojis = ['🔵', '🔴', '🟡', '🟢', '⚫'];
+            emojis.forEach((emoji, index) => {
+                const option = document.createElement('div');
+                option.className = 'menu-option';
+                option.textContent = emoji;
+                option.dataset.emoji = emoji;
+                document.body.appendChild(option);
+            });
+        }
+
+        function updateMenuPositions(point, initial = false) {
+            const menu = document.getElementById('create-menu');
+            const menuRect = menu.getBoundingClientRect();
+            const menuCenter = {
+                x: menuRect.left + menuRect.width / 2,
+                y: menuRect.top + menuRect.height / 2
+            };
+
+            const options = document.querySelectorAll('.menu-option');
+            const radius = 100;
+            let newSelectedOption = null;
+
+            options.forEach((option, index) => {
+                const angle = (index / options.length) * Math.PI * 2 - Math.PI / 2;
+                const x = menuCenter.x + Math.cos(angle) * radius;
+                const y = menuCenter.y + Math.sin(angle) * radius;
+                
+                option.style.left = `${x}px`;
+                option.style.top = `${y}px`;
+                option.classList.add('active');
+
+                const dx = point.clientX - x;
+                const dy = point.clientY - y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 40) {
+                    option.classList.add('selected');
+                    newSelectedOption = option;
+                } else {
+                    option.classList.remove('selected');
+                }
+            });
+
+            selectedOption = newSelectedOption;
+        }
+
+        function hideMenu() {
+            menuActive = false;
+            menuInteractionId = null;
+            selectedOption = null;
+            document.querySelectorAll('.menu-option').forEach(option => {
+                option.classList.remove('active', 'selected');
+            });
+        }
+
+        // Touch event handlers
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                const menu = document.getElementById('create-menu');
+                const menuRect = menu.getBoundingClientRect();
+                
+                if (!menuActive && 
+                    touch.clientX >= menuRect.left && 
+                    touch.clientX <= menuRect.right && 
+                    touch.clientY >= menuRect.top && 
+                    touch.clientY <= menuRect.bottom) {
+                    menuActive = true;
+                    menuInteractionId = touch.identifier;
+                    updateMenuPositions(touch, true);
+                    return;
+                }
+                
+                if (!activeDraggable) {
+                    const target = findDraggableTarget(touch);
+                    if (target) {
+                        activeDraggable = target;
+                        menuInteractionId = touch.identifier;
+                        dragStartTime = Date.now();
+                        target.classList.add('being-dragged');
+                        startHoldTimer(touch, target);
+                        
+                        addDebugEntry('interaction-start', {
+                            type: 'touch',
+                            id: touch.identifier,
+                            x: Math.round(touch.pageX),
+                            y: Math.round(touch.pageY)
+                        });
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                if (menuActive && touch.identifier === menuInteractionId) {
+                    updateMenuPositions(touch);
+                }
+                else if (activeDraggable && touch.identifier === menuInteractionId) {
+                    cancelHoldTimer(touch.identifier);
+                    activeDraggable.style.left = `${touch.pageX}px`;
+                    activeDraggable.style.top = `${touch.pageY}px`;
+                    
+                    addDebugEntry('interaction-move', {
+                        type: 'touch',
+                        id: touch.identifier,
+                        x: Math.round(touch.pageX),
+                        y: Math.round(touch.pageY)
+                    });
+                }
+            }
+        });
+
+        document.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                if (touch.identifier === menuInteractionId) {
+                    if (menuActive) {
+                        if (selectedOption) {
+                            const emoji = selectedOption.dataset.emoji;
+                            createObject(emoji);
+                        }
+                        hideMenu();
+                    } else if (activeDraggable) {
+                        const dragDuration = Date.now() - dragStartTime;
+                        activeDraggable.classList.remove('being-dragged');
+                        
+                        if (dragDuration < DRAG_THRESHOLD) {
+                            const metadata = activeDraggable.querySelector('.metadata');
+                            metadata.style.opacity = metadata.style.opacity === '1' ? '0' : '1';
+                        }
+                        
+                        activeDraggable = null;
+                        menuInteractionId = null;
+                    }
+                    
+                    addDebugEntry('interaction-end', {
+                        type: 'touch',
+                        id: touch.identifier,
+                        x: Math.round(touch.pageX),
+                        y: Math.round(touch.pageY)
+                    });
+                }
+            }
+        });
+
+        document.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            for (const touch of e.changedTouches) {
+                if (touch.identifier === menuInteractionId) {
+                    if (menuActive) {
+                        hideMenu();
+                    } else if (activeDraggable) {
+                        cancelHoldTimer(touch.identifier);
+                        activeDraggable.classList.remove('being-dragged');
+                        activeDraggable = null;
+                        menuInteractionId = null;
+                    }
+                }
+            }
+        });
+
+        // Mouse event handlers
+        document.addEventListener('mousedown', (e) => {
+            if (isTouchDevice) return; // Skip if touch device
+
+            const menu = document.getElementById('create-menu');
+            const menuRect = menu.getBoundingClientRect();
+            
+            if (!menuActive && 
+                e.clientX >= menuRect.left && 
+                e.clientX <= menuRect.right && 
+                e.clientY >= menuRect.top && 
+                e.clientY <= menuRect.bottom) {
+                menuActive = true;
+                menuInteractionId = 'mouse';
+                updateMenuPositions(e, true);
+                return;
+            }
+            
+            if (!activeDraggable) {
+                const target = findDraggableTarget(e);
+                if (target) {
+                    activeDraggable = target;
+                    menuInteractionId = 'mouse';
+                    dragStartTime = Date.now();
+                    target.classList.add('being-dragged');
+                    startHoldTimer(e, target);
+                    
+                    addDebugEntry('interaction-start', {
+                        type: 'mouse',
+                        x: Math.round(e.pageX),
+                        y: Math.round(e.pageY)
+                    });
+                }
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isTouchDevice) return; // Skip if touch device
+
+            if (menuActive) {
+                updateMenuPositions(e);
+            }
+            else if (activeDraggable) {
+                cancelHoldTimer('mouse');
+                activeDraggable.style.left = `${e.pageX}px`;
+                activeDraggable.style.top = `${e.pageY}px`;
+                
+                addDebugEntry('interaction-move', {
+                    type: 'mouse',
+                    x: Math.round(e.pageX),
+                    y: Math.round(e.pageY)
+                });
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (isTouchDevice) return; // Skip if touch device
+
+            if (menuActive) {
+                if (selectedOption) {
+                    const emoji = selectedOption.dataset.emoji;
+                    createObject(emoji);
+                }
+                hideMenu();
+            } else if (activeDraggable) {
+                const dragDuration = Date.now() - dragStartTime;
+                activeDraggable.classList.remove('being-dragged');
+                
+                if (dragDuration < DRAG_THRESHOLD) {
+                    const metadata = activeDraggable.querySelector('.metadata');
+                    metadata.style.opacity = metadata.style.opacity === '1' ? '0' : '1';
+                }
+                
+                activeDraggable = null;
+                menuInteractionId = null;
+                
+                addDebugEntry('interaction-end', {
+                    type: 'mouse',
+                    x: Math.round(e.pageX),
+                    y: Math.round(e.pageY)
+                });
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            // Ensure objects stay within bounds
+            document.querySelectorAll('.draggable').forEach(obj => {
+                const x = parseFloat(obj.style.left);
+                const y = parseFloat(obj.style.top);
+                
+                obj.style.left = `${Math.min(Math.max(x, 0), window.innerWidth)}px`;
+                obj.style.top = `${Math.min(Math.max(y, 0), window.innerHeight)}px`;
+            });
+        });
+
+        // Create menu options
+        createMenuOptions();
+
+        // Create initial objects
+        createObject('🔵');
+        createObject('🔴');
+        createObject('🟡');
+    </script>
+</body>
+</html>
