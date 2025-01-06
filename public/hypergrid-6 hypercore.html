@@ -100,6 +100,97 @@
         #save-preset:hover {
             background: rgba(100, 255, 100, 0.3);
         }
+        
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at 50% 50%, 
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: crosshair;
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+            pointer-events: all;
+        }
+
+        #navigator-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #navigator-grid::before,
+        #navigator-grid::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #navigator-grid::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        #navigator-grid::after {
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        #navigator-vector {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px cyan;
+        }
+
+        .target-point {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 100, 255, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.4; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+        }
+
+        .coordinate-label {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .label-w { top: 5px; left: 50%; transform: translateX(-50%); }
+        .label-x { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .label-y { left: 5px; top: 50%; transform: translateY(-50%); }
+        .label-z { right: 5px; top: 50%; transform: translateY(-50%); }
     </style>
 </head>
 <body>
@@ -107,13 +198,19 @@
     
     <div id="presets">
         <h3>✨ Ultra Slow Presets</h3>
-        <div id="preset-list"></div>
+        <div id="preset-container"></div>
     </div>
     
     <div id="controls">
+        <h3>🌌 HyperCore Controls</h3>
+        
         <div class="control-group">
             <label for="grid-density">Grid Density <span class="value-display">20</span></label>
             <input type="range" id="grid-density" min="5" max="100" step="1" value="20">
+        </div>
+        <div class="control-group">
+            <label for="evolution-speed">Evolution Speed <span class="value-display">0.0001</span></label>
+            <input type="range" id="evolution-speed" min="0" max="0.002" step="0.00001" value="0.0001">
         </div>
         <div class="control-group">
             <label for="volume-scale">Volume Scale <span class="value-display">1.2</span></label>
@@ -176,89 +273,92 @@
             <button id="save-preset">Save</button>
         </div>
     </div>
+    
+    <div id="quantum-navigator">
+        <div id="navigator-grid"></div>
+        <div id="navigator-vector"></div>
+        <div class="coordinate-label label-w">W</div>
+        <div class="coordinate-label label-x">X</div>
+        <div class="coordinate-label label-y">Y</div>
+        <div class="coordinate-label label-z">Z</div>
+    </div>
 
     <script>
-        // Preset Management
-        const defaultPresets = {
-            "🌌 Cosmic Drift": {
-                gridDensity: 20,
-                volumeScale: 1.2,
-                rotationScale: 2,
-                rotationSpeed: 0.0005,
-                wxRotation: 0,
-                wyRotation: 0,
-                wzRotation: 0,
-                xyRotation: 0,
-                xzRotation: 0,
-                yzRotation: 0,
-                pointSize: 2.5,
-                cameraDistance: 2.8,
-                traceDepth: 0.9,
-                pointBrightness: 1.4
-            },
-            "🌊 Deep Current": {
-                gridDensity: 25,
-                volumeScale: 1.5,
-                rotationScale: 1.5,
-                rotationSpeed: 0.0003,
-                wxRotation: 1.57,
-                wyRotation: 0,
-                wzRotation: 0,
-                xyRotation: 0,
-                xzRotation: 0,
-                yzRotation: 0,
-                pointSize: 2,
-                cameraDistance: 3.2,
-                traceDepth: 0.85,
-                pointBrightness: 1.3
-            },
-            "🔮 Time Crystal": {
-                gridDensity: 30,
-                volumeScale: 1.8,
-                rotationScale: 1.2,
-                rotationSpeed: 0.0002,
-                wxRotation: 3.14,
-                wyRotation: 0,
-                wzRotation: 0,
-                xyRotation: 0,
-                xzRotation: 0,
-                yzRotation: 0,
-                pointSize: 1.8,
-                cameraDistance: 2.5,
-                traceDepth: 0.95,
-                pointBrightness: 1.6
-            },
-            "🌸 Quantum Flow": {
-                gridDensity: 15,
-                volumeScale: 1.3,
-                rotationScale: 0.8,
-                rotationSpeed: 0.0001,
-                wxRotation: 4.71,
-                wyRotation: 0,
-                wzRotation: 0,
-                xyRotation: 0,
-                xzRotation: 0,
-                yzRotation: 0,
-                pointSize: 3,
-                cameraDistance: 3.8,
-                traceDepth: 0.92,
-                pointBrightness: 1.5
+        // Load presets from JSON file
+        let defaultPresets = {};
+        
+        async function loadPresets() {
+            try {
+                const response = await fetch('starseed/presets.json');
+                defaultPresets = await response.json();
+                updatePresetList();
+                // Load Starseed HD by default
+                loadPreset("✨ Starseed HD");
+            } catch (error) {
+                console.error('Error loading presets:', error);
             }
-        };
+        }
 
+        // Update preset list in UI
         function updatePresetList() {
-            const presetList = document.getElementById('preset-list');
-            presetList.innerHTML = '';
+            const presetContainer = document.getElementById('preset-container');
+            presetContainer.innerHTML = '';
             
-            Object.keys(defaultPresets).forEach(name => {
-                const button = document.createElement('button');
-                button.className = 'preset-btn';
-                button.textContent = name;
-                button.onclick = () => loadPreset(name);
-                presetList.appendChild(button);
+            Object.keys(defaultPresets).forEach(presetName => {
+                const btn = document.createElement('button');
+                btn.className = 'preset-btn';
+                btn.textContent = presetName;
+                btn.onclick = () => loadPreset(presetName);
+                presetContainer.appendChild(btn);
             });
         }
 
+        // Save new preset to JSON
+        async function savePresetToJson(name, settings) {
+            defaultPresets[name] = settings;
+            
+            try {
+                const response = await fetch('starseed/presets.json', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(defaultPresets, null, 4)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to save preset');
+                }
+                
+                updatePresetList();
+            } catch (error) {
+                console.error('Error saving preset:', error);
+                alert('Failed to save preset. Changes will be temporary.');
+            }
+        }
+
+        // Modified save preset button handler
+        const savePresetBtn = document.getElementById('save-preset');
+        const presetNameInput = document.getElementById('preset-name');
+        
+        savePresetBtn.addEventListener('click', () => {
+            const name = presetNameInput.value.trim();
+            if (!name) {
+                alert('Please enter a preset name');
+                return;
+            }
+            
+            const settings = getCurrentSettings();
+            savePresetToJson(name, settings);
+            
+            // Clear input
+            presetNameInput.value = '';
+        });
+
+        // Load presets when page loads
+        loadPresets();
+
+        // Preset Management
         function getCurrentSettings() {
             return {
                 gridDensity: parseInt(document.getElementById('grid-density').value),
@@ -299,9 +399,6 @@
             });
         }
 
-        // Initialize preset list
-        updatePresetList();
-
         // Initialize rotation animation state
         let rotationState = {
             wx: 0, wy: 0, wz: 0,
@@ -315,24 +412,6 @@
             wx: 0.02, wy: 0.025, wz: 0.03,
             xy: 0.015, xz: 0.035, yz: 0.022
         };
-
-        // Helper functions for smooth transitions
-        function generateHyperSmoothWave(time, baseFreq, phase, harmonics = 6) {
-            let wave = 0;
-            for (let i = 1; i <= harmonics; i++) {
-                wave += Math.sin(time * baseFreq / i + phase) / i;
-            }
-            return wave;
-        }
-
-        function hyperSmoothStep(x, smoothness = 4) {
-            x = Math.max(0, Math.min(1, x));
-            let result = x;
-            for (let i = 0; i < smoothness; i++) {
-                result = result * result * (3 - 2 * result);
-            }
-            return result;
-        }
 
         function getProjectionMatrix() {
             const aspect = canvas.width / canvas.height;
@@ -356,9 +435,8 @@
             rotationState.lastTime = currentTime;
             rotationState.time += deltaTime;
             
-            const settings = getCurrentSettings();
-            const speed = settings.rotationSpeed;
-            const scale = settings.rotationScale;
+            const speed = parseFloat(document.getElementById('rotation-speed').value);
+            const scale = parseFloat(document.getElementById('rotation-scale').value);
             
             // Update each rotation angle
             rotationState.wx += speed * baseFreqs.wx * scale;
@@ -367,6 +445,22 @@
             rotationState.xy += speed * baseFreqs.xy * scale;
             rotationState.xz += speed * baseFreqs.xz * scale;
             rotationState.yz += speed * baseFreqs.yz * scale;
+            
+            // Update slider values to match current state
+            document.getElementById('wx-rotation').value = rotationState.wx.toFixed(2);
+            document.getElementById('wy-rotation').value = rotationState.wy.toFixed(2);
+            document.getElementById('wz-rotation').value = rotationState.wz.toFixed(2);
+            document.getElementById('xy-rotation').value = rotationState.xy.toFixed(2);
+            document.getElementById('xz-rotation').value = rotationState.xz.toFixed(2);
+            document.getElementById('yz-rotation').value = rotationState.yz.toFixed(2);
+            
+            // Update displays
+            document.querySelectorAll('input[type="range"]').forEach(input => {
+                const display = input.previousElementSibling.querySelector('.value-display');
+                if (display) {
+                    display.textContent = input.value;
+                }
+            });
             
             // Get rotation matrix
             const rotationMatrix = get4DRotationMatrix(
@@ -377,9 +471,9 @@
             // Update uniforms
             gl.uniformMatrix4fv(projectionLocation, false, getProjectionMatrix());
             gl.uniformMatrix4fv(rotation4dLocation, false, rotationMatrix);
-            gl.uniform1f(cameraDistanceLocation, settings.cameraDistance);
-            gl.uniform1f(traceDepthLocation, settings.traceDepth);
-            gl.uniform1f(brightnessLocation, settings.pointBrightness);
+            gl.uniform1f(cameraDistanceLocation, parseFloat(document.getElementById('camera-distance').value));
+            gl.uniform1f(traceDepthLocation, parseFloat(document.getElementById('trace-depth').value));
+            gl.uniform1f(brightnessLocation, parseFloat(document.getElementById('point-brightness').value));
             
             // Update point attributes
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -508,25 +602,24 @@
         `;
 
         const fragmentShaderSource = `
-            precision highp float;
+            precision mediump float;
             varying vec4 vColor;
             varying float vDepth;
             uniform float traceDepth;
             
             void main() {
-                // Create circular points
-                vec2 coord = gl_PointCoord * 2.0 - 1.0;
-                float r = length(coord);
-                if (r > 1.0) discard;
+                // Calculate distance from center of point
+                vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+                float r = dot(cxy, cxy);
                 
-                // Fade edges and apply depth-based intensity
-                float alpha = 1.0 - smoothstep(0.8, 1.0, r);
-                float intensity = 1.0 - (vDepth * 0.5);
+                // Improved point rendering with softer edges
+                float alpha = max(0.0, 1.0 - r * 1.1);  // Slightly larger points
+                alpha = pow(alpha, 1.5);  // Adjusted power for better point shape
                 
-                // Apply trace depth effect
-                alpha *= mix(1.0, 0.1, traceDepth);
+                // Enhanced brightness in the center
+                float centerBoost = 1.0 + (1.0 - r) * 0.5;
                 
-                gl_FragColor = vec4(vColor.rgb * intensity, alpha);
+                gl_FragColor = vec4(vColor.rgb * centerBoost, vColor.a * alpha);
             }
         `;
 
@@ -644,13 +737,21 @@
         const pointBrightnessControl = document.getElementById('point-brightness');
         const rotationSpeedControl = document.getElementById('rotation-speed');
         const rotationScaleControl = document.getElementById('rotation-scale');
+        const evolutionSpeedControl = document.getElementById('evolution-speed');
+
+        // Function to update uniform values
+        function updateUniforms() {
+            gl.uniform1f(cameraDistanceLocation, parseFloat(cameraDistanceControl.value));
+            gl.uniform1f(traceDepthLocation, parseFloat(traceDepthControl.value));
+            gl.uniform1f(brightnessLocation, parseFloat(pointBrightnessControl.value));
+        }
 
         // Add event listeners for controls
         gridDensityControl.addEventListener('input', () => {
             const size = parseInt(gridDensityControl.value);
+            const scale = parseFloat(volumeScaleControl.value);
             let { points: newPoints, colors: newColors, sizes: newSizes } = generatePoints(size);
             
-            // Update buffers
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newPoints), gl.STATIC_DRAW);
             
@@ -663,59 +764,13 @@
             points = newPoints;
             colors = newColors;
             sizes = newSizes;
+            
+            updateUniforms();
         });
 
-        volumeScaleControl.addEventListener('input', () => {
-            let { points: newPoints, colors: newColors, sizes: newSizes } = generatePoints(parseInt(gridDensityControl.value));
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newPoints), gl.STATIC_DRAW);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newColors), gl.STATIC_DRAW);
-            
-            points = newPoints;
-            colors = newColors;
-        });
-
-        // Add save preset functionality
-        const savePresetBtn = document.getElementById('save-preset');
-        const presetNameInput = document.getElementById('preset-name');
-        
-        savePresetBtn.addEventListener('click', () => {
-            const name = presetNameInput.value.trim();
-            if (!name) {
-                alert('Please enter a preset name');
-                return;
-            }
-            
-            // Save current settings as a new preset
-            const settings = getCurrentSettings();
-            
-            // Add camera and visual settings
-            settings.cameraDistance = parseFloat(cameraDistanceControl.value);
-            settings.pointSize = parseFloat(pointSizeControl.value);
-            settings.traceDepth = parseFloat(traceDepthControl.value);
-            settings.pointBrightness = parseFloat(pointBrightnessControl.value);
-            settings.rotationSpeed = parseFloat(rotationSpeedControl.value);
-            settings.rotationScale = parseFloat(rotationScaleControl.value);
-            
-            // Add rotation states
-            settings.wxRotation = rotationState.wx;
-            settings.wyRotation = rotationState.wy;
-            settings.wzRotation = rotationState.wz;
-            settings.xyRotation = rotationState.xy;
-            settings.xzRotation = rotationState.xz;
-            settings.yzRotation = rotationState.yz;
-            
-            defaultPresets[name] = settings;
-            updatePresetList();
-            
-            // Select the new preset
-            loadPreset(name);
-            
-            // Clear input
-            presetNameInput.value = '';
+        // Add event listeners for direct uniform controls
+        [pointSizeControl, cameraDistanceControl, traceDepthControl, pointBrightnessControl].forEach(control => {
+            control.addEventListener('input', updateUniforms);
         });
 
         // Initialize displays with proper precision
@@ -727,7 +782,6 @@
                 display.textContent = value.toFixed(precision);
             }
             
-            // Add input event listener
             input.addEventListener('input', () => {
                 const display = input.previousElementSibling.querySelector('.value-display');
                 if (display) {
@@ -738,9 +792,6 @@
             });
         });
 
-        // Load initial preset after all UI is set up
-        loadPreset("🌌 Cosmic Drift");
-
         // Handle window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
@@ -748,19 +799,125 @@
             gl.viewport(0, 0, canvas.width, canvas.height);
         });
 
-        // Start rendering
-        function render() {
-            requestAnimationFrame(render);
-            
-            // Clear screen
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            
-            // Update rotations
-            updateRotations(performance.now());
-            
-            // Draw points
-            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+        // Quantum Navigator State
+        let navigatorState = {
+            currentVector: { x: 50, y: 50 }, // Center
+            targetVector: null,
+            transitionSpeed: 0.1,
+            lastUpdate: performance.now()
+        };
+
+        function initQuantumNavigator() {
+            const navigator = document.getElementById('quantum-navigator');
+            const vector = document.getElementById('navigator-vector');
+
+            // Set initial position
+            updateVectorPosition(vector, navigatorState.currentVector);
+
+            navigator.addEventListener('click', (e) => {
+                const rect = navigator.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Create new target point
+                navigatorState.targetVector = { x, y };
+                
+                // Create visual target indicator
+                const target = document.createElement('div');
+                target.className = 'target-point';
+                target.style.left = x + 'px';
+                target.style.top = y + 'px';
+                navigator.appendChild(target);
+                
+                // Remove old target after animation
+                setTimeout(() => target.remove(), 2000);
+
+                // Update rotation speeds based on vector
+                updateRotationVector(x, y);
+            });
         }
+
+        function updateVectorPosition(vector, pos) {
+            vector.style.left = pos.x + 'px';
+            vector.style.top = pos.y + 'px';
+        }
+
+        function updateRotationVector(x, y) {
+            // Convert click position to normalized coordinates (-1 to 1)
+            const size = 200; // Navigator size
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const dx = (x - centerX) / (size / 2); // -1 to 1
+            const dy = (y - centerY) / (size / 2); // -1 to 1
+            
+            // Calculate polar coordinates
+            const radius = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            // Map coordinates to 4D rotation space
+            // W-X plane (horizontal axis)
+            baseFreqs.wx = 0.02 * dx;
+            
+            // W-Y plane (vertical axis)
+            baseFreqs.wy = 0.02 * dy;
+            
+            // W-Z plane (radial distance)
+            baseFreqs.wz = 0.02 * radius;
+            
+            // X-Y plane (rotation around center)
+            baseFreqs.xy = 0.015 * Math.sin(angle);
+            
+            // X-Z and Y-Z planes (complex motion)
+            baseFreqs.xz = 0.015 * (dx * Math.cos(angle));
+            baseFreqs.yz = 0.015 * (dy * Math.sin(angle));
+
+            // Scale all frequencies by radius for more dramatic effect at edges
+            if (radius > 0.8) {
+                Object.keys(baseFreqs).forEach(key => {
+                    baseFreqs[key] *= (1 + (radius - 0.8) * 2);
+                });
+            }
+        }
+
+        function updateNavigator(currentTime) {
+            if (!navigatorState.targetVector) return;
+
+            const deltaTime = (currentTime - navigatorState.lastUpdate) / 1000;
+            navigatorState.lastUpdate = currentTime;
+
+            // Move current vector towards target
+            const dx = navigatorState.targetVector.x - navigatorState.currentVector.x;
+            const dy = navigatorState.targetVector.y - navigatorState.currentVector.y;
+            
+            navigatorState.currentVector.x += dx * navigatorState.transitionSpeed;
+            navigatorState.currentVector.y += dy * navigatorState.transitionSpeed;
+
+            // Update visual position
+            updateVectorPosition(
+                document.getElementById('navigator-vector'),
+                navigatorState.currentVector
+            );
+
+            // Clear target if we're close enough
+            if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+                navigatorState.targetVector = null;
+            }
+        }
+
+        // Start rendering
+        function render(currentTime) {
+            updateRotations(currentTime);
+            updateNavigator(currentTime);
+            
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+            
+            rotationState.lastTime = currentTime;
+            requestAnimationFrame(render);
+        }
+
+        // Initialize quantum navigator
+        initQuantumNavigator();
 
         // Start the animation
         render();
