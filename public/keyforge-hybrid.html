@@ -175,83 +175,46 @@
 
         .create-menu {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 80px;
+            width: 200px;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            z-index: 1000;
+            display: none;
+            transform-origin: center;
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .create-menu.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .create-option {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            margin: 4px;
             background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            z-index: 1000;
             cursor: pointer;
-            touch-action: none;
+            transition: all 0.2s ease;
         }
 
-        .menu-option {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            opacity: 0;
-            pointer-events: none;
-            transform: translate(-50%, -50%) scale(0.5);
-            cursor: pointer;
+        .create-option:hover,
+        .create-option.selected {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
-        .menu-option.active {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .menu-option.selected {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%) scale(1.2);
-        }
-
-        .metadata {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            white-space: pre;
-            z-index: 1000;
-            top: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        @media (hover: hover) {
-            .draggable:hover .metadata {
-                opacity: 1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            #debug-console {
-                width: calc(100vw - 40px);
-                font-size: 12px;
-            }
-        }
-
-        /* Add styles for context menu */
         .context-menu {
             position: absolute;
             background: rgba(30, 30, 30, 0.95);
@@ -315,12 +278,41 @@
             50% { opacity: 0.3; }
             100% { opacity: 1; }
         }
+
+        .metadata {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            white-space: pre;
+            z-index: 1000;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        @media (hover: hover) {
+            .draggable:hover .metadata {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #debug-console {
+                width: calc(100vw - 40px);
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="interaction-area"></div>
     <div id="debug-console"></div>
-    <div id="create-menu" class="create-menu">+</div>
 
     <script>
         const interactionArea = document.getElementById('interaction-area');
@@ -332,8 +324,8 @@
         let dragStartTime = 0;
         const DRAG_THRESHOLD = 150; // ms
         let objectCounter = 0;
-        let menuActive = false;
-        let menuInteractionId = null;
+        let createMenuActive = false;
+        let createStartPosition = null;
         let selectedOption = null;
         let isTouchDevice = false;
         let holdStartPosition = null;
@@ -541,12 +533,11 @@ Rate: ${obj.dataset.pulseRate}</div>
             
             const timer = setTimeout(() => {
                 isHolding = true;
-                createContextMenu(target, point.clientX, point.clientY);
-                addDebugEntry('show-context-menu', { 
-                    id: target.dataset.id,
-                    x: Math.round(point.clientX),
-                    y: Math.round(point.clientY)
-                });
+                if (target.dataset.type === 'create') {
+                    showCreateMenu(point.clientX, point.clientY);
+                } else {
+                    createContextMenu(target, point.clientX, point.clientY);
+                }
             }, HOLD_THRESHOLD);
             
             holdTimers.set(identifier, timer);
@@ -565,240 +556,91 @@ Rate: ${obj.dataset.pulseRate}</div>
             return elements.find(el => el.classList.contains('draggable'));
         }
 
-        function createMenuOptions() {
-            const emojis = ['🔵', '🔴', '🟡', '🟢', '⚫'];
-            emojis.forEach((emoji, index) => {
-                const option = document.createElement('div');
-                option.className = 'menu-option';
-                option.textContent = emoji;
-                option.dataset.emoji = emoji;
-                document.body.appendChild(option);
-            });
-        }
+        function showCreateMenu(x, y) {
+            const menu = document.createElement('div');
+            menu.className = 'create-menu';
+            menu.innerHTML = `
+                <div class="create-option" data-emoji="🔵">🔵</div>
+                <div class="create-option" data-emoji="🔴">🔴</div>
+                <div class="create-option" data-emoji="🟡">🟡</div>
+                <div class="create-option" data-emoji="🟢">🟢</div>
+                <div class="create-option" data-emoji="⚫">⚫</div>
+                <div class="create-option" data-emoji="🟣">🟣</div>
+                <div class="create-option" data-emoji="⚪">⚪</div>
+                <div class="create-option" data-emoji="🟤">🟤</div>
+            `;
 
-        function updateMenuPositions(point, initial = false) {
-            const menu = document.getElementById('create-menu');
+            // Position menu
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+
+            // Ensure menu stays within viewport
+            document.body.appendChild(menu);
             const menuRect = menu.getBoundingClientRect();
-            const menuCenter = {
-                x: menuRect.left + menuRect.width / 2,
-                y: menuRect.top + menuRect.height / 2
-            };
+            if (menuRect.right > window.innerWidth) {
+                menu.style.left = `${x - menuRect.width}px`;
+            }
+            if (menuRect.bottom > window.innerHeight) {
+                menu.style.top = `${y - menuRect.height}px`;
+            }
 
-            const options = document.querySelectorAll('.menu-option');
-            const radius = 100;
-            let newSelectedOption = null;
+            // Show menu with animation
+            menu.style.display = 'block';
+            requestAnimationFrame(() => menu.classList.add('active'));
 
-            options.forEach((option, index) => {
-                const angle = (index / options.length) * Math.PI * 2 - Math.PI / 2;
-                const x = menuCenter.x + Math.cos(angle) * radius;
-                const y = menuCenter.y + Math.sin(angle) * radius;
-                
-                option.style.left = `${x}px`;
-                option.style.top = `${y}px`;
-                option.classList.add('active');
-
-                const dx = point.clientX - x;
-                const dy = point.clientY - y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < 40) {
+            // Add hover effect
+            menu.addEventListener('mousemove', (e) => {
+                const option = e.target.closest('.create-option');
+                if (option) {
+                    document.querySelectorAll('.create-option').forEach(opt => 
+                        opt.classList.remove('selected'));
                     option.classList.add('selected');
-                    newSelectedOption = option;
-                } else {
-                    option.classList.remove('selected');
                 }
             });
 
-            selectedOption = newSelectedOption;
+            createMenuActive = true;
+            return menu;
         }
 
-        function hideMenu() {
-            menuActive = false;
-            menuInteractionId = null;
-            selectedOption = null;
-            document.querySelectorAll('.menu-option').forEach(option => {
-                option.classList.remove('active', 'selected');
-            });
+        function hideCreateMenu() {
+            const menu = document.querySelector('.create-menu');
+            if (menu) {
+                menu.classList.remove('active');
+                setTimeout(() => menu.remove(), 200);
+            }
+            createMenuActive = false;
         }
 
-        function toggleObjectState(obj) {
-            const currentState = obj.dataset.state;
-            const newState = currentState === 'active' ? 'inactive' : 'active';
-            obj.dataset.state = newState;
-            
-            // Update metadata
-            const metadata = obj.querySelector('.metadata');
-            const metadataText = metadata.textContent.split('\n');
-            metadataText[2] = `State: ${newState}`;
-            metadata.textContent = metadataText.join('\n');
-            
-            // Toggle active class and shape-specific pulse animation
-            obj.classList.toggle('active', newState === 'active');
-            if (newState === 'active') {
-                obj.classList.add(`${obj.dataset.pulseShape}-pulse`);
-            } else {
-                obj.classList.remove('circle-pulse', 'square-pulse');
-            }
-            
-            addDebugEntry('state-change', {
-                id: obj.dataset.id,
-                state: newState,
-                shape: obj.dataset.pulseShape
-            });
+        function createObjectAtPosition(emoji, x, y) {
+            const obj = document.createElement('div');
+            obj.className = 'draggable';
+            obj.dataset.type = 'object';
+            obj.dataset.id = `obj-${++objectCounter}`;
+            obj.dataset.state = 'inactive';
+            obj.dataset.pulseRate = '1s';
+            obj.dataset.pulseShape = Math.random() < 0.5 ? 'circle' : 'square';
+            obj.dataset.primaryPulse = 'inactive';
+            obj.dataset.secondaryPulse = 'inactive';
+            obj.style.setProperty('--pulse-rate', obj.dataset.pulseRate);
+            obj.style.left = `${x}px`;
+            obj.style.top = `${y}px`;
+            obj.innerHTML = `
+                <div style="font-size: 48px; text-align: center; line-height: 120px;">${emoji}</div>
+                <div class="metadata">ID: ${obj.dataset.id}
+Type: ${emoji}
+Primary Pulse: ${obj.dataset.primaryPulse}
+Secondary Pulse: ${obj.dataset.secondaryPulse}
+Shape: ${obj.dataset.pulseShape}
+Rate: ${obj.dataset.pulseRate}</div>
+            `;
+            interactionArea.appendChild(obj);
+            return obj;
         }
 
-        function togglePulseShape(obj) {
-            const currentShape = obj.dataset.pulseShape;
-            const newShape = currentShape === 'circle' ? 'square' : 'circle';
-            obj.dataset.pulseShape = newShape;
-            
-            // Update metadata
-            const metadata = obj.querySelector('.metadata');
-            const metadataText = metadata.textContent.split('\n');
-            metadataText[4] = `Shape: ${newShape}`;
-            metadata.textContent = metadataText.join('\n');
-            
-            // Update animation classes if active
-            if (obj.classList.contains('active')) {
-                obj.classList.remove('circle-pulse', 'square-pulse');
-                obj.classList.add(`${newShape}-pulse`);
-            }
-            
-            addDebugEntry('shape-change', {
-                id: obj.dataset.id,
-                shape: newShape
-            });
-        }
-
-        function updatePulseRate(obj, delta) {
-            const currentRate = parseFloat(obj.dataset.pulseRate);
-            const newRate = Math.max(0.2, Math.min(5, currentRate + delta));
-            obj.dataset.pulseRate = `${newRate}s`;
-            obj.style.setProperty('--pulse-rate', `${newRate}s`);
-            
-            // Update metadata
-            const metadata = obj.querySelector('.metadata');
-            const metadataText = metadata.textContent.split('\n');
-            metadataText[3] = `Pulse Rate: ${newRate}s`;
-            metadata.textContent = metadataText.join('\n');
-            
-            addDebugEntry('pulse-rate-change', {
-                id: obj.dataset.id,
-                rate: newRate
-            });
-        }
-
-        function handleDoubleTap(obj) {
-            const currentTime = Date.now();
-            if (currentTime - lastTapTime < DOUBLE_TAP_THRESHOLD) {
-                togglePulseShape(obj);
-                lastTapTime = 0; // Reset to prevent triple-tap
-            } else {
-                lastTapTime = currentTime;
-            }
-        }
-
-        // Touch event handlers
-        document.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            for (const touch of e.changedTouches) {
-                const menu = document.getElementById('create-menu');
-                const menuRect = menu.getBoundingClientRect();
-                
-                if (!menuActive && 
-                    touch.clientX >= menuRect.left && 
-                    touch.clientX <= menuRect.right && 
-                    touch.clientY >= menuRect.top && 
-                    touch.clientY <= menuRect.bottom) {
-                    menuActive = true;
-                    menuInteractionId = touch.identifier;
-                    updateMenuPositions(touch, true);
-                    return;
-                }
-                
-                if (!activeDraggable) {
-                    const target = findDraggableTarget(touch);
-                    if (target) {
-                        activeDraggable = target;
-                        menuInteractionId = touch.identifier;
-                        dragStartTime = Date.now();
-                        target.classList.add('being-dragged');
-                        startHoldTimer(touch, target);
-                        holdStartPosition = { x: touch.pageX, y: touch.pageY };
-                    }
-                }
-            }
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            for (const touch of e.changedTouches) {
-                if (menuActive && touch.identifier === menuInteractionId) {
-                    updateMenuPositions(touch);
-                }
-                else if (activeDraggable && touch.identifier === menuInteractionId) {
-                    // Cancel hold timer if dragging
-                    const dx = touch.pageX - holdStartPosition.x;
-                    const dy = touch.pageY - holdStartPosition.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance > 10) { // Small threshold to prevent accidental cancellation
-                        cancelHoldTimer(touch.identifier);
-                    }
-                    
-                    if (!isHolding) {
-                        activeDraggable.style.left = `${touch.pageX}px`;
-                        activeDraggable.style.top = `${touch.pageY}px`;
-                    }
-                }
-            }
-        });
-
-        document.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            for (const touch of e.changedTouches) {
-                if (touch.identifier === menuInteractionId) {
-                    cancelHoldTimer(touch.identifier);
-                    
-                    if (menuActive) {
-                        if (selectedOption) {
-                            const emoji = selectedOption.dataset.emoji;
-                            createObject(emoji);
-                        }
-                        hideMenu();
-                    } else if (activeDraggable) {
-                        const dragDuration = Date.now() - dragStartTime;
-                        activeDraggable.classList.remove('being-dragged');
-                        
-                        if (!isHolding && dragDuration < DRAG_THRESHOLD) {
-                            toggleObjectState(activeDraggable);
-                        }
-                        
-                        activeDraggable = null;
-                        menuInteractionId = null;
-                    }
-                }
-            }
-        });
-
-        // Mouse event handlers
+        // Modify event handlers for new create menu behavior
         document.addEventListener('mousedown', (e) => {
             if (isTouchDevice) return;
 
-            const menu = document.getElementById('create-menu');
-            const menuRect = menu.getBoundingClientRect();
-            
-            if (!menuActive && 
-                e.clientX >= menuRect.left && 
-                e.clientX <= menuRect.right && 
-                e.clientY >= menuRect.top && 
-                e.clientY <= menuRect.bottom) {
-                menuActive = true;
-                menuInteractionId = 'mouse';
-                updateMenuPositions(e, true);
-                return;
-            }
-            
             if (!activeDraggable) {
                 const target = findDraggableTarget(e);
                 if (target) {
@@ -808,6 +650,10 @@ Rate: ${obj.dataset.pulseRate}</div>
                     target.classList.add('being-dragged');
                     startHoldTimer(e, target);
                     holdStartPosition = { x: e.pageX, y: e.pageY };
+                } else {
+                    // Start create menu timer
+                    createStartPosition = { x: e.pageX, y: e.pageY };
+                    startHoldTimer(e, { dataset: { type: 'create' } });
                 }
             }
         });
@@ -815,38 +661,35 @@ Rate: ${obj.dataset.pulseRate}</div>
         document.addEventListener('mousemove', (e) => {
             if (isTouchDevice) return;
 
-            if (menuActive) {
-                updateMenuPositions(e);
-            }
-            else if (activeDraggable) {
-                // Cancel hold timer if dragging
-                const dx = e.pageX - holdStartPosition.x;
-                const dy = e.pageY - holdStartPosition.y;
+            if (createStartPosition && !createMenuActive) {
+                const dx = e.pageX - createStartPosition.x;
+                const dy = e.pageY - createStartPosition.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance > 10) { // Small threshold to prevent accidental cancellation
+                if (distance > 10) {
                     cancelHoldTimer('mouse');
+                    createStartPosition = null;
                 }
-                
-                if (!isHolding) {
-                    activeDraggable.style.left = `${e.pageX}px`;
-                    activeDraggable.style.top = `${e.pageY}px`;
-                }
+            }
+            else if (activeDraggable && !isHolding) {
+                activeDraggable.style.left = `${e.pageX}px`;
+                activeDraggable.style.top = `${e.pageY}px`;
             }
         });
 
         document.addEventListener('mouseup', (e) => {
             if (isTouchDevice) return;
 
-            cancelHoldTimer('mouse');
-            
-            if (menuActive) {
-                if (selectedOption) {
-                    const emoji = selectedOption.dataset.emoji;
-                    createObject(emoji);
+            if (createMenuActive) {
+                const option = e.target.closest('.create-option');
+                if (option) {
+                    const emoji = option.dataset.emoji;
+                    createObjectAtPosition(emoji, e.pageX, e.pageY);
                 }
-                hideMenu();
-            } else if (activeDraggable) {
+                hideCreateMenu();
+                createStartPosition = null;
+            }
+            else if (activeDraggable) {
                 const dragDuration = Date.now() - dragStartTime;
                 activeDraggable.classList.remove('being-dragged');
                 
@@ -857,6 +700,79 @@ Rate: ${obj.dataset.pulseRate}</div>
                 activeDraggable = null;
                 menuInteractionId = null;
             }
+            
+            cancelHoldTimer('mouse');
+        });
+
+        // Modify hold timer for create menu
+        function startHoldTimer(point, target) {
+            const identifier = point.identifier ?? 'mouse';
+            cancelHoldTimer(identifier);
+            
+            const timer = setTimeout(() => {
+                isHolding = true;
+                if (target.dataset.type === 'create') {
+                    showCreateMenu(point.clientX, point.clientY);
+                } else {
+                    createContextMenu(target, point.clientX, point.clientY);
+                }
+            }, HOLD_THRESHOLD);
+            
+            holdTimers.set(identifier, timer);
+        }
+
+        // Add touch event handlers for create menu
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            
+            if (!activeDraggable) {
+                const target = findDraggableTarget(touch);
+                if (target) {
+                    activeDraggable = target;
+                    menuInteractionId = touch.identifier;
+                    dragStartTime = Date.now();
+                    target.classList.add('being-dragged');
+                    startHoldTimer(touch, target);
+                    holdStartPosition = { x: touch.pageX, y: touch.pageY };
+                } else {
+                    createStartPosition = { x: touch.pageX, y: touch.pageY };
+                    startHoldTimer(touch, { dataset: { type: 'create' } });
+                }
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            
+            if (createStartPosition && !createMenuActive) {
+                const dx = touch.pageX - createStartPosition.x;
+                const dy = touch.pageY - createStartPosition.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 10) {
+                    cancelHoldTimer(touch.identifier);
+                    createStartPosition = null;
+                }
+            }
+        });
+
+        document.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            
+            if (createMenuActive) {
+                const option = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (option && option.classList.contains('create-option')) {
+                    const emoji = option.dataset.emoji;
+                    createObjectAtPosition(emoji, touch.pageX, touch.pageY);
+                }
+                hideCreateMenu();
+                createStartPosition = null;
+            }
+            
+            cancelHoldTimer(touch.identifier);
         });
 
         // Add wheel event for pulse rate adjustment
@@ -893,9 +809,6 @@ Rate: ${obj.dataset.pulseRate}</div>
                 obj.style.top = `${Math.min(Math.max(y, 0), window.innerHeight)}px`;
             });
         });
-
-        // Create menu options
-        createMenuOptions();
 
         // Create initial objects
         createObject('🔵');
