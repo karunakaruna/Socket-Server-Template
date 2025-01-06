@@ -250,6 +250,71 @@
                 font-size: 12px;
             }
         }
+
+        /* Add styles for context menu */
+        .context-menu {
+            position: absolute;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 200px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .context-menu.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 4px 0;
+        }
+
+        .context-menu-item.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .pulse-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.5);
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .pulse-indicator.active {
+            animation: indicator-pulse 1s infinite;
+        }
+
+        @keyframes indicator-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -273,6 +338,7 @@
         let isTouchDevice = false;
         let holdStartPosition = null;
         let lastTapTime = 0;
+        let isHolding = false;
         const DOUBLE_TAP_THRESHOLD = 300; // ms
 
         // Detect touch capability
@@ -301,6 +367,8 @@
             obj.dataset.state = 'inactive';
             obj.dataset.pulseRate = '1s';
             obj.dataset.pulseShape = Math.random() < 0.5 ? 'circle' : 'square';
+            obj.dataset.primaryPulse = 'inactive';
+            obj.dataset.secondaryPulse = 'inactive';
             obj.style.setProperty('--pulse-rate', obj.dataset.pulseRate);
             obj.style.left = `${window.innerWidth / 2}px`;
             obj.style.top = `${window.innerHeight / 2}px`;
@@ -308,12 +376,163 @@
                 <div style="font-size: 48px; text-align: center; line-height: 120px;">${emoji}</div>
                 <div class="metadata">ID: ${obj.dataset.id}
 Type: ${emoji}
-State: ${obj.dataset.state}
-Pulse Rate: ${obj.dataset.pulseRate}
-Shape: ${obj.dataset.pulseShape}</div>
+Primary Pulse: ${obj.dataset.primaryPulse}
+Secondary Pulse: ${obj.dataset.secondaryPulse}
+Shape: ${obj.dataset.pulseShape}
+Rate: ${obj.dataset.pulseRate}</div>
             `;
             interactionArea.appendChild(obj);
             return obj;
+        }
+
+        function createContextMenu(obj, x, y) {
+            // Remove any existing context menu
+            const existingMenu = document.querySelector('.context-menu');
+            if (existingMenu) existingMenu.remove();
+
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.innerHTML = `
+                <div class="context-menu-item ${obj.dataset.primaryPulse === 'active' ? 'active' : ''}" data-action="toggle-primary">
+                    <span class="pulse-indicator ${obj.dataset.primaryPulse === 'active' ? 'active' : ''}"></span>
+                    Primary Pulse
+                </div>
+                <div class="context-menu-item ${obj.dataset.secondaryPulse === 'active' ? 'active' : ''}" data-action="toggle-secondary">
+                    <span class="pulse-indicator ${obj.dataset.secondaryPulse === 'active' ? 'active' : ''}"></span>
+                    Secondary Pulse
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="toggle-shape">
+                    <span>🔄</span> Toggle Shape (${obj.dataset.pulseShape})
+                </div>
+                <div class="context-menu-item" data-action="adjust-rate">
+                    <span>⚡</span> Pulse Rate: ${obj.dataset.pulseRate}
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="info">
+                    <span>ℹ️</span> Node Information
+                </div>
+            `;
+
+            // Position menu
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+
+            // Ensure menu stays within viewport
+            document.body.appendChild(menu);
+            const menuRect = menu.getBoundingClientRect();
+            if (menuRect.right > window.innerWidth) {
+                menu.style.left = `${x - menuRect.width}px`;
+            }
+            if (menuRect.bottom > window.innerHeight) {
+                menu.style.top = `${y - menuRect.height}px`;
+            }
+
+            // Add event listeners
+            menu.addEventListener('click', (e) => {
+                const item = e.target.closest('.context-menu-item');
+                if (!item) return;
+
+                const action = item.dataset.action;
+                switch (action) {
+                    case 'toggle-primary':
+                        togglePulse(obj, 'primary');
+                        break;
+                    case 'toggle-secondary':
+                        togglePulse(obj, 'secondary');
+                        break;
+                    case 'toggle-shape':
+                        togglePulseShape(obj);
+                        break;
+                    case 'adjust-rate':
+                        // Show rate adjustment UI
+                        break;
+                    case 'info':
+                        showNodeInfo(obj);
+                        break;
+                }
+                updateContextMenu(obj);
+            });
+
+            // Show menu with animation
+            requestAnimationFrame(() => menu.classList.add('active'));
+        }
+
+        function togglePulse(obj, pulseType) {
+            const pulseKey = `${pulseType}Pulse`;
+            const currentState = obj.dataset[pulseKey];
+            const newState = currentState === 'active' ? 'inactive' : 'active';
+            obj.dataset[pulseKey] = newState;
+
+            // Update metadata
+            const metadata = obj.querySelector('.metadata');
+            const metadataText = metadata.textContent.split('\n');
+            const index = pulseType === 'primary' ? 2 : 3;
+            metadataText[index] = `${pulseType.charAt(0).toUpperCase() + pulseType.slice(1)} Pulse: ${newState}`;
+            metadata.textContent = metadataText.join('\n');
+
+            // Update visual state
+            updatePulseVisuals(obj);
+
+            addDebugEntry('pulse-toggle', {
+                id: obj.dataset.id,
+                type: pulseType,
+                state: newState
+            });
+        }
+
+        function updatePulseVisuals(obj) {
+            // Remove all pulse classes
+            obj.classList.remove('circle-pulse', 'square-pulse');
+
+            // Add appropriate pulse class based on active pulses
+            if (obj.dataset.primaryPulse === 'active' || obj.dataset.secondaryPulse === 'active') {
+                obj.classList.add('active');
+                obj.classList.add(`${obj.dataset.pulseShape}-pulse`);
+            } else {
+                obj.classList.remove('active');
+            }
+        }
+
+        function showNodeInfo(obj) {
+            const info = {
+                id: obj.dataset.id,
+                type: obj.querySelector('.metadata').textContent.split('\n')[1].split(': ')[1],
+                primaryPulse: obj.dataset.primaryPulse,
+                secondaryPulse: obj.dataset.secondaryPulse,
+                shape: obj.dataset.pulseShape,
+                rate: obj.dataset.pulseRate,
+                position: {
+                    x: parseInt(obj.style.left),
+                    y: parseInt(obj.style.top)
+                }
+            };
+
+            addDebugEntry('node-info', info);
+        }
+
+        function updateContextMenu(obj) {
+            const menu = document.querySelector('.context-menu');
+            if (!menu) return;
+
+            // Update menu items to reflect current state
+            const primaryItem = menu.querySelector('[data-action="toggle-primary"]');
+            const secondaryItem = menu.querySelector('[data-action="toggle-secondary"]');
+
+            primaryItem.classList.toggle('active', obj.dataset.primaryPulse === 'active');
+            secondaryItem.classList.toggle('active', obj.dataset.secondaryPulse === 'active');
+
+            primaryItem.querySelector('.pulse-indicator').classList.toggle('active', obj.dataset.primaryPulse === 'active');
+            secondaryItem.querySelector('.pulse-indicator').classList.toggle('active', obj.dataset.secondaryPulse === 'active');
+        }
+
+        function cancelHoldTimer(identifier) {
+            const timer = holdTimers.get(identifier);
+            if (timer) {
+                clearTimeout(timer);
+                holdTimers.delete(identifier);
+            }
+            isHolding = false;
         }
 
         function startHoldTimer(point, target) {
@@ -321,27 +540,25 @@ Shape: ${obj.dataset.pulseShape}</div>
             cancelHoldTimer(identifier);
             
             const timer = setTimeout(() => {
-                const indicator = document.createElement('div');
-                indicator.className = 'hold-indicator';
-                indicator.style.left = `${point.clientX}px`;
-                indicator.style.top = `${point.clientY}px`;
-                document.body.appendChild(indicator);
-                
-                holdTimers.set(identifier, { timer: null, indicator });
-                addDebugEntry('hold', { id: identifier });
+                isHolding = true;
+                createContextMenu(target, point.clientX, point.clientY);
+                addDebugEntry('show-context-menu', { 
+                    id: target.dataset.id,
+                    x: Math.round(point.clientX),
+                    y: Math.round(point.clientY)
+                });
             }, HOLD_THRESHOLD);
             
-            holdTimers.set(identifier, { timer, indicator: null });
+            holdTimers.set(identifier, timer);
         }
 
-        function cancelHoldTimer(identifier) {
-            const hold = holdTimers.get(identifier);
-            if (hold) {
-                if (hold.timer) clearTimeout(hold.timer);
-                if (hold.indicator) hold.indicator.remove();
-                holdTimers.delete(identifier);
+        // Add document click handler to close context menu
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu') && !isHolding) {
+                const menu = document.querySelector('.context-menu');
+                if (menu) menu.remove();
             }
-        }
+        });
 
         function findDraggableTarget(point) {
             const elements = document.elementsFromPoint(point.clientX, point.clientY);
@@ -507,16 +724,7 @@ Shape: ${obj.dataset.pulseShape}</div>
                         dragStartTime = Date.now();
                         target.classList.add('being-dragged');
                         startHoldTimer(touch, target);
-                        
-                        // Start tracking hold for pulse rate adjustment
                         holdStartPosition = { x: touch.pageX, y: touch.pageY };
-                        
-                        addDebugEntry('interaction-start', {
-                            type: 'touch',
-                            id: touch.identifier,
-                            x: Math.round(touch.pageX),
-                            y: Math.round(touch.pageY)
-                        });
                     }
                 }
             }
@@ -529,27 +737,18 @@ Shape: ${obj.dataset.pulseShape}</div>
                     updateMenuPositions(touch);
                 }
                 else if (activeDraggable && touch.identifier === menuInteractionId) {
-                    cancelHoldTimer(touch.identifier);
-                    activeDraggable.style.left = `${touch.pageX}px`;
-                    activeDraggable.style.top = `${touch.pageY}px`;
+                    // Cancel hold timer if dragging
+                    const dx = touch.pageX - holdStartPosition.x;
+                    const dy = touch.pageY - holdStartPosition.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
                     
-                    addDebugEntry('interaction-move', {
-                        type: 'touch',
-                        id: touch.identifier,
-                        x: Math.round(touch.pageX),
-                        y: Math.round(touch.pageY)
-                    });
+                    if (distance > 10) { // Small threshold to prevent accidental cancellation
+                        cancelHoldTimer(touch.identifier);
+                    }
                     
-                    if (holdStartPosition) {
-                        const dx = touch.pageX - holdStartPosition.x;
-                        const dy = touch.pageY - holdStartPosition.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        if (distance > 20) {
-                            const angle = Math.atan2(dy, dx);
-                            const delta = Math.cos(angle) * 0.01;
-                            updatePulseRate(activeDraggable, delta);
-                            holdStartPosition = { x: touch.pageX, y: touch.pageY };
-                        }
+                    if (!isHolding) {
+                        activeDraggable.style.left = `${touch.pageX}px`;
+                        activeDraggable.style.top = `${touch.pageY}px`;
                     }
                 }
             }
@@ -559,6 +758,8 @@ Shape: ${obj.dataset.pulseShape}</div>
             e.preventDefault();
             for (const touch of e.changedTouches) {
                 if (touch.identifier === menuInteractionId) {
+                    cancelHoldTimer(touch.identifier);
+                    
                     if (menuActive) {
                         if (selectedOption) {
                             const emoji = selectedOption.dataset.emoji;
@@ -569,36 +770,10 @@ Shape: ${obj.dataset.pulseShape}</div>
                         const dragDuration = Date.now() - dragStartTime;
                         activeDraggable.classList.remove('being-dragged');
                         
-                        if (dragDuration < DRAG_THRESHOLD) {
-                            handleDoubleTap(activeDraggable);
-                            if (lastTapTime === 0) { // Not a double-tap
-                                toggleObjectState(activeDraggable);
-                            }
+                        if (!isHolding && dragDuration < DRAG_THRESHOLD) {
+                            toggleObjectState(activeDraggable);
                         }
                         
-                        activeDraggable = null;
-                        menuInteractionId = null;
-                    }
-                    
-                    addDebugEntry('interaction-end', {
-                        type: 'touch',
-                        id: touch.identifier,
-                        x: Math.round(touch.pageX),
-                        y: Math.round(touch.pageY)
-                    });
-                }
-            }
-        });
-
-        document.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
-            for (const touch of e.changedTouches) {
-                if (touch.identifier === menuInteractionId) {
-                    if (menuActive) {
-                        hideMenu();
-                    } else if (activeDraggable) {
-                        cancelHoldTimer(touch.identifier);
-                        activeDraggable.classList.remove('being-dragged');
                         activeDraggable = null;
                         menuInteractionId = null;
                     }
@@ -608,7 +783,7 @@ Shape: ${obj.dataset.pulseShape}</div>
 
         // Mouse event handlers
         document.addEventListener('mousedown', (e) => {
-            if (isTouchDevice) return; // Skip if touch device
+            if (isTouchDevice) return;
 
             const menu = document.getElementById('create-menu');
             const menuRect = menu.getBoundingClientRect();
@@ -632,53 +807,39 @@ Shape: ${obj.dataset.pulseShape}</div>
                     dragStartTime = Date.now();
                     target.classList.add('being-dragged');
                     startHoldTimer(e, target);
-                    
-                    // Start tracking hold for pulse rate adjustment
                     holdStartPosition = { x: e.pageX, y: e.pageY };
-                    
-                    addDebugEntry('interaction-start', {
-                        type: 'mouse',
-                        x: Math.round(e.pageX),
-                        y: Math.round(e.pageY)
-                    });
                 }
             }
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (isTouchDevice) return; // Skip if touch device
+            if (isTouchDevice) return;
 
             if (menuActive) {
                 updateMenuPositions(e);
             }
             else if (activeDraggable) {
-                cancelHoldTimer('mouse');
-                activeDraggable.style.left = `${e.pageX}px`;
-                activeDraggable.style.top = `${e.pageY}px`;
+                // Cancel hold timer if dragging
+                const dx = e.pageX - holdStartPosition.x;
+                const dy = e.pageY - holdStartPosition.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                addDebugEntry('interaction-move', {
-                    type: 'mouse',
-                    x: Math.round(e.pageX),
-                    y: Math.round(e.pageY)
-                });
+                if (distance > 10) { // Small threshold to prevent accidental cancellation
+                    cancelHoldTimer('mouse');
+                }
                 
-                if (holdStartPosition) {
-                    const dx = e.pageX - holdStartPosition.x;
-                    const dy = e.pageY - holdStartPosition.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance > 20) {
-                        const angle = Math.atan2(dy, dx);
-                        const delta = Math.cos(angle) * 0.01;
-                        updatePulseRate(activeDraggable, delta);
-                        holdStartPosition = { x: e.pageX, y: e.pageY };
-                    }
+                if (!isHolding) {
+                    activeDraggable.style.left = `${e.pageX}px`;
+                    activeDraggable.style.top = `${e.pageY}px`;
                 }
             }
         });
 
         document.addEventListener('mouseup', (e) => {
-            if (isTouchDevice) return; // Skip if touch device
+            if (isTouchDevice) return;
 
+            cancelHoldTimer('mouse');
+            
             if (menuActive) {
                 if (selectedOption) {
                     const emoji = selectedOption.dataset.emoji;
@@ -689,19 +850,12 @@ Shape: ${obj.dataset.pulseShape}</div>
                 const dragDuration = Date.now() - dragStartTime;
                 activeDraggable.classList.remove('being-dragged');
                 
-                if (dragDuration < DRAG_THRESHOLD) {
-                    // Toggle state on click
+                if (!isHolding && dragDuration < DRAG_THRESHOLD) {
                     toggleObjectState(activeDraggable);
                 }
                 
                 activeDraggable = null;
                 menuInteractionId = null;
-                
-                addDebugEntry('interaction-end', {
-                    type: 'mouse',
-                    x: Math.round(e.pageX),
-                    y: Math.round(e.pageY)
-                });
             }
         });
 
