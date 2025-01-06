@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid 5 - Ultra Slow</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: Arial, sans-serif; }
+        canvas { display: block; }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-group {
+            margin: 10px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .value-display {
+            float: right;
+            color: #888;
+            font-size: 0.8em;
+        }
+        
+        #presets {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .preset-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .preset-btn.active {
+            background: rgba(100, 200, 255, 0.3);
+        }
+        
+        #preset-name {
+            width: calc(100% - 16px);
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+        }
+
+        #save-preset {
+            margin-top: 10px;
+            padding: 8px;
+            width: 100%;
+            background: rgba(100, 255, 100, 0.2);
+            border: 1px solid rgba(100, 255, 100, 0.3);
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #save-preset:hover {
+            background: rgba(100, 255, 100, 0.3);
+        }
+        
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at 50% 50%, 
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: crosshair;
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+            pointer-events: all;
+        }
+
+        #navigator-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #navigator-grid::before,
+        #navigator-grid::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #navigator-grid::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        #navigator-grid::after {
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        #navigator-vector {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px cyan;
+        }
+
+        .target-point {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 100, 255, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.4; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+        }
+
+        .coordinate-label {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .label-w { top: 5px; left: 50%; transform: translateX(-50%); }
+        .label-x { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .label-y { left: 5px; top: 50%; transform: translateY(-50%); }
+        .label-z { right: 5px; top: 50%; transform: translateY(-50%); }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    
+    <div id="presets">
+        <h3>✨ Ultra Slow Presets</h3>
+        <div id="preset-container"></div>
+    </div>
+    
+    <div id="controls">
+        <h3>🌌 HyperCore Controls</h3>
+        
+        <div class="control-group">
+            <label for="grid-density">Grid Density <span class="value-display">20</span></label>
+            <input type="range" id="grid-density" min="5" max="100" step="1" value="20">
+        </div>
+        <div class="control-group">
+            <label for="evolution-speed">Evolution Speed <span class="value-display">0.0001</span></label>
+            <input type="range" id="evolution-speed" min="0" max="0.002" step="0.00001" value="0.0001">
+        </div>
+        <div class="control-group">
+            <label for="volume-scale">Volume Scale <span class="value-display">1.2</span></label>
+            <input type="range" id="volume-scale" min="0.1" max="5" step="0.1" value="1.2">
+        </div>
+        <div class="rotation-controls">
+            <h4>4D Rotations</h4>
+            <div class="control-group">
+                <label for="rotation-speed">Hyperslow Rotation <span class="value-display">0</span></label>
+                <input type="range" id="rotation-speed" min="0" max="0.002" step="0.00001" value="0">
+            </div>
+            <div class="control-group">
+                <label for="rotation-scale">Motion Scale <span class="value-display">1</span></label>
+                <input type="range" id="rotation-scale" min="0" max="5" step="0.001" value="1">
+            </div>
+            <div class="control-group">
+                <label for="wx-rotation">WX Rotation <span class="value-display">0</span></label>
+                <input type="range" id="wx-rotation" min="0" max="6.28" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label for="wy-rotation">WY Rotation <span class="value-display">0</span></label>
+                <input type="range" id="wy-rotation" min="0" max="6.28" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label for="wz-rotation">WZ Rotation <span class="value-display">0</span></label>
+                <input type="range" id="wz-rotation" min="0" max="6.28" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label for="xy-rotation">XY Rotation <span class="value-display">0</span></label>
+                <input type="range" id="xy-rotation" min="0" max="6.28" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label for="xz-rotation">XZ Rotation <span class="value-display">0</span></label>
+                <input type="range" id="xz-rotation" min="0" max="6.28" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label for="yz-rotation">YZ Rotation <span class="value-display">0</span></label>
+                <input type="range" id="yz-rotation" min="0" max="6.28" step="0.01" value="0">
+            </div>
+        </div>
+        <div class="control-group">
+            <label for="point-size">Point Size <span class="value-display">2</span></label>
+            <input type="range" id="point-size" min="0.1" max="10" step="0.1" value="2">
+        </div>
+        <div class="control-group">
+            <label for="camera-distance">Camera Distance <span class="value-display">2.8</span></label>
+            <input type="range" id="camera-distance" min="0.5" max="5" step="0.1" value="2.8">
+        </div>
+        <div class="control-group">
+            <label for="trace-depth">Trace Depth <span class="value-display">0.9</span></label>
+            <input type="range" id="trace-depth" min="0" max="0.95" step="0.01" value="0.9">
+        </div>
+        <div class="control-group">
+            <label for="point-brightness">Point Brightness <span class="value-display">1.4</span></label>
+            <input type="range" id="point-brightness" min="0.1" max="2" step="0.1" value="1.4">
+        </div>
+        <div class="control-group">
+            <label for="preset-name">Save Preset:</label>
+            <input type="text" id="preset-name" placeholder="Enter preset name">
+            <button id="save-preset">Save</button>
+        </div>
+    </div>
+    
+    <div id="quantum-navigator">
+        <div id="navigator-grid"></div>
+        <div id="navigator-vector"></div>
+        <div class="coordinate-label label-w">W</div>
+        <div class="coordinate-label label-x">X</div>
+        <div class="coordinate-label label-y">Y</div>
+        <div class="coordinate-label label-z">Z</div>
+    </div>
+
+    <script>
+        // Load presets from JSON file
+        let defaultPresets = {};
+        
+        async function loadPresets() {
+            try {
+                const response = await fetch('starseed/presets.json');
+                defaultPresets = await response.json();
+                updatePresetList();
+                // Load Starseed HD by default
+                loadPreset("✨ Starseed HD");
+            } catch (error) {
+                console.error('Error loading presets:', error);
+            }
+        }
+
+        // Update preset list in UI
+        function updatePresetList() {
+            const presetContainer = document.getElementById('preset-container');
+            presetContainer.innerHTML = '';
+            
+            Object.keys(defaultPresets).forEach(presetName => {
+                const btn = document.createElement('button');
+                btn.className = 'preset-btn';
+                btn.textContent = presetName;
+                btn.onclick = () => loadPreset(presetName);
+                presetContainer.appendChild(btn);
+            });
+        }
+
+        // Save new preset to JSON
+        async function savePresetToJson(name, settings) {
+            defaultPresets[name] = settings;
+            
+            try {
+                const response = await fetch('starseed/presets.json', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(defaultPresets, null, 4)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to save preset');
+                }
+                
+                updatePresetList();
+            } catch (error) {
+                console.error('Error saving preset:', error);
+                alert('Failed to save preset. Changes will be temporary.');
+            }
+        }
+
+        // Modified save preset button handler
+        const savePresetBtn = document.getElementById('save-preset');
+        const presetNameInput = document.getElementById('preset-name');
+        
+        savePresetBtn.addEventListener('click', () => {
+            const name = presetNameInput.value.trim();
+            if (!name) {
+                alert('Please enter a preset name');
+                return;
+            }
+            
+            const settings = getCurrentSettings();
+            savePresetToJson(name, settings);
+            
+            // Clear input
+            presetNameInput.value = '';
+        });
+
+        // Load presets when page loads
+        loadPresets();
+
+        // Preset Management
+        function getCurrentSettings() {
+            return {
+                gridDensity: parseInt(document.getElementById('grid-density').value),
+                volumeScale: parseFloat(document.getElementById('volume-scale').value),
+                wxRotation: parseFloat(document.getElementById('wx-rotation').value),
+                wyRotation: parseFloat(document.getElementById('wy-rotation').value),
+                wzRotation: parseFloat(document.getElementById('wz-rotation').value),
+                xyRotation: parseFloat(document.getElementById('xy-rotation').value),
+                xzRotation: parseFloat(document.getElementById('xz-rotation').value),
+                yzRotation: parseFloat(document.getElementById('yz-rotation').value),
+                pointSize: parseFloat(document.getElementById('point-size').value),
+                cameraDistance: parseFloat(document.getElementById('camera-distance').value),
+                traceDepth: parseFloat(document.getElementById('trace-depth').value),
+                pointBrightness: parseFloat(document.getElementById('point-brightness').value),
+                rotationSpeed: parseFloat(document.getElementById('rotation-speed').value),
+                rotationScale: parseFloat(document.getElementById('rotation-scale').value)
+            };
+        }
+
+        function loadPreset(name) {
+            const preset = defaultPresets[name];
+            if (!preset) return;
+            
+            Object.entries(preset).forEach(([key, value]) => {
+                const element = document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase());
+                if (element) {
+                    element.value = value;
+                    const display = element.previousElementSibling.querySelector('.value-display');
+                    if (display) {
+                        display.textContent = value;
+                    }
+                }
+            });
+            
+            // Update buttons
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === name);
+            });
+        }
+
+        // Initialize rotation animation state
+        let rotationState = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0,
+            time: 0,
+            lastTime: performance.now()
+        };
+
+        // Base frequencies for ultra-slow natural motion
+        const baseFreqs = {
+            wx: 0.02, wy: 0.025, wz: 0.03,
+            xy: 0.015, xz: 0.035, yz: 0.022
+        };
+
+        function getProjectionMatrix() {
+            const aspect = canvas.width / canvas.height;
+            const fov = Math.PI / 4;
+            const near = 0.1;
+            const far = 100.0;
+            
+            const f = 1.0 / Math.tan(fov / 2);
+            const rangeInv = 1 / (near - far);
+            
+            return [
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (near + far) * rangeInv, -1,
+                0, 0, near * far * rangeInv * 2, 0
+            ];
+        }
+
+        function updateRotations(currentTime) {
+            const deltaTime = (currentTime - rotationState.lastTime) / 1000;
+            rotationState.lastTime = currentTime;
+            rotationState.time += deltaTime;
+            
+            const speed = parseFloat(document.getElementById('rotation-speed').value);
+            const scale = parseFloat(document.getElementById('rotation-scale').value);
+            
+            // Update each rotation angle
+            rotationState.wx += speed * baseFreqs.wx * scale;
+            rotationState.wy += speed * baseFreqs.wy * scale;
+            rotationState.wz += speed * baseFreqs.wz * scale;
+            rotationState.xy += speed * baseFreqs.xy * scale;
+            rotationState.xz += speed * baseFreqs.xz * scale;
+            rotationState.yz += speed * baseFreqs.yz * scale;
+            
+            // Update slider values to match current state
+            document.getElementById('wx-rotation').value = rotationState.wx.toFixed(2);
+            document.getElementById('wy-rotation').value = rotationState.wy.toFixed(2);
+            document.getElementById('wz-rotation').value = rotationState.wz.toFixed(2);
+            document.getElementById('xy-rotation').value = rotationState.xy.toFixed(2);
+            document.getElementById('xz-rotation').value = rotationState.xz.toFixed(2);
+            document.getElementById('yz-rotation').value = rotationState.yz.toFixed(2);
+            
+            // Update displays
+            document.querySelectorAll('input[type="range"]').forEach(input => {
+                const display = input.previousElementSibling.querySelector('.value-display');
+                if (display) {
+                    display.textContent = input.value;
+                }
+            });
+            
+            // Get rotation matrix
+            const rotationMatrix = get4DRotationMatrix(
+                rotationState.wx, rotationState.wy, rotationState.wz,
+                rotationState.xy, rotationState.xz, rotationState.yz
+            );
+            
+            // Update uniforms
+            gl.uniformMatrix4fv(projectionLocation, false, getProjectionMatrix());
+            gl.uniformMatrix4fv(rotation4dLocation, false, rotationMatrix);
+            gl.uniform1f(cameraDistanceLocation, parseFloat(document.getElementById('camera-distance').value));
+            gl.uniform1f(traceDepthLocation, parseFloat(document.getElementById('trace-depth').value));
+            gl.uniform1f(brightnessLocation, parseFloat(document.getElementById('point-brightness').value));
+            
+            // Update point attributes
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+        }
+
+        function get4DRotationMatrix(wx, wy, wz, xy, xz, yz) {
+            // Create rotation matrices for each plane
+            function rotationMatrix(angle, plane) {
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                const m = new Array(16).fill(0);
+                
+                // Initialize as identity matrix
+                m[0] = m[5] = m[10] = m[15] = 1;
+                
+                // Set rotation components
+                switch(plane) {
+                    case 'wx':
+                        m[0] = c; m[3] = -s;
+                        m[12] = s; m[15] = c;
+                        break;
+                    case 'wy':
+                        m[5] = c; m[7] = -s;
+                        m[13] = s; m[15] = c;
+                        break;
+                    case 'wz':
+                        m[10] = c; m[11] = -s;
+                        m[14] = s; m[15] = c;
+                        break;
+                    case 'xy':
+                        m[0] = c; m[1] = -s;
+                        m[4] = s; m[5] = c;
+                        break;
+                    case 'xz':
+                        m[0] = c; m[2] = -s;
+                        m[8] = s; m[10] = c;
+                        break;
+                    case 'yz':
+                        m[5] = c; m[6] = -s;
+                        m[9] = s; m[10] = c;
+                        break;
+                }
+                return m;
+            }
+            
+            // Multiply matrices
+            function multiplyMatrices(a, b) {
+                const result = new Array(16).fill(0);
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        for (let k = 0; k < 4; k++) {
+                            result[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                        }
+                    }
+                }
+                return result;
+            }
+            
+            // Combine all rotations
+            let matrix = rotationMatrix(wx, 'wx');
+            matrix = multiplyMatrices(matrix, rotationMatrix(wy, 'wy'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(wz, 'wz'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(xy, 'xy'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(xz, 'xz'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(yz, 'yz'));
+            
+            return matrix;
+        }
+
+        // Initialize WebGL
+        const canvas = document.getElementById("glCanvas");
+        const gl = canvas.getContext("webgl");
+
+        if (!gl) {
+            alert("WebGL not supported");
+            throw new Error("WebGL not supported");
+        }
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        // Clear to black and enable blending
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        // Create shaders
+        const vertexShaderSource = `
+            attribute vec4 position;
+            attribute float pointSize;
+            attribute vec4 color;
+            uniform mat4 projection;
+            uniform mat4 rotation4d;
+            uniform float cameraDistance;
+            uniform float brightness;
+            varying vec4 vColor;
+            varying float vDepth;
+            
+            void main() {
+                // Apply 4D rotation
+                vec4 rotated = rotation4d * position;
+                float w = rotated.w;
+                
+                // Project to 3D with perspective division
+                vec3 pos = rotated.xyz / (cameraDistance * (w + 2.0));
+                
+                // Final position
+                gl_Position = projection * vec4(pos, 1.0);
+                
+                // Point size varies with w-coordinate and depth
+                float depthScale = 1.0 - gl_Position.z * 0.1;
+                gl_PointSize = pointSize * (2.0 / (w + 2.0)) * depthScale;
+                
+                // Pass color and depth to fragment shader
+                vColor = color * brightness;
+                vDepth = gl_Position.z;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec4 vColor;
+            varying float vDepth;
+            uniform float traceDepth;
+            
+            void main() {
+                // Calculate distance from center of point
+                vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+                float r = dot(cxy, cxy);
+                
+                // Improved point rendering with softer edges
+                float alpha = max(0.0, 1.0 - r * 1.1);  // Slightly larger points
+                alpha = pow(alpha, 1.5);  // Adjusted power for better point shape
+                
+                // Enhanced brightness in the center
+                float centerBoost = 1.0 + (1.0 - r) * 0.5;
+                
+                gl_FragColor = vec4(vColor.rgb * centerBoost, vColor.a * alpha);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error("Shader compile failed:", gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error("Program link failed:", gl.getProgramInfoLog(program));
+        }
+
+        gl.useProgram(program);
+
+        // Generate 4D grid points
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            
+            const volumeScale = parseFloat(document.getElementById('volume-scale').value);
+            const step = 2.0 / size;
+            
+            // Expanded volume
+            for (let w = -volumeScale; w <= volumeScale; w += step * volumeScale) {
+                for (let x = -volumeScale; x <= volumeScale; x += step * volumeScale) {
+                    for (let y = -volumeScale; y <= volumeScale; y += step * volumeScale) {
+                        for (let z = -volumeScale; z <= volumeScale; z += step * volumeScale) {
+                            points.push(x, y, z, w);
+                            
+                            // Enhanced color variation with volume scale
+                            const r = 0.5 + (x/volumeScale + w/volumeScale) / 4;
+                            const g = 0.5 + (y/volumeScale + w/volumeScale) / 4;
+                            const b = 0.5 + (z/volumeScale + w/volumeScale) / 4;
+                            colors.push(r, g, b, 1.0);
+                            
+                            sizes.push(2.0);
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        }
+
+        // Get attribute and uniform locations
+        const positionLocation = gl.getAttribLocation(program, "position");
+        const colorLocation = gl.getAttribLocation(program, "color");
+        const sizeLocation = gl.getAttribLocation(program, "pointSize");
+
+        const projectionLocation = gl.getUniformLocation(program, "projection");
+        const rotation4dLocation = gl.getUniformLocation(program, "rotation4d");
+        const cameraDistanceLocation = gl.getUniformLocation(program, "cameraDistance");
+        const traceDepthLocation = gl.getUniformLocation(program, "traceDepth");
+        const brightnessLocation = gl.getUniformLocation(program, "brightness");
+
+        // Enable attributes
+        gl.enableVertexAttribArray(positionLocation);
+        gl.enableVertexAttribArray(colorLocation);
+        gl.enableVertexAttribArray(sizeLocation);
+
+        // Generate points
+        let currentGridSize = parseInt(document.getElementById('grid-density').value);
+        let currentVolumeScale = parseFloat(document.getElementById('volume-scale').value);
+        let { points, colors, sizes } = generatePoints(currentGridSize);
+
+        // Set up buffers
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+        // Set initial attribute pointers
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+        // UI Controls
+        const gridDensityControl = document.getElementById('grid-density');
+        const volumeScaleControl = document.getElementById('volume-scale');
+        const wxRotationControl = document.getElementById('wx-rotation');
+        const wyRotationControl = document.getElementById('wy-rotation');
+        const wzRotationControl = document.getElementById('wz-rotation');
+        const xyRotationControl = document.getElementById('xy-rotation');
+        const xzRotationControl = document.getElementById('xz-rotation');
+        const yzRotationControl = document.getElementById('yz-rotation');
+        const pointSizeControl = document.getElementById('point-size');
+        const cameraDistanceControl = document.getElementById('camera-distance');
+        const traceDepthControl = document.getElementById('trace-depth');
+        const pointBrightnessControl = document.getElementById('point-brightness');
+        const rotationSpeedControl = document.getElementById('rotation-speed');
+        const rotationScaleControl = document.getElementById('rotation-scale');
+        const evolutionSpeedControl = document.getElementById('evolution-speed');
+
+        // Function to update uniform values
+        function updateUniforms() {
+            gl.uniform1f(cameraDistanceLocation, parseFloat(cameraDistanceControl.value));
+            gl.uniform1f(traceDepthLocation, parseFloat(traceDepthControl.value));
+            gl.uniform1f(brightnessLocation, parseFloat(pointBrightnessControl.value));
+        }
+
+        // Add event listeners for controls
+        gridDensityControl.addEventListener('input', () => {
+            const size = parseInt(gridDensityControl.value);
+            const scale = parseFloat(volumeScaleControl.value);
+            let { points: newPoints, colors: newColors, sizes: newSizes } = generatePoints(size);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newPoints), gl.STATIC_DRAW);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newColors), gl.STATIC_DRAW);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newSizes), gl.STATIC_DRAW);
+            
+            points = newPoints;
+            colors = newColors;
+            sizes = newSizes;
+            
+            updateUniforms();
+        });
+
+        // Add event listeners for direct uniform controls
+        [pointSizeControl, cameraDistanceControl, traceDepthControl, pointBrightnessControl].forEach(control => {
+            control.addEventListener('input', updateUniforms);
+        });
+
+        // Initialize displays with proper precision
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            const display = input.previousElementSibling.querySelector('.value-display');
+            if (display) {
+                const value = parseFloat(input.value);
+                const precision = value < 0.0001 ? 6 : value < 0.001 ? 5 : value < 0.01 ? 4 : value < 0.1 ? 3 : 2;
+                display.textContent = value.toFixed(precision);
+            }
+            
+            input.addEventListener('input', () => {
+                const display = input.previousElementSibling.querySelector('.value-display');
+                if (display) {
+                    const value = parseFloat(input.value);
+                    const precision = value < 0.0001 ? 6 : value < 0.001 ? 5 : value < 0.01 ? 4 : value < 0.1 ? 3 : 2;
+                    display.textContent = value.toFixed(precision);
+                }
+            });
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        });
+
+        // Quantum Navigator State
+        let navigatorState = {
+            currentVector: { x: 50, y: 50 }, // Center
+            targetVector: null,
+            transitionSpeed: 0.1,
+            lastUpdate: performance.now()
+        };
+
+        function initQuantumNavigator() {
+            const navigator = document.getElementById('quantum-navigator');
+            const vector = document.getElementById('navigator-vector');
+
+            // Set initial position
+            updateVectorPosition(vector, navigatorState.currentVector);
+
+            navigator.addEventListener('click', (e) => {
+                const rect = navigator.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Create new target point
+                navigatorState.targetVector = { x, y };
+                
+                // Create visual target indicator
+                const target = document.createElement('div');
+                target.className = 'target-point';
+                target.style.left = x + 'px';
+                target.style.top = y + 'px';
+                navigator.appendChild(target);
+                
+                // Remove old target after animation
+                setTimeout(() => target.remove(), 2000);
+
+                // Update rotation speeds based on vector
+                updateRotationVector(x, y);
+            });
+        }
+
+        function updateVectorPosition(vector, pos) {
+            vector.style.left = pos.x + 'px';
+            vector.style.top = pos.y + 'px';
+        }
+
+        function updateRotationVector(x, y) {
+            // Convert click position to normalized coordinates (-1 to 1)
+            const size = 200; // Navigator size
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const dx = (x - centerX) / (size / 2); // -1 to 1
+            const dy = (y - centerY) / (size / 2); // -1 to 1
+            
+            // Calculate polar coordinates
+            const radius = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            // Map coordinates to 4D rotation space
+            // W-X plane (horizontal axis)
+            baseFreqs.wx = 0.02 * dx;
+            
+            // W-Y plane (vertical axis)
+            baseFreqs.wy = 0.02 * dy;
+            
+            // W-Z plane (radial distance)
+            baseFreqs.wz = 0.02 * radius;
+            
+            // X-Y plane (rotation around center)
+            baseFreqs.xy = 0.015 * Math.sin(angle);
+            
+            // X-Z and Y-Z planes (complex motion)
+            baseFreqs.xz = 0.015 * (dx * Math.cos(angle));
+            baseFreqs.yz = 0.015 * (dy * Math.sin(angle));
+
+            // Scale all frequencies by radius for more dramatic effect at edges
+            if (radius > 0.8) {
+                Object.keys(baseFreqs).forEach(key => {
+                    baseFreqs[key] *= (1 + (radius - 0.8) * 2);
+                });
+            }
+        }
+
+        function updateNavigator(currentTime) {
+            if (!navigatorState.targetVector) return;
+
+            const deltaTime = (currentTime - navigatorState.lastUpdate) / 1000;
+            navigatorState.lastUpdate = currentTime;
+
+            // Move current vector towards target
+            const dx = navigatorState.targetVector.x - navigatorState.currentVector.x;
+            const dy = navigatorState.targetVector.y - navigatorState.currentVector.y;
+            
+            navigatorState.currentVector.x += dx * navigatorState.transitionSpeed;
+            navigatorState.currentVector.y += dy * navigatorState.transitionSpeed;
+
+            // Update visual position
+            updateVectorPosition(
+                document.getElementById('navigator-vector'),
+                navigatorState.currentVector
+            );
+
+            // Clear target if we're close enough
+            if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+                navigatorState.targetVector = null;
+            }
+        }
+
+        // Start rendering
+        function render(currentTime) {
+            updateRotations(currentTime);
+            updateNavigator(currentTime);
+            
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+            
+            rotationState.lastTime = currentTime;
+            requestAnimationFrame(render);
+        }
+
+        // Initialize quantum navigator
+        initQuantumNavigator();
+
+        // Start the animation
+        render();
+    </script>
+</body>
+</html>

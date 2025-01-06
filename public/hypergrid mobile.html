@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid Mobile</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            border-radius: 50%;
+            cursor: crosshair;
+            background: radial-gradient(circle at 50% 50%,
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        #navigator-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #navigator-grid::before,
+        #navigator-grid::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #navigator-grid::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        #navigator-grid::after {
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        #navigator-vector {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px cyan;
+        }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            pointer-events: none;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .quantum-coordinate {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .coordinate-label {
+            width: 120px;
+            opacity: 0.7;
+        }
+
+        .coordinate-value {
+            font-family: 'Consolas', monospace;
+            color: #0ff;
+        }
+
+        .manifold-info {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .quantum-bar {
+            width: 100px;
+            height: 4px;
+            background: rgba(0, 255, 255, 0.2);
+            margin-left: 10px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .quantum-bar-fill {
+            height: 100%;
+            background: rgba(0, 255, 255, 0.8);
+            transition: width 0.3s ease;
+        }
+
+        .entropy-high {
+            color: #ff5555;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .entropy-medium {
+            color: #ffff55;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+        }
+
+        .entropy-low {
+            color: #55ff55;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        #quantum-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1001;
+        }
+
+        .quantum-btn {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: rgba(0, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantum-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .quantum-btn:active {
+            transform: scale(0.95);
+        }
+
+        .quantum-btn i {
+            font-size: 18px;
+        }
+
+        #collected-points {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            max-height: 60vh;
+            overflow-y: auto;
+            color: rgba(0, 255, 255, 0.8);
+            font-family: 'Courier New', monospace;
+            display: none;
+        }
+
+        .collected-point {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .collected-point:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+
+        .point-timestamp {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        #save-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1001;
+        }
+
+        #save-dialog input {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: rgba(0, 255, 255, 0.8);
+            padding: 8px;
+            border-radius: 8px;
+            width: 200px;
+            margin-bottom: 10px;
+        }
+
+        .save-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        @keyframes collect-flash {
+            0% { background: rgba(0, 255, 255, 0.5); }
+            100% { background: rgba(0, 255, 255, 0.1); }
+        }
+
+        .collecting {
+            animation: collect-flash 0.5s ease;
+        }
+
+        #quantum-status {
+            position: fixed;
+            left: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: rgba(0, 255, 255, 0.8);
+            font-family: 'Courier New', monospace;
+        }
+        .status-item {
+            margin: 5px 0;
+        }
+        #entangled-status.active {
+            color: #ff00ff;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+        .quantum-btn i {
+            font-size: 1.2em;
+            margin-right: 5px;
+        }
+        #transmit-btn.active {
+            animation: transmit-pulse 1s infinite;
+        }
+        @keyframes transmit-pulse {
+            0% { background: rgba(0, 255, 255, 0.1); }
+            50% { background: rgba(0, 255, 255, 0.3); }
+            100% { background: rgba(0, 255, 255, 0.1); }
+        }
+        
+        .quantum-ripple {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 0, 255, 0.5);
+            border-radius: 50%;
+            animation: ripple 1s ease-out;
+            pointer-events: none;
+        }
+        
+        @keyframes ripple {
+            0% { 
+                width: 10px;
+                height: 10px;
+                opacity: 1;
+            }
+            100% { 
+                width: 300px;
+                height: 300px;
+                opacity: 0;
+            }
+        }
+        
+        #quantum-status.entangled {
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+            animation: quantum-pulse 2s infinite;
+        }
+        
+        @keyframes quantum-pulse {
+            0% { border-color: rgba(0, 255, 255, 0.2); }
+            50% { border-color: rgba(255, 0, 255, 0.4); }
+            100% { border-color: rgba(0, 255, 255, 0.2); }
+        }
+        
+        .quantum-btn.active {
+            background: rgba(255, 0, 255, 0.3);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+        
+        #transmit-btn.active {
+            animation: transmit-pulse 0.5s infinite;
+        }
+        
+        @keyframes transmit-pulse {
+            0% { background: rgba(0, 255, 255, 0.1); }
+            50% { background: rgba(255, 0, 255, 0.3); }
+            100% { background: rgba(0, 255, 255, 0.1); }
+        }
+        
+        #quantum-network {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: rgba(0, 255, 255, 0.8);
+            font-family: 'Courier New', monospace;
+            min-width: 200px;
+        }
+        
+        #network-status {
+            float: right;
+            color: rgba(255, 100, 100, 0.8);
+        }
+        
+        #network-status.connected {
+            color: rgba(100, 255, 100, 0.8);
+        }
+        
+        .peer-item {
+            margin: 10px 0;
+            padding: 5px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .entangle-peer-btn {
+            background: rgba(255, 0, 255, 0.2);
+            border: 1px solid rgba(255, 0, 255, 0.4);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .entangle-peer-btn:hover {
+            background: rgba(255, 0, 255, 0.4);
+        }
+        
+        .entangled-peer {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .quantum-state-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+        
+        .entanglement-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, 
+                rgba(255, 0, 255, 0.2) 0%,
+                transparent 70%);
+            pointer-events: none;
+            animation: entanglement-pulse 2s ease-out;
+        }
+        
+        @keyframes entanglement-pulse {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        #connection-key-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
+            color: #0ff;
+            font-family: monospace;
+            min-width: 300px;
+        }
+
+        #connection-key-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            padding: 12px;
+            margin: 15px 0;
+            font-family: monospace;
+            text-align: center;
+            width: 200px;
+            font-size: 24px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        #connection-key-error {
+            color: #ff4444;
+            margin-top: 10px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        #connect-button {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            padding: 12px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        #connect-button:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            font-family: monospace;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        
+        .peer-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .peer-id {
+            font-family: monospace;
+            color: #0ff;
+        }
+
+        .quantum-btn {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quantum-btn:hover:not([disabled]) {
+            background: rgba(0, 255, 255, 0.3);
+        }
+
+        .quantum-btn.entangled {
+            background: rgba(128, 0, 255, 0.3);
+            border-color: rgba(128, 0, 255, 0.5);
+            color: #f0f;
+        }
+
+        .quantum-btn[disabled] {
+            cursor: default;
+            opacity: 0.5;
+        }
+
+        .entangled-peer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(128, 0, 255, 0.3);
+        }
+
+        .quantum-state-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .soul-connected {
+            border-color: rgba(255, 192, 203, 0.5);
+            background: rgba(255, 192, 203, 0.1);
+            box-shadow: 0 0 20px rgba(255, 192, 203, 0.2);
+        }
+
+        .soul-btn {
+            background: rgba(255, 192, 203, 0.2);
+            border: 1px solid rgba(255, 192, 203, 0.3);
+            color: pink;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .soul-btn:hover:not([disabled]) {
+            background: rgba(255, 192, 203, 0.3);
+            box-shadow: 0 0 10px rgba(255, 192, 203, 0.3);
+        }
+
+        .soul-resonance {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at 50% 50%,
+                rgba(255, 192, 203, 0),
+                rgba(255, 192, 203, 0.1)
+            );
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .soul-resonance.active {
+            opacity: 1;
+            animation: soulPulse 2s infinite;
+        }
+
+        @keyframes soulPulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+        
+        #enter-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 30px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
+            color: #0ff;
+            font-family: monospace;
+        }
+
+        #enter-button {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            padding: 15px 40px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+
+        #enter-button:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="quantum-navigator">
+        <div id="navigator-grid"></div>
+        <div id="navigator-vector"></div>
+    </div>
+    <div id="quantum-hud">
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">ψ-Position:</span>
+            <span class="coordinate-value" id="psi-pos">0.000 ∠ 0.000</span>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">φ-Phase:</span>
+            <span class="coordinate-value" id="phi-phase">0.000π rad</span>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">∇-Gradient:</span>
+            <span class="coordinate-value" id="gradient">
+                <span class="quantum-bar">
+                    <span class="quantum-bar-fill" id="gradient-bar"></span>
+                </span>
+            </span>
+        </div>
+        <div class="manifold-info">
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Manifold Depth:</span>
+                <span class="coordinate-value" id="manifold-depth">λ=1.000</span>
+            </div>
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Curvature:</span>
+                <span class="coordinate-value" id="curvature">κ=1.000</span>
+            </div>
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Q-Entropy:</span>
+                <span class="coordinate-value" id="q-entropy">0.000 qbits</span>
+            </div>
+        </div>
+    </div>
+    <div id="quantum-controls">
+        <button class="quantum-btn" id="home-btn">
+            <i>⌂</i> Return Home
+        </button>
+        <button class="quantum-btn" id="entangle-btn">
+            <i>∞</i> Entangle
+        </button>
+        <button class="quantum-btn" id="transmit-btn">
+            <i>↯</i> Transmit
+        </button>
+        <button class="quantum-btn" id="collect-btn">
+            <i>⊕</i> Collect
+        </button>
+        <button class="quantum-btn" id="points-btn">
+            <i>≡</i> Points
+        </button>
+    </div>
+    <div id="quantum-status">
+        <div class="status-item">Phase: <span id="phase-value">0</span>π</div>
+        <div class="status-item">Spin: <span id="spin-value">↑</span></div>
+        <div class="status-item">Entangled: <span id="entangled-status">No</span></div>
+    </div>
+    <div id="collected-points">
+        <h3>✧ Quantum Points</h3>
+        <div id="points-list"></div>
+    </div>
+    <div id="save-dialog">
+        <h3>Save Quantum Point</h3>
+        <input type="text" id="point-name" placeholder="Enter point name...">
+        <div class="save-actions">
+            <button class="quantum-btn" id="save-cancel">Cancel</button>
+            <button class="quantum-btn" id="save-confirm">Save</button>
+        </div>
+    </div>
+    <div id="quantum-network">
+        <div id="network-header">
+            <span>Quantum Network</span>
+            <span id="network-status">Connecting...</span>
+        </div>
+        <div id="peer-list"></div>
+        <div id="entangled-peers"></div>
+    </div>
+    <div id="enter-modal">
+        <button id="enter-button">Enter World Tree</button>
+    </div>
+    <div id="soul-resonance" class="soul-resonance"></div>
+    
+    <script>
+        // Initialize WebGL
+        const canvas = document.createElement('canvas');
+        document.body.appendChild(canvas);
+        const gl = canvas.getContext('webgl', {
+            antialias: true,
+            alpha: true
+        });
+
+        if (!gl) {
+            alert("Unable to initialize WebGL. Your browser may not support it.");
+        }
+
+        // Make sure we're using the full window
+        function resizeCanvas() {
+            const pixelRatio = window.devicePixelRatio || 1;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // Set canvas size in pixels
+            canvas.width = width * pixelRatio;
+            canvas.height = height * pixelRatio;
+            
+            // Set canvas CSS size
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            
+            // Update WebGL viewport
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            
+            // Update projection matrix if needed
+            const aspect = width / height;
+            // Adjust field of view based on aspect ratio
+            const fov = aspect > 1 ? 60 : 80;
+            
+            // Center the rendering
+            gl.uniform1f(projectionFactorLocation, 0.5 * Math.min(1, aspect));
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            // Redraw immediately after resize
+            requestAnimationFrame(render);
+        });
+        
+        // Initial resize
+        resizeCanvas();
+
+        // Vertex shader source
+        const vertexShaderSource = `
+            attribute vec4 position;
+            attribute vec3 color;
+            attribute float pointSize;
+            uniform mat4 matrix;
+            uniform float projectionFactor;
+            uniform float wProjection;
+            uniform float hyperCurvature;
+            uniform float isStable;
+            varying vec3 vColor;
+            
+            void main() {
+                vec4 projected = matrix * position;
+                float w = projected.w;
+                
+                // Clean projection
+                float projectedW = 1.0 / (1.0 - (w * projectionFactor * wProjection));
+                
+                // Basic manifold transformation
+                float hypersphereRadius = length(projected.xyz);
+                float manifoldFactor = hyperCurvature * (1.0 + hypersphereRadius * 0.4);
+                
+                vec3 warpedPos = projected.xyz * projectedW * manifoldFactor;
+                
+                // Only apply wave effects when not in stable mode
+                if (isStable < 0.5) {
+                    // Wave effect
+                    float wave = sin(hypersphereRadius * 5.0 + w * 2.5) * 0.05;
+                    manifoldFactor *= (1.0 + wave);
+                    
+                    // Orbital motion
+                    float angle = atan(warpedPos.y, warpedPos.x);
+                    float radius = length(warpedPos.xy);
+                    warpedPos.xy = vec2(
+                        cos(angle + wave * 0.5) * radius,
+                        sin(angle + wave * 0.5) * radius
+                    );
+                }
+                
+                gl_Position = vec4(warpedPos * 0.7, 1);
+                
+                // Stable point size in stable mode
+                if (isStable > 0.5) {
+                    gl_PointSize = pointSize * (1.0 + projectedW * 2.0);
+                    vColor = color * (0.7 + 0.3 * manifoldFactor);
+                } else {
+                    float sizeFactor = 1.0 + sin(hypersphereRadius * 4.0 + w * 2.0) * 0.1;
+                    gl_PointSize = pointSize * (1.0 + projectedW * 2.0) * sizeFactor;
+                    
+                    float phaseFactor = sin(hypersphereRadius * 7.5 + w * 5.0) * 0.25 + 0.75;
+                    vColor = mix(
+                        color * (0.7 + 0.3 * manifoldFactor),
+                        vec3(0.2, 0.4, 0.8),
+                        phaseFactor * 0.15
+                    );
+                }
+            }
+        `;
+
+        // Fragment shader source
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec3 vColor;
+            uniform float isEntangled;
+            uniform float transmitPhase;
+            
+            void main() {
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                float r = length(coord) * 2.0;
+                
+                // Enhanced quantum interference pattern
+                float interference = sin(r * 30.0 + transmitPhase * 3.0) * 0.5 + 0.5;
+                
+                // Stronger entanglement effect
+                vec3 entangleColor = vec3(1.0, 0.0, 1.0); // Bright quantum entanglement color
+                vec3 baseColor = vColor * (1.0 + sin(transmitPhase) * 0.3);
+                vec3 finalColor = mix(baseColor, entangleColor, isEntangled * (interference * 0.7 + 0.3));
+                
+                // Enhanced core glow with quantum effects
+                float core = 1.0 - smoothstep(0.0, 0.8, r);
+                float quantum = sin(r * 15.0 + transmitPhase * 2.0) * 0.5 + 0.5;
+                float brightness = core * (0.8 + 0.4 * quantum);
+                
+                // Add pulsing glow for entangled state
+                if (isEntangled > 0.5) {
+                    brightness += 0.3 * sin(transmitPhase * 2.0) * (1.0 - r);
+                }
+                
+                gl_FragColor = vec4(finalColor, brightness);
+            }
+        `;
+
+        // Create shader function
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // Generate 4D grid points
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            const spacing = 1.2 / size; // Even closer spacing
+            
+            // Generate points in a hyperspherical pattern
+            for (let w = 0; w < size; w++) {
+                for (let x = 0; x < size; x++) {
+                    for (let y = 0; y < size; y++) {
+                        for (let z = 0; z < size; z++) {
+                            // Calculate 4D spherical coordinates
+                            const wx = (w * spacing - 0.6);
+                            const xx = (x * spacing - 0.6);
+                            const yx = (y * spacing - 0.6);
+                            const zx = (z * spacing - 0.6);
+                            
+                            // Add slight spherical distortion
+                            const dist = Math.sqrt(wx*wx + xx*xx + yx*yx + zx*zx);
+                            const factor = 1.0 + 0.2 * Math.sin(dist * 8.0);
+                            
+                            points.push(
+                                wx * factor,
+                                xx * factor,
+                                yx * factor,
+                                zx * factor
+                            );
+                            
+                            // Enhanced color based on position in 4D
+                            const phase = Math.atan2(wx, xx) + Math.atan2(yx, zx);
+                            colors.push(
+                                0.7 + 0.3 * Math.sin(phase),
+                                0.7 + 0.3 * Math.sin(phase + 2.094),
+                                0.7 + 0.3 * Math.sin(phase + 4.189)
+                            );
+                            
+                            // Variable point size based on position
+                            sizes.push(1.5 + Math.sin(dist * 5.0) * 0.5);
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        }
+
+        // Set up buffers
+        const gridSize = 10; // Even more points!
+        const { points, colors, sizes } = generatePoints(gridSize);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+        // Get attribute and uniform locations
+        const positionLocation = gl.getAttribLocation(program, "position");
+        const colorLocation = gl.getAttribLocation(program, "color");
+        const sizeLocation = gl.getAttribLocation(program, "pointSize");
+        const matrixLocation = gl.getUniformLocation(program, "matrix");
+        const projectionFactorLocation = gl.getUniformLocation(program, "projectionFactor");
+        const wProjectionLocation = gl.getUniformLocation(program, "wProjection");
+        const hyperCurvatureLocation = gl.getUniformLocation(program, "hyperCurvature");
+        const stableModeUniformLocation = gl.getUniformLocation(program, 'isStable');
+        const entangledUniformLocation = gl.getUniformLocation(program, 'isEntangled');
+        const transmitPhaseLocation = gl.getUniformLocation(program, 'transmitPhase');
+
+        // Initialize rotation animation state
+        let rotationState = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0
+        };
+
+        let baseFreqs = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0
+        };
+
+        let navigatorState = {
+            currentVector: { x: 100, y: 100 },
+            targetVector: null,
+            transitionSpeed: 0.1,
+            lastUpdate: performance.now(),
+            isDragging: false,
+            pinchStart: null,
+            wProjection: 0.8,
+            hyperCurvature: 1.4,
+            lastPinchDistance: 0
+        };
+
+        // Add quantum state management
+        let quantumState = {
+            collectedPoints: [],
+            isCollecting: false,
+            isStableMode: false,
+            entangledStates: new Map(),
+            currentQState: {
+                phase: 0,
+                spin: 1,
+                entangled: false
+            },
+            homeState: {
+                rotation: { wx: 0, wy: 0, wz: 0, xy: 0, xz: 0, yz: 0 },
+                projection: 0.8,
+                curvature: 1.4
+            }
+        };
+
+        function updateRotationVector(x, y) {
+            // Convert position to normalized coordinates (-1 to 1)
+            const size = 200; // Navigator size
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const dx = (x - centerX) / (size / 2); // -1 to 1
+            const dy = (y - centerY) / (size / 2); // -1 to 1
+            
+            // Calculate polar coordinates
+            const radius = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            // Map coordinates to 4D rotation space with smooth transitions
+            baseFreqs.wx = 0.02 * dx;
+            baseFreqs.wy = 0.02 * dy;
+            baseFreqs.wz = 0.02 * radius;
+            baseFreqs.xy = 0.015 * Math.sin(angle);
+            baseFreqs.xz = 0.015 * (dx * Math.cos(angle));
+            baseFreqs.yz = 0.015 * (dy * Math.sin(angle));
+
+            // Scale frequencies by radius for more dramatic effect at edges
+            if (radius > 0.8) {
+                Object.keys(baseFreqs).forEach(key => {
+                    baseFreqs[key] *= (1 + (radius - 0.8) * 2);
+                });
+            }
+
+            // Update visual feedback
+            const vector = document.getElementById('navigator-vector');
+            vector.style.left = `${x}px`;
+            vector.style.top = `${y}px`;
+        }
+
+        function handlePinchZoom(e) {
+            if (e.touches.length !== 2) {
+                navigatorState.pinchStart = null;
+                navigatorState.lastPinchDistance = 0;
+                return;
+            }
+
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const distance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+
+            if (!navigatorState.pinchStart) {
+                navigatorState.pinchStart = distance;
+                navigatorState.lastPinchDistance = distance;
+                return;
+            }
+
+            const delta = distance - navigatorState.lastPinchDistance;
+            navigatorState.lastPinchDistance = distance;
+
+            // Calculate pinch direction and magnitude
+            const pinchSpeed = 0.005;
+            const pinchDelta = delta * pinchSpeed;
+
+            // Map pinch to both w-projection and hypercurvature
+            const pinchRatio = distance / navigatorState.pinchStart;
+            
+            // W-projection affects the depth perception
+            navigatorState.wProjection = Math.max(0.1, Math.min(2.0,
+                navigatorState.wProjection + pinchDelta
+            ));
+
+            // Hypercurvature affects the manifold structure
+            navigatorState.hyperCurvature = Math.max(0.5, Math.min(2.0,
+                navigatorState.hyperCurvature + pinchDelta * 0.5
+            ));
+
+            // Add some cross-dimensional effects
+            Object.keys(baseFreqs).forEach(key => {
+                if (key.includes('w')) {
+                    baseFreqs[key] += pinchDelta * 0.01;
+                }
+            });
+        }
+
+        function initQuantumNavigator() {
+            const navigator = document.getElementById('quantum-navigator');
+            const vector = document.getElementById('navigator-vector');
+            
+            function handleStart(e) {
+                navigatorState.isDragging = true;
+                e.preventDefault();
+                const pos = getEventPosition(e);
+                navigatorState.targetVector = pos;
+                updateRotationVector(pos.x, pos.y);
+            }
+
+            function handleMove(e) {
+                if (!navigatorState.isDragging) return;
+                e.preventDefault();
+                const pos = getEventPosition(e);
+                navigatorState.targetVector = pos;
+                updateRotationVector(pos.x, pos.y);
+            }
+
+            function handleEnd(e) {
+                navigatorState.isDragging = false;
+                // Gradually reset frequencies when released
+                Object.keys(baseFreqs).forEach(key => {
+                    baseFreqs[key] *= 0.95;
+                });
+            }
+
+            function getEventPosition(e) {
+                const rect = navigator.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            }
+
+            // Add both mouse and touch event listeners
+            navigator.addEventListener('mousedown', handleStart);
+            navigator.addEventListener('mousemove', handleMove);
+            navigator.addEventListener('mouseup', handleEnd);
+            navigator.addEventListener('mouseleave', handleEnd);
+            
+            navigator.addEventListener('touchstart', handleStart);
+            navigator.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    handlePinchZoom(e);
+                } else {
+                    handleMove(e);
+                }
+            });
+            navigator.addEventListener('touchend', handleEnd);
+            navigator.addEventListener('touchcancel', handleEnd);
+
+            // Set initial position
+            updateRotationVector(100, 100);
+        }
+
+        function updateQuantumHUD() {
+            // Calculate quantum coordinates from current state
+            const psiMagnitude = Math.sqrt(
+                rotationState.wx * rotationState.wx + 
+                rotationState.wy * rotationState.wy
+            );
+            const psiPhase = Math.atan2(rotationState.wy, rotationState.wx);
+            
+            // Calculate phase from higher dimensional rotations
+            const phiPhase = Math.atan2(rotationState.yz, rotationState.xz);
+            
+            // Calculate gradient from frequency changes
+            const gradientMagnitude = Object.values(baseFreqs).reduce((sum, freq) => sum + Math.abs(freq), 0);
+            
+            // Calculate quantum entropy from state complexity
+            const stateComplexity = Object.values(rotationState).reduce((sum, val) => sum + Math.abs(val), 0);
+            const qEntropy = Math.log2(1 + stateComplexity);
+            
+            // Update HUD elements
+            document.getElementById('psi-pos').textContent = 
+                `${psiMagnitude.toFixed(3)} ∠ ${(psiPhase / Math.PI).toFixed(3)}π`;
+            
+            document.getElementById('phi-phase').textContent = 
+                `${(phiPhase / Math.PI).toFixed(3)}π rad`;
+            
+            document.getElementById('gradient-bar').style.width = 
+                `${Math.min(100, gradientMagnitude * 100)}%`;
+            
+            document.getElementById('manifold-depth').textContent = 
+                `λ=${navigatorState.wProjection.toFixed(3)}`;
+            
+            document.getElementById('curvature').textContent = 
+                `κ=${navigatorState.hyperCurvature.toFixed(3)}`;
+            
+            const entropyElement = document.getElementById('q-entropy');
+            entropyElement.textContent = `${qEntropy.toFixed(3)} qbits`;
+            
+            // Update entropy color based on value
+            entropyElement.className = 'coordinate-value ' + 
+                (qEntropy > 4 ? 'entropy-high' : 
+                 qEntropy > 2 ? 'entropy-medium' : 
+                 'entropy-low');
+        }
+
+        // 4D rotation matrix calculation
+        function get4DRotationMatrix(wx, wy, wz, xy, xz, yz) {
+            const cwx = Math.cos(wx), swx = Math.sin(wx);
+            const cwy = Math.cos(wy), swy = Math.sin(wy);
+            const cwz = Math.cos(wz), swz = Math.sin(wz);
+            const cxy = Math.cos(xy), sxy = Math.sin(xy);
+            const cxz = Math.cos(xz), sxz = Math.sin(xz);
+            const cyz = Math.cos(yz), syz = Math.sin(yz);
+            
+            return [
+                cxy*cxz, -sxy*cwz + cxy*sxz*swz, sxy*swz + cxy*sxz*cwz, -sxz,
+                sxy*cxz, cxy*cwz + sxy*sxz*swz, -cxy*swz + sxy*sxz*cwz, 0,
+                -sxz, -cxz*swz, cxz*cwz, 0,
+                0, 0, 0, 1
+            ];
+        }
+
+        // Handle window resize
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Initialize quantum navigator
+        initQuantumNavigator();
+
+        // Initialize quantum state management
+        function entangleState() {
+            const btn = document.getElementById('entangle-btn');
+            btn.classList.add('active');
+            
+            quantumState.currentQState.entangled = true;
+            quantumState.currentQState.phase = Math.random() * Math.PI * 2;
+            
+            // Visual feedback
+            document.getElementById('entangled-status').classList.add('active');
+            document.getElementById('entangled-status').textContent = 'Yes';
+            document.getElementById('quantum-status').classList.add('entangled');
+            
+            // Add ripple effect
+            const ripple = document.createElement('div');
+            ripple.className = 'quantum-ripple';
+            document.body.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 1000);
+            
+            updateQuantumStatus();
+        }
+
+        function transmitQuantumState() {
+            if (!quantumState.currentQState.entangled) return;
+            
+            const transmitBtn = document.getElementById('transmit-btn');
+            transmitBtn.classList.add('active');
+            
+            // Simulate quantum state transmission
+            setTimeout(() => {
+                transmitBtn.classList.remove('active');
+                // In a real implementation, this would use quantum key distribution
+                console.log('Transmitted quantum state:', quantumState.currentQState);
+            }, 2000);
+        }
+
+        function updateQuantumStatus() {
+            document.getElementById('phase-value').textContent = 
+                (quantumState.currentQState.phase / Math.PI).toFixed(2);
+            document.getElementById('spin-value').textContent = 
+                quantumState.currentQState.spin > 0 ? '↑' : '↓';
+        }
+
+        // Initialize quantum controls
+        function initQuantumControls() {
+            // Add event listeners
+            document.getElementById('entangle-btn').addEventListener('click', entangleState);
+            document.getElementById('transmit-btn').addEventListener('click', transmitQuantumState);
+            
+            // Initialize quantum state display
+            updateQuantumStatus();
+            
+            // Start quantum animation loop
+            let lastTime = performance.now();
+            function animateQuantum() {
+                const currentTime = performance.now();
+                const deltaTime = (currentTime - lastTime) / 1000;
+                lastTime = currentTime;
+                
+                if (quantumState.currentQState.entangled) {
+                    // Update phase more dramatically
+                    quantumState.currentQState.phase += deltaTime * 2.0;
+                    if (quantumState.currentQState.phase > Math.PI * 2) {
+                        quantumState.currentQState.phase -= Math.PI * 2;
+                    }
+                    
+                    // Update spin state based on phase
+                    quantumState.currentQState.spin = Math.sin(quantumState.currentQState.phase) > 0 ? 1 : -1;
+                    
+                    // Update display
+                    updateQuantumStatus();
+                }
+                
+                requestAnimationFrame(animateQuantum);
+            }
+            animateQuantum();
+        }
+
+        // Save current state as quantum coordinates
+        function saveQuantumPoint(name) {
+            const point = {
+                name: name,
+                timestamp: new Date().toISOString(),
+                state: {
+                    rotation: { ...rotationState },
+                    projection: navigatorState.wProjection,
+                    curvature: navigatorState.hyperCurvature,
+                    frequencies: { ...baseFreqs }
+                }
+            };
+            quantumState.collectedPoints.push(point);
+            localStorage.setItem('quantumPoints', JSON.stringify(quantumState.collectedPoints));
+            updatePointsList();
+        }
+
+        // Load saved quantum point
+        function loadQuantumPoint(point) {
+            Object.assign(rotationState, point.state.rotation);
+            navigatorState.wProjection = point.state.projection;
+            navigatorState.hyperCurvature = point.state.curvature;
+            Object.assign(baseFreqs, point.state.frequencies);
+        }
+
+        // Return to home state
+        function returnHome() {
+            quantumState.isStableMode = true;
+            Object.assign(rotationState, quantumState.homeState.rotation);
+            navigatorState.wProjection = quantumState.homeState.projection;
+            navigatorState.hyperCurvature = quantumState.homeState.curvature;
+            Object.assign(baseFreqs, {
+                wx: 0, wy: 0, wz: 0,
+                xy: 0, xz: 0, yz: 0
+            });
+            
+            // Clear any ongoing motion
+            navigatorState.targetVector = null;
+            navigatorState.currentVector = { x: 0, y: 0 };
+        }
+
+        // Update points list UI
+        function updatePointsList() {
+            const list = document.getElementById('points-list');
+            list.innerHTML = quantumState.collectedPoints.map(point => `
+                <div class="collected-point" onclick="loadQuantumPoint(${JSON.stringify(point)})">
+                    <div>${point.name}</div>
+                    <div class="point-timestamp">${new Date(point.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize UI controls
+        function initQuantumControls() {
+            // Load saved points
+            const saved = localStorage.getItem('quantumPoints');
+            if (saved) {
+                quantumState.collectedPoints = JSON.parse(saved);
+                updatePointsList();
+            }
+
+            // Home button
+            document.getElementById('home-btn').addEventListener('click', returnHome);
+
+            // Save button
+            document.getElementById('save-btn').addEventListener('click', () => {
+                document.getElementById('save-dialog').style.display = 'block';
+            });
+
+            // Collect button
+            document.getElementById('collect-btn').addEventListener('click', () => {
+                quantumState.isCollecting = !quantumState.isCollecting;
+                document.getElementById('collect-btn').classList.toggle('collecting');
+            });
+
+            // Points list toggle
+            document.getElementById('points-btn').addEventListener('click', () => {
+                const points = document.getElementById('collected-points');
+                points.style.display = points.style.display === 'none' ? 'block' : 'none';
+            });
+
+            // Save dialog
+            document.getElementById('save-confirm').addEventListener('click', () => {
+                const name = document.getElementById('point-name').value;
+                if (name) {
+                    saveQuantumPoint(name);
+                    document.getElementById('save-dialog').style.display = 'none';
+                    document.getElementById('point-name').value = '';
+                }
+            });
+
+            document.getElementById('save-cancel').addEventListener('click', () => {
+                document.getElementById('save-dialog').style.display = 'none';
+                document.getElementById('point-name').value = '';
+            });
+        }
+
+        // Initialize everything when DOM is ready
+        function initializeQuantumSystem() {
+            initQuantumNavigator();
+            initQuantumControls();
+            
+            // Initialize quantum network
+            const quantumNetwork = new QuantumNetwork();
+
+            // Add network event listeners
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('entangle-peer-btn')) {
+                    const peerId = e.target.dataset.peer;
+                    quantumNetwork.requestEntanglement(peerId);
+                }
+            });
+
+            // Add touch event listeners
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('touchend', handleTouchEnd);
+            canvas.addEventListener('touchstart', () => {
+                quantumState.isStableMode = false;
+            });
+        }
+
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeQuantumSystem);
+        } else {
+            initializeQuantumSystem();
+        }
+
+        // Initialize quantum controls
+        function initQuantumControls() {
+            const entangleBtn = document.getElementById('entangle-btn');
+            const transmitBtn = document.getElementById('transmit-btn');
+            
+            if (entangleBtn) {
+                entangleBtn.addEventListener('click', entangleState);
+            }
+            
+            if (transmitBtn) {
+                transmitBtn.addEventListener('click', transmitQuantumState);
+            }
+            
+            // Initialize quantum state display
+            updateQuantumStatus();
+            
+            // Start quantum animation loop
+            let lastTime = performance.now();
+            function animateQuantum() {
+                const currentTime = performance.now();
+                const deltaTime = (currentTime - lastTime) / 1000;
+                lastTime = currentTime;
+                
+                if (quantumState.currentQState.entangled) {
+                    // Update phase more dramatically
+                    quantumState.currentQState.phase += deltaTime * 2.0;
+                    if (quantumState.currentQState.phase > Math.PI * 2) {
+                        quantumState.currentQState.phase -= Math.PI * 2;
+                    }
+                    
+                    // Update spin state based on phase
+                    quantumState.currentQState.spin = Math.sin(quantumState.currentQState.phase) > 0 ? 1 : -1;
+                    
+                    // Update display
+                    updateQuantumStatus();
+                }
+                
+                requestAnimationFrame(animateQuantum);
+            }
+            animateQuantum();
+        }
+
+        // Animation loop
+        function render(currentTime) {
+            const deltaTime = (currentTime - (navigatorState.lastUpdate || currentTime)) / 1000;
+            navigatorState.lastUpdate = currentTime;
+
+            // Smoothly update rotation state based on frequencies
+            Object.keys(rotationState).forEach(key => {
+                rotationState[key] += baseFreqs[key];
+                
+                // Apply quantum orbital rotation patterns
+                if (!navigatorState.isDragging) {
+                    const phi = 1.618033988749895; // Golden ratio for quantum harmony
+                    const autoSpeed = 0.0003; // Slightly slower base speed
+                    
+                    // Quantum orbital frequency ratios based on electron orbital shapes
+                    const orbitalRatios = {
+                        'wy': phi,          // Primary quantum number n
+                        'wz': 1/phi,        // Angular momentum l
+                        'xy': phi * phi,    // Magnetic quantum number m
+                        'xz': 1/(phi * phi),// Spin quantum number s
+                        'yz': phi * 0.5,    // Phase relationship
+                        'wx': 1.0           // Reference frequency
+                    };
+                    
+                    rotationState[key] += autoSpeed * orbitalRatios[key];
+                }
+            });
+
+            // Clear canvas and update rendering
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            
+            // Set up attributes
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.enableVertexAttribArray(sizeLocation);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+            
+            // Update uniforms with smooth rotations
+            const matrix = get4DRotationMatrix(
+                rotationState.wx * Math.PI,
+                rotationState.wy * Math.PI * 2, // Double frequency for wy to create p-orbital shape
+                rotationState.wz * Math.PI,
+                rotationState.xy * Math.PI * 1.5, // Amplify xy rotation for d-orbital characteristics
+                rotationState.xz * Math.PI,
+                rotationState.yz * Math.PI
+            );
+            gl.uniformMatrix4fv(matrixLocation, false, new Float32Array(matrix));
+            gl.uniform1f(projectionFactorLocation, 0.5);
+            gl.uniform1f(wProjectionLocation, navigatorState.wProjection);
+            gl.uniform1f(hyperCurvatureLocation, navigatorState.hyperCurvature);
+            gl.uniform1f(stableModeUniformLocation, quantumState.isStableMode ? 1.0 : 0.0);
+            gl.uniform1f(entangledUniformLocation, quantumState.currentQState.entangled ? 1.0 : 0.0);
+            gl.uniform1f(transmitPhaseLocation, quantumState.currentQState.phase);
+            
+            // Draw points
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+            
+            // Update HUD
+            updateQuantumHUD();
+            
+            requestAnimationFrame(render);
+        }
+
+        // Enable blending for point sprites
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        
+        // Start the animation
+        requestAnimationFrame(render);
+
+        // Add handler to disable stable mode on interaction
+        canvas.addEventListener('pointerdown', () => {
+            quantumState.isStableMode = false;
+        });
+
+        canvas.addEventListener('touchstart', () => {
+            quantumState.isStableMode = false;
+        });
+
+        // Quantum Network Connection
+        class QuantumNetwork {
+            constructor() {
+                this.ws = null;
+                this.nodeId = localStorage.getItem('quantum_node_id');
+                this.connectionKey = '1Q400C'; // Hardcoded key
+                this.entangledPeers = new Map();
+                this.connectionAttempts = 0;
+                this.maxRetries = 3;
+                this.basePorts = [8081, 8082, 8083, 8084, 8085];
+                this.currentPortIndex = 0;
+                
+                // Setup enter button
+                const enterButton = document.getElementById('enter-button');
+                if (enterButton) {
+                    enterButton.addEventListener('click', () => {
+                        document.getElementById('enter-modal').style.display = 'none';
+                        this.initializeConnection();
+                    });
+                }
+            }
+
+            setupConnectionKeyUI() {
+                // Hide the connection modal since we're auto-connecting
+                const modal = document.getElementById('connection-key-modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            async initializeConnection() {
+                if (this.ws) {
+                    this.ws.close();
+                }
+
+                const port = this.basePorts[this.currentPortIndex];
+                const ws = new WebSocket(`ws://localhost:${port}`);
+                this.ws = ws;
+
+                ws.onopen = () => {
+                    console.log('🌿 Connected to World Tree Network');
+                    this.connectionAttempts = 0;
+                    this.sendAuthMessage();
+                };
+
+                ws.onclose = () => {
+                    console.log('🍂 Disconnected from World Tree Network');
+                    this.handleDisconnect();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('Connection error:', error);
+                    this.handleConnectionError();
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleQuantumMessage(message);
+                    } catch (e) {
+                        console.error('Error processing message:', e);
+                    }
+                };
+            }
+
+            sendAuthMessage() {
+                this.sendQuantumMessage({
+                    type: 'auth',
+                    key: this.connectionKey,
+                    nodeId: this.nodeId
+                });
+            }
+
+            handleDisconnect() {
+                document.getElementById('network-status').textContent = 'Disconnected';
+                document.getElementById('network-status').classList.remove('connected');
+                
+                if (this.connectionAttempts < this.maxRetries) {
+                    this.connectionAttempts++;
+                    setTimeout(() => this.initializeConnection(), 1000 * Math.pow(2, this.connectionAttempts));
+                } else {
+                    this.showConnectionError('Connection lost. Please try again.');
+                }
+            }
+
+            handleConnectionError() {
+                this.currentPortIndex++;
+                if (this.currentPortIndex < this.basePorts.length) {
+                    console.log(`🔄 Trying next port: ${this.basePorts[this.currentPortIndex]}`);
+                    setTimeout(() => this.initializeConnection(), 1000);
+                } else {
+                    console.error('❌ Failed to connect to any World Tree Network port');
+                    this.showConnectionError('Could not connect to World Tree Network. Please try again.');
+                }
+            }
+
+            handleQuantumMessage(message) {
+                switch (message.type) {
+                    case 'auth-failed':
+                        console.error('Authentication failed:', message.message);
+                        this.showConnectionError(message.message);
+                        break;
+
+                    case 'quantum-welcome':
+                        console.log('🌿 Authenticated with World Tree');
+                        this.nodeId = message.nodeId;
+                        localStorage.setItem('quantum_node_id', message.nodeId);
+                        document.getElementById('network-status').textContent = 'Connected';
+                        document.getElementById('network-status').classList.add('connected');
+                        break;
+
+                    case 'node-list-update':
+                        this.updatePeerList(message.nodes.filter(id => id !== this.nodeId));
+                        break;
+
+                    case 'soul-connection-established':
+                        this.handleSoulConnection(message);
+                        break
+                }
+            }
+
+            sendQuantumMessage(message) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(message));
+                }
+            }
+
+            updatePeerList(peers) {
+                const peerList = document.getElementById('peer-list');
+                if (!peerList) return;
+                
+                peerList.innerHTML = '';
+                peers.forEach(peerId => {
+                    const peerDiv = document.createElement('div');
+                    peerDiv.className = 'peer-item';
+                    const isConnected = this.entangledPeers.has(peerId);
+                    
+                    if (isConnected) {
+                        peerDiv.classList.add('soul-connected');
+                    }
+                    
+                    peerDiv.innerHTML = `
+                        <span class="peer-id">Soul ${peerId.substr(0, 6)}</span>
+                        <button class="soul-btn ${isConnected ? 'connected' : ''}" 
+                                onclick="quantumNetwork.requestSoulConnection('${peerId}')"
+                                ${isConnected ? 'disabled' : ''}>
+                            ${isConnected ? 'Connected' : 'Connect Souls'}
+                        </button>
+                    `;
+                    peerList.appendChild(peerDiv);
+                });
+            }
+
+            showConnectionError(message) {
+                const error = document.getElementById('connection-key-error');
+                if (error) {
+                    error.textContent = message;
+                    error.style.display = 'block';
+                }
+                
+                const modal = document.getElementById('connection-key-modal');
+                if (modal) {
+                    modal.style.display = 'block';
+                }
+            }
+
+            requestSoulConnection(targetId) {
+                this.sendQuantumMessage({
+                    type: 'soul-connection-request',
+                    targetId: targetId
+                });
+            }
+
+            handleSoulConnection(message) {
+                const { partnerId, state } = message;
+                this.entangledPeers.set(partnerId, state);
+                
+                // Visual feedback
+                document.getElementById('soul-resonance').classList.add('active');
+                
+                // Update quantum state
+                if (window.quantumState) {
+                    window.quantumState.currentQState = {
+                        ...window.quantumState.currentQState,
+                        ...state,
+                        soulConnected: true
+                    };
+                    window.updateQuantumStatus();
+                }
+                
+                this.updatePeerList(Array.from(this.entangledPeers.keys()));
+            }
+        }
+
+        // Initialize quantum network when document is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.quantumNetwork = new QuantumNetwork();
+        });
+    </script>
+</body>
+</html>
