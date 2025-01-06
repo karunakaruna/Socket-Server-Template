@@ -50,6 +50,61 @@
             z-index: 100;
         }
 
+        .draggable.active {
+            animation: none;
+        }
+
+        .draggable.active.circle-pulse {
+            animation: circle-pulse var(--pulse-rate) infinite;
+        }
+
+        .draggable.active.square-pulse {
+            animation: square-pulse var(--pulse-rate) infinite;
+        }
+
+        @keyframes circle-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 0, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+        }
+
+        @keyframes square-pulse {
+            0% { 
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4);
+                border-radius: 0;
+            }
+            70% { 
+                box-shadow: 0 0 0 20px rgba(255, 0, 0, 0);
+                border-radius: 0;
+            }
+            100% { 
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+                border-radius: 0;
+            }
+        }
+
+        .draggable.active.circle-pulse::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,0,0,0.2) 0%, rgba(255,0,0,0) 70%);
+        }
+
+        .draggable.active.square-pulse::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 0;
+            background: radial-gradient(circle, rgba(255,0,0,0.2) 0%, rgba(255,0,0,0) 70%);
+        }
+
         .interaction-point {
             border: 4px solid rgba(0, 255, 0, 0.8);
             border-radius: 50%;
@@ -114,6 +169,9 @@
         .debug-entry.interaction-move { border-left-color: rgba(33, 150, 243, 0.8); }
         .debug-entry.interaction-end { border-left-color: rgba(244, 67, 54, 0.8); }
         .debug-entry.hold { border-left-color: rgba(255, 152, 0, 0.8); }
+        .debug-entry.state-change { border-left-color: rgba(255, 0, 0, 0.8); }
+        .debug-entry.pulse-rate-change { border-left-color: rgba(0, 255, 0, 0.8); }
+        .debug-entry.shape-change { border-left-color: rgba(0, 0, 255, 0.8); }
 
         .create-menu {
             position: fixed;
@@ -213,6 +271,9 @@
         let menuInteractionId = null;
         let selectedOption = null;
         let isTouchDevice = false;
+        let holdStartPosition = null;
+        let lastTapTime = 0;
+        const DOUBLE_TAP_THRESHOLD = 300; // ms
 
         // Detect touch capability
         window.addEventListener('touchstart', function onFirstTouch() {
@@ -237,12 +298,19 @@
             obj.className = 'draggable';
             obj.dataset.type = 'object';
             obj.dataset.id = `obj-${++objectCounter}`;
+            obj.dataset.state = 'inactive';
+            obj.dataset.pulseRate = '1s';
+            obj.dataset.pulseShape = Math.random() < 0.5 ? 'circle' : 'square';
+            obj.style.setProperty('--pulse-rate', obj.dataset.pulseRate);
             obj.style.left = `${window.innerWidth / 2}px`;
             obj.style.top = `${window.innerHeight / 2}px`;
             obj.innerHTML = `
                 <div style="font-size: 48px; text-align: center; line-height: 120px;">${emoji}</div>
                 <div class="metadata">ID: ${obj.dataset.id}
-Type: ${emoji}</div>
+Type: ${emoji}
+State: ${obj.dataset.state}
+Pulse Rate: ${obj.dataset.pulseRate}
+Shape: ${obj.dataset.pulseShape}</div>
             `;
             interactionArea.appendChild(obj);
             return obj;
@@ -336,6 +404,83 @@ Type: ${emoji}</div>
             });
         }
 
+        function toggleObjectState(obj) {
+            const currentState = obj.dataset.state;
+            const newState = currentState === 'active' ? 'inactive' : 'active';
+            obj.dataset.state = newState;
+            
+            // Update metadata
+            const metadata = obj.querySelector('.metadata');
+            const metadataText = metadata.textContent.split('\n');
+            metadataText[2] = `State: ${newState}`;
+            metadata.textContent = metadataText.join('\n');
+            
+            // Toggle active class and shape-specific pulse animation
+            obj.classList.toggle('active', newState === 'active');
+            if (newState === 'active') {
+                obj.classList.add(`${obj.dataset.pulseShape}-pulse`);
+            } else {
+                obj.classList.remove('circle-pulse', 'square-pulse');
+            }
+            
+            addDebugEntry('state-change', {
+                id: obj.dataset.id,
+                state: newState,
+                shape: obj.dataset.pulseShape
+            });
+        }
+
+        function togglePulseShape(obj) {
+            const currentShape = obj.dataset.pulseShape;
+            const newShape = currentShape === 'circle' ? 'square' : 'circle';
+            obj.dataset.pulseShape = newShape;
+            
+            // Update metadata
+            const metadata = obj.querySelector('.metadata');
+            const metadataText = metadata.textContent.split('\n');
+            metadataText[4] = `Shape: ${newShape}`;
+            metadata.textContent = metadataText.join('\n');
+            
+            // Update animation classes if active
+            if (obj.classList.contains('active')) {
+                obj.classList.remove('circle-pulse', 'square-pulse');
+                obj.classList.add(`${newShape}-pulse`);
+            }
+            
+            addDebugEntry('shape-change', {
+                id: obj.dataset.id,
+                shape: newShape
+            });
+        }
+
+        function updatePulseRate(obj, delta) {
+            const currentRate = parseFloat(obj.dataset.pulseRate);
+            const newRate = Math.max(0.2, Math.min(5, currentRate + delta));
+            obj.dataset.pulseRate = `${newRate}s`;
+            obj.style.setProperty('--pulse-rate', `${newRate}s`);
+            
+            // Update metadata
+            const metadata = obj.querySelector('.metadata');
+            const metadataText = metadata.textContent.split('\n');
+            metadataText[3] = `Pulse Rate: ${newRate}s`;
+            metadata.textContent = metadataText.join('\n');
+            
+            addDebugEntry('pulse-rate-change', {
+                id: obj.dataset.id,
+                rate: newRate
+            });
+        }
+
+        function handleDoubleTap(obj) {
+            const currentTime = Date.now();
+            if (currentTime - lastTapTime < DOUBLE_TAP_THRESHOLD) {
+                togglePulseShape(obj);
+                lastTapTime = 0; // Reset to prevent triple-tap
+            } else {
+                lastTapTime = currentTime;
+            }
+        }
+
         // Touch event handlers
         document.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -362,6 +507,9 @@ Type: ${emoji}</div>
                         dragStartTime = Date.now();
                         target.classList.add('being-dragged');
                         startHoldTimer(touch, target);
+                        
+                        // Start tracking hold for pulse rate adjustment
+                        holdStartPosition = { x: touch.pageX, y: touch.pageY };
                         
                         addDebugEntry('interaction-start', {
                             type: 'touch',
@@ -391,6 +539,18 @@ Type: ${emoji}</div>
                         x: Math.round(touch.pageX),
                         y: Math.round(touch.pageY)
                     });
+                    
+                    if (holdStartPosition) {
+                        const dx = touch.pageX - holdStartPosition.x;
+                        const dy = touch.pageY - holdStartPosition.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance > 20) {
+                            const angle = Math.atan2(dy, dx);
+                            const delta = Math.cos(angle) * 0.01;
+                            updatePulseRate(activeDraggable, delta);
+                            holdStartPosition = { x: touch.pageX, y: touch.pageY };
+                        }
+                    }
                 }
             }
         });
@@ -410,8 +570,10 @@ Type: ${emoji}</div>
                         activeDraggable.classList.remove('being-dragged');
                         
                         if (dragDuration < DRAG_THRESHOLD) {
-                            const metadata = activeDraggable.querySelector('.metadata');
-                            metadata.style.opacity = metadata.style.opacity === '1' ? '0' : '1';
+                            handleDoubleTap(activeDraggable);
+                            if (lastTapTime === 0) { // Not a double-tap
+                                toggleObjectState(activeDraggable);
+                            }
                         }
                         
                         activeDraggable = null;
@@ -471,6 +633,9 @@ Type: ${emoji}</div>
                     target.classList.add('being-dragged');
                     startHoldTimer(e, target);
                     
+                    // Start tracking hold for pulse rate adjustment
+                    holdStartPosition = { x: e.pageX, y: e.pageY };
+                    
                     addDebugEntry('interaction-start', {
                         type: 'mouse',
                         x: Math.round(e.pageX),
@@ -496,6 +661,18 @@ Type: ${emoji}</div>
                     x: Math.round(e.pageX),
                     y: Math.round(e.pageY)
                 });
+                
+                if (holdStartPosition) {
+                    const dx = e.pageX - holdStartPosition.x;
+                    const dy = e.pageY - holdStartPosition.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance > 20) {
+                        const angle = Math.atan2(dy, dx);
+                        const delta = Math.cos(angle) * 0.01;
+                        updatePulseRate(activeDraggable, delta);
+                        holdStartPosition = { x: e.pageX, y: e.pageY };
+                    }
+                }
             }
         });
 
@@ -513,8 +690,8 @@ Type: ${emoji}</div>
                 activeDraggable.classList.remove('being-dragged');
                 
                 if (dragDuration < DRAG_THRESHOLD) {
-                    const metadata = activeDraggable.querySelector('.metadata');
-                    metadata.style.opacity = metadata.style.opacity === '1' ? '0' : '1';
+                    // Toggle state on click
+                    toggleObjectState(activeDraggable);
                 }
                 
                 activeDraggable = null;
@@ -525,6 +702,29 @@ Type: ${emoji}</div>
                     x: Math.round(e.pageX),
                     y: Math.round(e.pageY)
                 });
+            }
+        });
+
+        // Add wheel event for pulse rate adjustment
+        document.addEventListener('wheel', (e) => {
+            if (isTouchDevice) return; // Skip if touch device
+            
+            const target = findDraggableTarget(e);
+            if (target && target.dataset.state === 'active') {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.1 : -0.1;
+                updatePulseRate(target, delta);
+            }
+        });
+
+        // Add double-click handler for desktop
+        document.addEventListener('dblclick', (e) => {
+            if (isTouchDevice) return;
+            
+            const target = findDraggableTarget(e);
+            if (target) {
+                togglePulseShape(target);
+                e.preventDefault(); // Prevent text selection
             }
         });
 
