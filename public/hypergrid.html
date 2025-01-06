@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperdimensional Grid Visualization</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            backdrop-filter: blur(5px);
+        }
+        .control-group {
+            margin: 10px 0;
+        }
+        label { display: block; margin-bottom: 5px; }
+        input[type="range"] { width: 200px; }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="controls">
+        <div class="control-group">
+            <label for="w-rotation">4D W-Rotation</label>
+            <input type="range" id="w-rotation" min="0" max="6.28" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <label for="point-size">Point Size</label>
+            <input type="range" id="point-size" min="0.1" max="5" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+            <label for="noise-scale">Noise Scale</label>
+            <input type="range" id="noise-scale" min="0" max="2" step="0.01" value="0.5">
+        </div>
+        <div class="control-group">
+            <label for="sparkle-intensity">Sparkle Intensity</label>
+            <input type="range" id="sparkle-intensity" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <div class="control-group">
+            <label for="sparkle-speed">Sparkle Speed</label>
+            <input type="range" id="sparkle-speed" min="0" max="5" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+            <label for="sparkle-size">Sparkle Size</label>
+            <input type="range" id="sparkle-size" min="0.1" max="3" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+            <label for="sparkle-density">Sparkle Density</label>
+            <input type="range" id="sparkle-density" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <div class="control-group">
+            <label for="camera-distance">Camera Distance</label>
+            <input type="range" id="camera-distance" min="0.5" max="5" step="0.1" value="2">
+        </div>
+        <div class="control-group">
+            <label for="view-distance">View Distance</label>
+            <input type="range" id="view-distance" min="1" max="50" step="1" value="20">
+        </div>
+        <div class="control-group">
+            <label for="auto-rotation">Auto Rotation Speed</label>
+            <input type="range" id="auto-rotation" min="0" max="0.01" step="0.0001" value="0.002">
+        </div>
+        <div class="control-group">
+            <label for="rotation-x">Rotation X</label>
+            <input type="range" id="rotation-x" min="0" max="6.28" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <label for="rotation-y">Rotation Y</label>
+            <input type="range" id="rotation-y" min="0" max="6.28" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <label for="rotation-z">Rotation Z</label>
+            <input type="range" id="rotation-z" min="0" max="6.28" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <label for="geometry-scale">Geometry Scale</label>
+            <input type="range" id="geometry-scale" min="0.1" max="2" step="0.1" value="1">
+        </div>
+    </div>
+    <script>
+        // Noise function implementation
+        function noise4D(x, y, z, w, t) {
+            return Math.sin(x*7.13 + y*5.27 + z*3.31 + w*9.17 + t) * 
+                   Math.cos(x*4.73 + y*9.19 + z*7.23 + w*3.47 + t*2) * 0.5 + 0.5;
+        }
+
+        const canvas = document.getElementById("glCanvas");
+        const gl = canvas.getContext("webgl");
+
+        if (!gl) {
+            alert("WebGL not supported");
+            throw new Error("WebGL not supported");
+        }
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        const vertexShaderSource = `
+            attribute vec4 position;
+            attribute float pointSize;
+            attribute vec4 color;
+            uniform mat4 projection;
+            uniform mat4 rotation4d;
+            uniform float time;
+            uniform float noiseScale;
+            uniform float sparkleIntensity;
+            uniform float sparkleSpeed;
+            uniform float sparkleSize;
+            uniform float sparkleDensity;
+            uniform float cameraDistance;
+            uniform float geometryScale;
+            uniform vec3 manualRotation;
+            varying vec4 vColor;
+            varying float vSparkle;
+            varying float vDepth;
+            
+            // Rotation matrix functions
+            mat4 rotationX(float angle) {
+                float s = sin(angle);
+                float c = cos(angle);
+                return mat4(
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, c, -s, 0.0,
+                    0.0, s, c, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                );
+            }
+
+            mat4 rotationY(float angle) {
+                float s = sin(angle);
+                float c = cos(angle);
+                return mat4(
+                    c, 0.0, s, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    -s, 0.0, c, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                );
+            }
+
+            mat4 rotationZ(float angle) {
+                float s = sin(angle);
+                float c = cos(angle);
+                return mat4(
+                    c, -s, 0.0, 0.0,
+                    s, c, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                );
+            }
+            
+            float noise(vec4 p) {
+                return fract(sin(dot(p, vec4(12.9898, 78.233, 45.164, 94.673))) * 43758.5453);
+            }
+
+            void main() {
+                // Scale the initial position
+                vec4 scaledPos = position * geometryScale;
+                
+                // Apply manual rotations
+                mat4 rotX = rotationX(manualRotation.x);
+                mat4 rotY = rotationY(manualRotation.y);
+                mat4 rotZ = rotationZ(manualRotation.z);
+                vec4 rotated = rotZ * rotY * rotX * rotation4d * scaledPos;
+                
+                float w = rotated.w;
+                
+                // Improved centering with camera distance
+                vec3 centered = rotated.xyz / cameraDistance;
+                float scale = 2.0 / (2.0 + w);
+                
+                // Add noise-based displacement
+                float timeScale = time * sparkleSpeed;
+                float noiseVal = noise(rotated + vec4(timeScale * 0.1));
+                vec3 displacement = vec3(
+                    noise(rotated + vec4(1.0, 0.0, 0.0, timeScale)),
+                    noise(rotated + vec4(0.0, 1.0, 0.0, timeScale)),
+                    noise(rotated + vec4(0.0, 0.0, 1.0, timeScale))
+                ) * 2.0 - 1.0;
+                
+                // Center the displacement effect
+                vec3 pos = centered + (displacement - vec3(0.5)) * noiseScale * 0.1;
+                gl_Position = projection * vec4(pos * scale, 1.0);
+                
+                // Enhanced depth calculation
+                vDepth = (1.0 + pos.z) * 0.5;
+                
+                // Dynamic point size with distance attenuation
+                float distanceAttenuation = 1.0 - length(pos) * 0.1;
+                float sizeNoise = noise(rotated + vec4(timeScale * 0.2));
+                float sparkleNoise = noise(rotated + vec4(timeScale * 5.0));
+                float sparkleEffect = step(1.0 - sparkleDensity, sparkleNoise);
+                float finalSize = pointSize * sparkleSize * (2.0 + w + sizeNoise * 2.0) * (1.0 + noiseVal);
+                gl_PointSize = max(1.0, finalSize * (1.0 + sparkleEffect * sparkleIntensity) * distanceAttenuation);
+                
+                // Enhanced color with depth and sparkle
+                float sparkle = sparkleEffect * sparkleIntensity * (0.5 + sparkleNoise * 0.5);
+                vColor = color + vec4(sparkle);
+                vSparkle = sparkle;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision highp float;
+            varying vec4 vColor;
+            varying float vSparkle;
+            varying float vDepth;
+            
+            void main() {
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                float r = length(coord) * 2.0;
+                
+                // Soft circle with sparkle effect
+                float circle = 1.0 - smoothstep(0.8, 1.0, r);
+                float glow = 0.5 * (1.0 - smoothstep(0.5, 2.0, r));
+                
+                // Enhanced sparkle effect
+                float sparkle = vSparkle * (1.0 - r) * 2.0;
+                vec4 color = vColor + vec4(sparkle);
+                
+                // Depth-based alpha for intersection effect
+                float depthAlpha = mix(0.3, 1.0, vDepth);
+                
+                // Combine circle and glow with depth-based alpha
+                float alpha = (circle + glow * 0.5) * depthAlpha;
+                gl_FragColor = vec4(color.rgb * (1.0 + sparkle), alpha);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error("Shader compile failed:", gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error("Program link failed:", gl.getProgramInfoLog(program));
+        }
+
+        gl.useProgram(program);
+
+        // Generate 4D grid points with multiple layers
+        let gridSize = 20; // Will be controlled by slider
+        const generatePoints = (size) => {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            const layerCount = 5;
+
+            for (let layer = 0; layer < layerCount; layer++) {
+                const layerDensity = (layer + 1) * 2;
+                for (let x = -size; x <= size; x++) {
+                    for (let y = -size; y <= size; y++) {
+                        for (let z = -size; z <= size; z++) {
+                            if ((Math.abs(x) + Math.abs(y) + Math.abs(z)) % layerDensity !== 0) continue;
+                            
+                            for (let w = -size; w <= size; w += size/4) {
+                                // Center the points by subtracting half the grid size
+                                const px = (x - size/2) / size;
+                                const py = (y - size/2) / size;
+                                const pz = (z - size/2) / size;
+                                const pw = (w - size/2) / size;
+                                
+                                points.push(px, py, pz, pw);
+                                
+                                const r = (x + size) / (2 * size);
+                                const g = (y + size) / (2 * size);
+                                const b = (z + size) / (2 * size);
+                                const a = 0.4 + layer * 0.15;
+                                
+                                colors.push(r, g, b, a);
+                                sizes.push(0.8 + layer * 0.4);
+                            }
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        };
+
+        let { points, colors, sizes } = generatePoints(gridSize);
+
+        // Set up buffers
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+        // Get attribute and uniform locations
+        const positionLocation = gl.getAttribLocation(program, "position");
+        const colorLocation = gl.getAttribLocation(program, "color");
+        const sizeLocation = gl.getAttribLocation(program, "pointSize");
+        const timeLocation = gl.getUniformLocation(program, "time");
+        const noiseScaleLocation = gl.getUniformLocation(program, "noiseScale");
+        const sparkleIntensityLocation = gl.getUniformLocation(program, "sparkleIntensity");
+        const sparkleSpeedLocation = gl.getUniformLocation(program, "sparkleSpeed");
+        const sparkleSizeLocation = gl.getUniformLocation(program, "sparkleSize");
+        const sparkleDensityLocation = gl.getUniformLocation(program, "sparkleDensity");
+        const cameraDistanceLocation = gl.getUniformLocation(program, "cameraDistance");
+        const geometryScaleLocation = gl.getUniformLocation(program, "geometryScale");
+        const manualRotationLocation = gl.getUniformLocation(program, "manualRotation");
+        const projectionLocation = gl.getUniformLocation(program, "projection");
+        const rotation4dLocation = gl.getUniformLocation(program, "rotation4d");
+
+        // Enable attributes
+        gl.enableVertexAttribArray(positionLocation);
+        gl.enableVertexAttribArray(colorLocation);
+        gl.enableVertexAttribArray(sizeLocation);
+
+        function getProjectionMatrix(angle) {
+            const cosA = Math.cos(angle), sinA = Math.sin(angle);
+            return new Float32Array([
+                cosA, 0, -sinA, 0,
+                0, 1, 0, 0,
+                sinA, 0, cosA, 0,
+                0, 0, -2, 1
+            ]);
+        }
+
+        function get4DRotationMatrix(wx, wy, wz, t) {
+            const cwx = Math.cos(wx + t * 0.1);
+            const swx = Math.sin(wx + t * 0.1);
+            const cwy = Math.cos(wy + t * 0.15);
+            const swy = Math.sin(wy + t * 0.15);
+            const cwz = Math.cos(wz + t * 0.2);
+            const swz = Math.sin(wz + t * 0.2);
+            
+            return new Float32Array([
+                cwz*cwy, -swz, cwz*swy, swx,
+                swz*cwy, cwz, swz*swy, -cwx,
+                -swy, 0, cwy, 0,
+                -swx*cwy, cwx, -swx*swy, cwx*cwy
+            ]);
+        }
+
+        // UI Controls
+        const wRotationControl = document.getElementById('w-rotation');
+        const pointSizeControl = document.getElementById('point-size');
+        const noiseScaleControl = document.getElementById('noise-scale');
+        const sparkleIntensityControl = document.getElementById('sparkle-intensity');
+        const sparkleSpeedControl = document.getElementById('sparkle-speed');
+        const sparkleSizeControl = document.getElementById('sparkle-size');
+        const sparkleDensityControl = document.getElementById('sparkle-density');
+        const cameraDistanceControl = document.getElementById('camera-distance');
+        const viewDistanceControl = document.getElementById('view-distance');
+        const autoRotationControl = document.getElementById('auto-rotation');
+        const rotationXControl = document.getElementById('rotation-x');
+        const rotationYControl = document.getElementById('rotation-y');
+        const rotationZControl = document.getElementById('rotation-z');
+        const geometryScaleControl = document.getElementById('geometry-scale');
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+        let startTime = Date.now();
+        let angle = 0;
+
+        function render() {
+            const currentTime = (Date.now() - startTime) * 0.001;
+            const autoRotationSpeed = parseFloat(autoRotationControl.value);
+            angle += autoRotationSpeed;
+
+            // Update grid size if view distance changed
+            const newGridSize = parseInt(viewDistanceControl.value);
+            if (newGridSize !== gridSize) {
+                gridSize = newGridSize;
+                const newGeometry = generatePoints(gridSize);
+                points = newGeometry.points;
+                colors = newGeometry.colors;
+                sizes = newGeometry.sizes;
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+            }
+
+            const wRotation = parseFloat(wRotationControl.value);
+            const basePointSize = parseFloat(pointSizeControl.value);
+            const noiseScale = parseFloat(noiseScaleControl.value);
+            const sparkleIntensity = parseFloat(sparkleIntensityControl.value);
+            const sparkleSpeed = parseFloat(sparkleSpeedControl.value);
+            const sparkleSize = parseFloat(sparkleSizeControl.value);
+            const sparkleDensity = parseFloat(sparkleDensityControl.value);
+            const cameraDistance = parseFloat(cameraDistanceControl.value);
+            const geometryScale = parseFloat(geometryScaleControl.value);
+
+            // Manual rotation values
+            const rotX = parseFloat(rotationXControl.value);
+            const rotY = parseFloat(rotationYControl.value);
+            const rotZ = parseFloat(rotationZControl.value);
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // Update attribute bindings
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+            // Set uniforms
+            gl.uniform1f(timeLocation, currentTime);
+            gl.uniform1f(noiseScaleLocation, noiseScale);
+            gl.uniform1f(sparkleIntensityLocation, sparkleIntensity);
+            gl.uniform1f(sparkleSpeedLocation, sparkleSpeed);
+            gl.uniform1f(sparkleSizeLocation, sparkleSize);
+            gl.uniform1f(sparkleDensityLocation, sparkleDensity);
+            gl.uniform1f(cameraDistanceLocation, cameraDistance);
+            gl.uniform1f(geometryScaleLocation, geometryScale);
+            gl.uniform3f(manualRotationLocation, rotX, rotY, rotZ);
+            gl.uniformMatrix4fv(projectionLocation, false, getProjectionMatrix(angle));
+            gl.uniformMatrix4fv(rotation4dLocation, false, get4DRotationMatrix(wRotation, angle * 0.5, angle * 0.3, currentTime));
+
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+            requestAnimationFrame(render);
+        }
+
+        render();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        });
+    </script>
+</body>
+</html>

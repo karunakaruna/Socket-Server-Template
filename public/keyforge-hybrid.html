@@ -217,37 +217,60 @@
 
         .context-menu {
             position: absolute;
-            background: rgba(30, 30, 30, 0.95);
+            background: rgba(20, 20, 20, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            padding: 8px 0;
+            padding: 8px;
             min-width: 200px;
-            z-index: 1000;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            opacity: 0;
-            transform: scale(0.95);
-            transition: all 0.2s ease;
-            pointer-events: none;
-        }
-
-        .context-menu.active {
-            opacity: 1;
-            transform: scale(1);
-            pointer-events: auto;
+            z-index: 1000;
+            font-family: 'Segoe UI', sans-serif;
         }
 
         .context-menu-item {
-            padding: 8px 16px;
-            color: #fff;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: background 0.2s ease;
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #fff;
+            transition: all 0.2s ease;
+            user-select: none;
         }
 
         .context-menu-item:hover {
             background: rgba(255, 255, 255, 0.1);
+        }
+
+        .context-menu-item.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .context-menu-item .icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .context-menu-item .label {
+            flex-grow: 1;
+        }
+
+        .context-menu-item .status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .context-menu-item .status.active {
+            background: #00ff00;
         }
 
         .context-menu-separator {
@@ -256,27 +279,80 @@
             margin: 4px 0;
         }
 
-        .context-menu-item.active {
-            background: rgba(255, 255, 255, 0.2);
+        @keyframes pulse-circle {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
         }
 
-        .pulse-indicator {
-            width: 12px;
-            height: 12px;
+        @keyframes pulse-square {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(45deg); opacity: 0; }
+        }
+
+        @keyframes pulse-triangle {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(120deg); opacity: 0; }
+        }
+
+        @keyframes pulse-star {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(180deg); opacity: 0; }
+        }
+
+        @keyframes pulse-ripple {
+            0% { transform: scale(0.8); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+            100% { transform: scale(0.8); opacity: 1; }
+        }
+
+        .pulse-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            background: rgba(255, 0, 0, 0.5);
-            display: inline-block;
-            margin-right: 8px;
+            animation-iteration-count: infinite;
+            animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .pulse-indicator.active {
-            animation: indicator-pulse 1s infinite;
+        .pulse-primary {
+            border: 2px solid rgba(0, 255, 255, 0.5);
         }
 
-        @keyframes indicator-pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
+        .pulse-secondary {
+            border: 2px solid rgba(255, 0, 255, 0.5);
+        }
+
+        .shape-circle .pulse {
+            border-radius: 50%;
+            animation-name: pulse-circle;
+        }
+
+        .shape-square .pulse {
+            border-radius: 0;
+            animation-name: pulse-square;
+        }
+
+        .shape-triangle .pulse {
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            animation-name: pulse-triangle;
+        }
+
+        .shape-star .pulse {
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation-name: pulse-star;
+        }
+
+        .shape-ripple .pulse {
+            animation-name: pulse-ripple;
         }
 
         .metadata {
@@ -377,36 +453,51 @@ Rate: ${obj.dataset.pulseRate}</div>
             return obj;
         }
 
-        function createContextMenu(obj, x, y) {
-            // Remove any existing context menu
-            const existingMenu = document.querySelector('.context-menu');
-            if (existingMenu) existingMenu.remove();
-
+        function createContextMenu(target, x, y) {
             const menu = document.createElement('div');
             menu.className = 'context-menu';
+            
+            const shapes = [
+                { id: 'circle', icon: '⭕', label: 'Circle' },
+                { id: 'square', icon: '⬛', label: 'Square' },
+                { id: 'triangle', icon: '△', label: 'Triangle' },
+                { id: 'star', icon: '⭐', label: 'Star' },
+                { id: 'ripple', icon: '◎', label: 'Ripple' }
+            ];
+
+            const pulseTypes = [
+                { id: 'primary', icon: '🔵', label: 'Primary Pulse' },
+                { id: 'secondary', icon: '🔴', label: 'Secondary Pulse' }
+            ];
+
             menu.innerHTML = `
-                <div class="context-menu-item ${obj.dataset.primaryPulse === 'active' ? 'active' : ''}" data-action="toggle-primary">
-                    <span class="pulse-indicator ${obj.dataset.primaryPulse === 'active' ? 'active' : ''}"></span>
-                    Primary Pulse
-                </div>
-                <div class="context-menu-item ${obj.dataset.secondaryPulse === 'active' ? 'active' : ''}" data-action="toggle-secondary">
-                    <span class="pulse-indicator ${obj.dataset.secondaryPulse === 'active' ? 'active' : ''}"></span>
-                    Secondary Pulse
+                <div class="context-menu-item" data-action="toggle-info">
+                    <div class="icon">ℹ️</div>
+                    <div class="label">Toggle Information</div>
                 </div>
                 <div class="context-menu-separator"></div>
-                <div class="context-menu-item" data-action="toggle-shape">
-                    <span>🔄</span> Toggle Shape (${obj.dataset.pulseShape})
-                </div>
-                <div class="context-menu-item" data-action="adjust-rate">
-                    <span>⚡</span> Pulse Rate: ${obj.dataset.pulseRate}
-                </div>
+                ${pulseTypes.map(pulse => `
+                    <div class="context-menu-item" data-action="toggle-pulse" data-pulse="${pulse.id}">
+                        <div class="icon">${pulse.icon}</div>
+                        <div class="label">${pulse.label}</div>
+                        <div class="status ${target.dataset[pulse.id + 'Pulse'] === 'active' ? 'active' : ''}"></div>
+                    </div>
+                `).join('')}
                 <div class="context-menu-separator"></div>
-                <div class="context-menu-item" data-action="info">
-                    <span>ℹ️</span> Node Information
+                ${shapes.map(shape => `
+                    <div class="context-menu-item ${target.dataset.pulseShape === shape.id ? 'active' : ''}" 
+                         data-action="set-shape" data-shape="${shape.id}">
+                        <div class="icon">${shape.icon}</div>
+                        <div class="label">${shape.label}</div>
+                    </div>
+                `).join('')}
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="set-rate">
+                    <div class="icon">⚡</div>
+                    <div class="label">Pulse Rate: ${target.dataset.pulseRate}</div>
                 </div>
             `;
 
-            // Position menu
             menu.style.left = `${x}px`;
             menu.style.top = `${y}px`;
 
@@ -427,95 +518,116 @@ Rate: ${obj.dataset.pulseRate}</div>
 
                 const action = item.dataset.action;
                 switch (action) {
-                    case 'toggle-primary':
-                        togglePulse(obj, 'primary');
+                    case 'toggle-info':
+                        toggleObjectInfo(target);
                         break;
-                    case 'toggle-secondary':
-                        togglePulse(obj, 'secondary');
+                    case 'toggle-pulse':
+                        const pulseType = item.dataset.pulse;
+                        togglePulse(target, pulseType);
                         break;
-                    case 'toggle-shape':
-                        togglePulseShape(obj);
+                    case 'set-shape':
+                        const shape = item.dataset.shape;
+                        setShape(target, shape);
                         break;
-                    case 'adjust-rate':
-                        // Show rate adjustment UI
-                        break;
-                    case 'info':
-                        showNodeInfo(obj);
+                    case 'set-rate':
+                        startRateAdjustment(target, x, y);
                         break;
                 }
-                updateContextMenu(obj);
+                menu.remove();
             });
 
-            // Show menu with animation
-            requestAnimationFrame(() => menu.classList.add('active'));
+            return menu;
+        }
+
+        function toggleObjectInfo(obj) {
+            const metadata = obj.querySelector('.metadata');
+            metadata.style.display = metadata.style.display === 'none' ? 'block' : 'none';
         }
 
         function togglePulse(obj, pulseType) {
-            const pulseKey = `${pulseType}Pulse`;
-            const currentState = obj.dataset[pulseKey];
+            const currentState = obj.dataset[pulseType + 'Pulse'];
             const newState = currentState === 'active' ? 'inactive' : 'active';
-            obj.dataset[pulseKey] = newState;
+            obj.dataset[pulseType + 'Pulse'] = newState;
+            
+            const pulseContainer = obj.querySelector('.pulse-container');
+            if (!pulseContainer) {
+                const container = document.createElement('div');
+                container.className = 'pulse-container';
+                obj.appendChild(container);
+            }
 
-            // Update metadata
-            const metadata = obj.querySelector('.metadata');
-            const metadataText = metadata.textContent.split('\n');
-            const index = pulseType === 'primary' ? 2 : 3;
-            metadataText[index] = `${pulseType.charAt(0).toUpperCase() + pulseType.slice(1)} Pulse: ${newState}`;
-            metadata.textContent = metadataText.join('\n');
-
-            // Update visual state
-            updatePulseVisuals(obj);
-
-            addDebugEntry('pulse-toggle', {
-                id: obj.dataset.id,
-                type: pulseType,
-                state: newState
-            });
+            updatePulseAnimations(obj);
         }
 
-        function updatePulseVisuals(obj) {
-            // Remove all pulse classes
-            obj.classList.remove('circle-pulse', 'square-pulse');
+        function setShape(obj, shape) {
+            obj.dataset.pulseShape = shape;
+            obj.className = `draggable shape-${shape}`;
+            updatePulseAnimations(obj);
+        }
 
-            // Add appropriate pulse class based on active pulses
-            if (obj.dataset.primaryPulse === 'active' || obj.dataset.secondaryPulse === 'active') {
-                obj.classList.add('active');
-                obj.classList.add(`${obj.dataset.pulseShape}-pulse`);
-            } else {
-                obj.classList.remove('active');
+        function updatePulseAnimations(obj) {
+            const container = obj.querySelector('.pulse-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            if (obj.dataset.primaryPulse === 'active') {
+                const pulse = document.createElement('div');
+                pulse.className = 'pulse pulse-primary';
+                pulse.style.animationDuration = obj.dataset.pulseRate;
+                container.appendChild(pulse);
+            }
+
+            if (obj.dataset.secondaryPulse === 'active') {
+                const pulse = document.createElement('div');
+                pulse.className = 'pulse pulse-secondary';
+                pulse.style.animationDuration = obj.dataset.pulseRate;
+                container.appendChild(pulse);
             }
         }
 
-        function showNodeInfo(obj) {
-            const info = {
-                id: obj.dataset.id,
-                type: obj.querySelector('.metadata').textContent.split('\n')[1].split(': ')[1],
-                primaryPulse: obj.dataset.primaryPulse,
-                secondaryPulse: obj.dataset.secondaryPulse,
-                shape: obj.dataset.pulseShape,
-                rate: obj.dataset.pulseRate,
-                position: {
-                    x: parseInt(obj.style.left),
-                    y: parseInt(obj.style.top)
-                }
+        let rateAdjustmentStart = null;
+
+        function startRateAdjustment(obj, startX, startY) {
+            rateAdjustmentStart = { 
+                x: startX, 
+                y: startY, 
+                initialRate: parseFloat(obj.dataset.pulseRate),
+                axis: null
             };
+            
+            function onMouseMove(e) {
+                if (!rateAdjustmentStart) return;
+                
+                const dx = e.pageX - rateAdjustmentStart.x;
+                const dy = e.pageY - rateAdjustmentStart.y;
+                
+                // Determine axis if not set
+                if (!rateAdjustmentStart.axis) {
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        rateAdjustmentStart.axis = 'x';
+                    } else {
+                        rateAdjustmentStart.axis = 'y';
+                    }
+                }
+                
+                // Calculate rate based on axis distance
+                const distance = Math.abs(rateAdjustmentStart.axis === 'x' ? dx : dy);
+                const newRate = Math.max(0.1, Math.min(5, distance / 100));
+                
+                obj.dataset.pulseRate = `${newRate.toFixed(1)}s`;
+                obj.style.setProperty('--pulse-rate', `${newRate}s`);
+                updatePulseAnimations(obj);
+            }
 
-            addDebugEntry('node-info', info);
-        }
+            function onMouseUp() {
+                rateAdjustmentStart = null;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
 
-        function updateContextMenu(obj) {
-            const menu = document.querySelector('.context-menu');
-            if (!menu) return;
-
-            // Update menu items to reflect current state
-            const primaryItem = menu.querySelector('[data-action="toggle-primary"]');
-            const secondaryItem = menu.querySelector('[data-action="toggle-secondary"]');
-
-            primaryItem.classList.toggle('active', obj.dataset.primaryPulse === 'active');
-            secondaryItem.classList.toggle('active', obj.dataset.secondaryPulse === 'active');
-
-            primaryItem.querySelector('.pulse-indicator').classList.toggle('active', obj.dataset.primaryPulse === 'active');
-            secondaryItem.querySelector('.pulse-indicator').classList.toggle('active', obj.dataset.secondaryPulse === 'active');
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
         }
 
         function cancelHoldTimer(identifier) {
@@ -646,7 +758,7 @@ Rate: ${obj.dataset.pulseRate}</div>
         document.addEventListener('mousedown', (e) => {
             if (isTouchDevice) return;
 
-            // Right click for create menu
+            // Right click for context menu
             if (e.button === 2) {
                 const target = findDraggableTarget(e);
                 if (target) {
@@ -693,73 +805,65 @@ Rate: ${obj.dataset.pulseRate}</div>
                 return;
             }
 
-            // Handle left click release
-            if (e.button === 0 && activeDraggable) {
-                const dragDuration = Date.now() - dragStartTime;
-                activeDraggable.classList.remove('being-dragged');
-                
-                if (dragDuration < DRAG_THRESHOLD) {
-                    toggleObjectState(activeDraggable);
-                }
-                
-                activeDraggable = null;
-                menuInteractionId = null;
-            }
-        });
-
-        // Touch event handlers - keep the hold behavior for touch devices
-        document.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            
-            if (!activeDraggable) {
-                const target = findDraggableTarget(touch);
-                if (target) {
-                    activeDraggable = target;
-                    menuInteractionId = touch.identifier;
-                    dragStartTime = Date.now();
-                    target.classList.add('being-dragged');
-                    startHoldTimer(touch, target);
-                    holdStartPosition = { x: touch.pageX, y: touch.pageY };
-                } else {
-                    createStartPosition = { x: touch.pageX, y: touch.pageY };
-                    startHoldTimer(touch, { dataset: { type: 'create' } });
+            // Handle left click
+            if (e.button === 0) {
+                if (activeDraggable) {
+                    const dragDuration = Date.now() - dragStartTime;
+                    activeDraggable.classList.remove('being-dragged');
+                    
+                    // Only toggle info on click (no significant drag)
+                    if (dragDuration < DRAG_THRESHOLD) {
+                        toggleObjectInfo(activeDraggable);
+                    }
+                    
+                    activeDraggable = null;
+                    menuInteractionId = null;
                 }
             }
         });
 
-        document.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
+        // Handle rate adjustment with axis-based distance
+        function startRateAdjustment(obj, startX, startY) {
+            rateAdjustmentStart = { 
+                x: startX, 
+                y: startY, 
+                initialRate: parseFloat(obj.dataset.pulseRate),
+                axis: null
+            };
             
-            if (createStartPosition && !createMenuActive) {
-                const dx = touch.pageX - createStartPosition.x;
-                const dy = touch.pageY - createStartPosition.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+            function onMouseMove(e) {
+                if (!rateAdjustmentStart) return;
                 
-                if (distance > 10) {
-                    cancelHoldTimer(touch.identifier);
-                    createStartPosition = null;
+                const dx = e.pageX - rateAdjustmentStart.x;
+                const dy = e.pageY - rateAdjustmentStart.y;
+                
+                // Determine axis if not set
+                if (!rateAdjustmentStart.axis) {
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        rateAdjustmentStart.axis = 'x';
+                    } else {
+                        rateAdjustmentStart.axis = 'y';
+                    }
                 }
+                
+                // Calculate rate based on axis distance
+                const distance = Math.abs(rateAdjustmentStart.axis === 'x' ? dx : dy);
+                const newRate = Math.max(0.1, Math.min(5, distance / 100));
+                
+                obj.dataset.pulseRate = `${newRate.toFixed(1)}s`;
+                obj.style.setProperty('--pulse-rate', `${newRate}s`);
+                updatePulseAnimations(obj);
             }
-        });
 
-        document.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            const touch = e.changedTouches[0];
-            
-            if (createMenuActive) {
-                const option = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (option && option.classList.contains('create-option')) {
-                    const emoji = option.dataset.emoji;
-                    createObjectAtPosition(emoji, touch.pageX, touch.pageY);
-                }
-                hideCreateMenu();
-                createStartPosition = null;
+            function onMouseUp() {
+                rateAdjustmentStart = null;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
             }
-            
-            cancelHoldTimer(touch.identifier);
-        });
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
 
         // Add wheel event for pulse rate adjustment
         document.addEventListener('wheel', (e) => {

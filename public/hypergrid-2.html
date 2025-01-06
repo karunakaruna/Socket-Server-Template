@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypergrid 2.0</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            backdrop-filter: blur(5px);
+        }
+        .control-group {
+            margin: 10px 0;
+        }
+        label { display: block; margin-bottom: 5px; }
+        input[type="range"] { width: 200px; }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="controls">
+        <div class="control-group">
+            <label for="w-rotation">4D W-Rotation</label>
+            <input type="range" id="w-rotation" min="0" max="6.28" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <label for="grid-density">Grid Density</label>
+            <input type="range" id="grid-density" min="5" max="30" step="1" value="10">
+        </div>
+        <div class="control-group">
+            <label for="point-size">Point Size</label>
+            <input type="range" id="point-size" min="0.1" max="10" step="0.1" value="2">
+        </div>
+        <div class="control-group">
+            <label for="camera-distance">Camera Distance</label>
+            <input type="range" id="camera-distance" min="0.5" max="5" step="0.1" value="2">
+        </div>
+        <div class="control-group">
+            <label for="trace-depth">Trace Depth</label>
+            <input type="range" id="trace-depth" min="0" max="0.95" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <label for="point-brightness">Point Brightness</label>
+            <input type="range" id="point-brightness" min="0.1" max="2" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+            <label for="rotation-speed">Auto Rotation</label>
+            <input type="range" id="rotation-speed" min="0" max="0.02" step="0.001" value="0">
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById("glCanvas");
+        const gl = canvas.getContext("webgl");
+
+        if (!gl) {
+            alert("WebGL not supported");
+            throw new Error("WebGL not supported");
+        }
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        const vertexShaderSource = `
+            attribute vec4 position;
+            attribute float pointSize;
+            attribute vec4 color;
+            uniform mat4 projection;
+            uniform mat4 rotation4d;
+            uniform float cameraDistance;
+            uniform float brightness;
+            varying vec4 vColor;
+            varying float vDepth;
+            
+            void main() {
+                // Apply 4D rotation
+                vec4 rotated = rotation4d * position;
+                float w = rotated.w;
+                
+                // Project to 3D with perspective division
+                vec3 pos = rotated.xyz / (cameraDistance * (w + 2.0));
+                
+                // Final position
+                gl_Position = projection * vec4(pos, 1.0);
+                
+                // Point size varies with w-coordinate and depth
+                float depthScale = 1.0 - gl_Position.z * 0.1;
+                gl_PointSize = pointSize * (2.0 / (w + 2.0)) * depthScale;
+                
+                // Pass color and depth to fragment shader
+                vColor = color * brightness;
+                vDepth = gl_Position.z;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision highp float;
+            varying vec4 vColor;
+            varying float vDepth;
+            uniform float traceDepth;
+            
+            void main() {
+                // Create circular points
+                vec2 coord = gl_PointCoord * 2.0 - 1.0;
+                float r = length(coord);
+                if (r > 1.0) discard;
+                
+                // Fade edges and apply depth-based intensity
+                float alpha = 1.0 - smoothstep(0.8, 1.0, r);
+                float intensity = 1.0 - (vDepth * 0.5);
+                
+                // Apply trace depth effect
+                alpha *= mix(1.0, 0.1, traceDepth);
+                
+                gl_FragColor = vec4(vColor.rgb * intensity, alpha);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error("Shader compile failed:", gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error("Program link failed:", gl.getProgramInfoLog(program));
+        }
+
+        gl.useProgram(program);
+
+        // Generate 4D grid points
+        const gridSize = 10;
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+
+            for (let w = -1; w <= 1; w += 2/size) {
+                for (let x = -1; x <= 1; x += 2/size) {
+                    for (let y = -1; y <= 1; y += 2/size) {
+                        for (let z = -1; z <= 1; z += 2/size) {
+                            points.push(x, y, z, w);
+                            
+                            // Color based on position
+                            colors.push(
+                                0.5 + x/2,
+                                0.5 + y/2,
+                                0.5 + z/2,
+                                1.0
+                            );
+                            
+                            sizes.push(2.0);
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        }
+
+        let { points, colors, sizes } = generatePoints(gridSize);
+
+        // Set up buffers
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+        // Get attribute locations
+        const positionLocation = gl.getAttribLocation(program, "position");
+        const colorLocation = gl.getAttribLocation(program, "color");
+        const sizeLocation = gl.getAttribLocation(program, "pointSize");
+
+        // Get uniform locations
+        const projectionLocation = gl.getUniformLocation(program, "projection");
+        const rotation4dLocation = gl.getUniformLocation(program, "rotation4d");
+        const cameraDistanceLocation = gl.getUniformLocation(program, "cameraDistance");
+        const traceDepthLocation = gl.getUniformLocation(program, "traceDepth");
+        const brightnessLocation = gl.getUniformLocation(program, "brightness");
+
+        // Enable attributes
+        gl.enableVertexAttribArray(positionLocation);
+        gl.enableVertexAttribArray(colorLocation);
+        gl.enableVertexAttribArray(sizeLocation);
+
+        function getProjectionMatrix(angle) {
+            const s = Math.sin(angle), c = Math.cos(angle);
+            return new Float32Array([
+                c, 0, -s, 0,
+                0, 1, 0, 0,
+                s, 0, c, 0,
+                0, 0, 0, 1
+            ]);
+        }
+
+        function get4DRotationMatrix(angle) {
+            const s = Math.sin(angle), c = Math.cos(angle);
+            return new Float32Array([
+                c, 0, 0, -s,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                s, 0, 0, c
+            ]);
+        }
+
+        // UI Controls
+        const wRotationControl = document.getElementById('w-rotation');
+        const gridDensityControl = document.getElementById('grid-density');
+        const pointSizeControl = document.getElementById('point-size');
+        const cameraDistanceControl = document.getElementById('camera-distance');
+        const traceDepthControl = document.getElementById('trace-depth');
+        const pointBrightnessControl = document.getElementById('point-brightness');
+        const rotationSpeedControl = document.getElementById('rotation-speed');
+
+        // Enable alpha blending for trails
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+        let angle = 0;
+        let currentGridSize = gridSize;
+
+        function render() {
+            // Clear based on trace depth
+            const traceDepth = parseFloat(traceDepthControl.value);
+            gl.clearColor(0, 0, 0, 1 - traceDepth);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // Update grid if density changed
+            const newGridSize = parseInt(gridDensityControl.value);
+            if (newGridSize !== currentGridSize) {
+                currentGridSize = newGridSize;
+                let { points: newPoints, colors: newColors, sizes: newSizes } = generatePoints(currentGridSize);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newPoints), gl.STATIC_DRAW);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newColors), gl.STATIC_DRAW);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newSizes), gl.STATIC_DRAW);
+                
+                points = newPoints;
+            }
+
+            // Update uniforms
+            const wRotation = parseFloat(wRotationControl.value);
+            const cameraDistance = parseFloat(cameraDistanceControl.value);
+            const brightness = parseFloat(pointBrightnessControl.value);
+            const rotationSpeed = parseFloat(rotationSpeedControl.value);
+            
+            angle += rotationSpeed;
+            
+            gl.uniformMatrix4fv(projectionLocation, false, getProjectionMatrix(angle));
+            gl.uniformMatrix4fv(rotation4dLocation, false, get4DRotationMatrix(wRotation));
+            gl.uniform1f(cameraDistanceLocation, cameraDistance);
+            gl.uniform1f(traceDepthLocation, traceDepth);
+            gl.uniform1f(brightnessLocation, brightness);
+
+            // Update point sizes
+            const pointSize = parseFloat(pointSizeControl.value);
+            const sizes = new Float32Array(points.length / 4).fill(pointSize);
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);
+
+            // Bind attributes and draw
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+            
+            requestAnimationFrame(render);
+        }
+
+        render();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        });
+    </script>
+</body>
+</html>
