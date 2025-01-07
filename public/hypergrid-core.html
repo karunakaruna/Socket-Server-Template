@@ -407,6 +407,42 @@
             z-index: 1000;
             text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
         }
+        
+        #controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        #performance-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        #orbital-compass {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at center,
+                rgba(255, 0, 255, 0.2) 0%,
+                rgba(0, 255, 255, 0.1) 50%,
+                transparent 100%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -475,6 +511,14 @@
         <div id="depth-display">λ=0.000</div>
         <div id="curvature-display">κ=1.000</div>
         <div id="entropy-display">1.317 qbits</div>
+    </div>
+
+    <div id="controls">
+        <div id="performance-controls">
+            <input type="range" id="quality-slider" min="0.1" max="1.0" step="0.1" value="0.5">
+            <input type="range" id="particle-slider" min="5" max="50" step="5" value="15">
+        </div>
+        <div id="orbital-compass"></div>
     </div>
 
     <script>
@@ -1199,98 +1243,641 @@
             }
         }
 
-        // Handle hyperstring excitation
-        function exciteHyperstring(x, y) {
-            const excitation = {
-                x, y,
+        // Break angle physics
+        const breakPhysics = {
+            angle: 0,
+            speed: 0,
+            breakPoint: Math.PI * 0.4, // Break angle threshold
+            recovery: 0.95, // Recovery rate
+            lerpFactor: 0.02, // Core gravity pull
+            criticalSpeed: 30 // Speed at which break effects start
+        };
+
+        // Core gravity LERP
+        function lerpToCore(entity, strength = 1) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Calculate current angle to core
+            const dx = centerX - entity.x;
+            const dy = centerY - entity.y;
+            const currentAngle = Math.atan2(dy, dx);
+            
+            // Calculate break angle effect
+            const velocityAngle = Math.atan2(entity.vy, entity.vx);
+            const angleDiff = Math.abs(currentAngle - velocityAngle);
+            const breakEffect = angleDiff > breakPhysics.breakPoint ? 
+                              Math.pow(breakPhysics.recovery, angleDiff) : 1;
+            
+            // Apply speed-based break physics
+            const speed = Math.hypot(entity.vx, entity.vy);
+            const breakMultiplier = speed > breakPhysics.criticalSpeed ?
+                                  breakEffect * (breakPhysics.criticalSpeed / speed) : 1;
+            
+            // LERP position to core
+            entity.x = entity.x + (centerX - entity.x) * breakPhysics.lerpFactor * strength;
+            entity.y = entity.y + (centerY - entity.y) * breakPhysics.lerpFactor * strength;
+            
+            // Apply break physics to velocity
+            entity.vx *= breakMultiplier;
+            entity.vy *= breakMultiplier;
+            
+            return breakMultiplier; // Return for visual effects
+        }
+
+        // Enhanced hyperstring excitation with break physics
+        function exciteHyperstring(x, y, strength = 0.5) {
+            const radius = 100 * strength * hyperSpeed.boost;
+            const temporalStrength = strength * (1 + hyperGradient.temporalField) * hyperSpeed.boost;
+            
+            // Speed burst with break physics
+            const currentSpeed = hyperSpeed.velocity;
+            const targetSpeed = Math.min(hyperSpeed.maxSpeed, 
+                currentSpeed + strength * 5 * hyperSpeed.boost
+            );
+            
+            // Apply break angle to speed increase
+            const speedDiff = targetSpeed - currentSpeed;
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            
+            hyperSpeed.velocity = currentSpeed + speedDiff * breakEffect;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < radius * 1.5) {
+                    // Amplified influence
+                    const influence = (1 - dist/radius) * temporalStrength * hyperSpeed.boost;
+                    const temporalPhase = Math.sin(time * 0.02 * hyperSpeed.boost + 
+                                                 hyperGradient.temporalField);
+                    
+                    // Accelerated orbital force
+                    const angle = Math.atan2(dy, dx) + 
+                        temporalPhase * influence * hyperGradient.orbitalFlow * hyperSpeed.boost;
+                    
+                    // Boosted velocity
+                    const speedMult = 8 * (1 + hyperSpeed.velocity * 0.1);
+                    psiboid.vx += Math.cos(angle) * influence * speedMult;
+                    psiboid.vy += Math.sin(angle) * influence * speedMult;
+                    
+                    // Rapid quantum depth increase
+                    hyperGradient.gravityWell = Math.min(1,
+                        hyperGradient.gravityWell + influence * 0.1 * hyperSpeed.boost
+                    );
+                }
+            });
+        }
+
+        // Update frame with break physics
+        function updateFrame() {
+            // Speed-based fade with break effect
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            const fadeAlpha = 0.1 * (1 + hyperGradient.temporalField * 0.1) / 
+                            (1 + hyperSpeed.velocity * 0.05 * breakEffect);
+            
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
+            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
+            orbitalState.depth = Math.min(orbitalState.maxDepth, 
+                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
+            
+            // Update all psiboids with quantum effects
+            psiBoids.forEach((psiboid, i) => {
+                // Apply quantum uncertainty
+                const uncertainty = 0.1 * (1 - quantumState.depth);
+                psiboid.vx += (Math.random() - 0.5) * uncertainty;
+                psiboid.vy += (Math.random() - 0.5) * uncertainty;
+                
+                // Update position
+                psiboid.update();
+                
+                // Create quantum bridges between adjacent psiboids
+                if (i < psiBoids.length - 1) {
+                    const nextPsiboid = psiBoids[i + 1];
+                    const bridgeStrength = (1 + Math.sin(quantumState.phase + i * Math.PI/psiBoids.length) * 0.3);
+                    
+                    createQuantumBridge(
+                        psiboid.x, psiboid.y,
+                        nextPsiboid.x, nextPsiboid.y,
+                        bridgeStrength * quantumState.depth
+                    );
+                }
+            });
+            
+            // Update the GUARDIAN
+            guardian.update();
+            
+            // Request next frame
+            requestAnimationFrame(updateFrame);
+        }
+
+        // Find nearest psiboid to a point
+        function findNearestPsiboid(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = psiboid;
+                }
+            });
+            
+            return nearest;
+        }
+
+        // Create quantum bridge between points
+        function createQuantumBridge(startX, startY, endX, endY, strength) {
+            const segments = 20;
+            const phase = quantumState.phase;
+            const depth = quantumState.depth;
+            
+            // Draw main bridge
+            coreCtx.beginPath();
+            for (let i = 0; i <= segments; i++) {
+                const t = i/segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+                
+                // Add quantum fluctuations
+                const fluctuation = Math.sin(t * Math.PI * 6 + phase) * 
+                                  Math.sin(time * 0.002) * 
+                                  (10 + depth * 20);
+                
+                // Add spiral structure
+                const spiralRadius = (1 - t) * t * 100 * (1 + depth);
+                const spiralPhase = t * Math.PI * 8 + phase;
+                const spiralX = Math.cos(spiralPhase) * spiralRadius * strength;
+                const spiralY = Math.sin(spiralPhase) * spiralRadius * strength;
+                
+                if (i === 0) {
+                    coreCtx.moveTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                } else {
+                    coreCtx.lineTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                }
+            }
+            
+            // Create quantum gradient
+            const gradient = coreCtx.createLinearGradient(startX, startY, endX, endY);
+            const alpha = strength * 0.4 * (1 + depth);
+            
+            gradient.addColorStop(0, `rgba(0, 255, 255, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(100, 200, 255, ${alpha * 0.7})`);
+            gradient.addColorStop(1, `rgba(0, 255, 255, ${alpha})`);
+            
+            coreCtx.strokeStyle = gradient;
+            coreCtx.lineWidth = 2 * (1 + depth * strength);
+            coreCtx.stroke();
+            
+            // Add quantum glow
+            coreCtx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+            coreCtx.shadowBlur = 10 * strength;
+            coreCtx.stroke();
+        }
+
+        // Initialize interface controls
+        function initInterface() {
+            const controls = document.createElement('div');
+            controls.style.position = 'fixed';
+            controls.style.bottom = '20px';
+            controls.style.left = '50%';
+            controls.style.transform = 'translateX(-50%)';
+            controls.style.display = 'flex';
+            controls.style.gap = '10px';
+            controls.style.background = 'rgba(0, 0, 0, 0.7)';
+            controls.style.padding = '10px';
+            controls.style.borderRadius = '5px';
+            controls.style.zIndex = '1000';
+
+            // Create buttons
+            const homeBtn = createButton('HOME');
+            const stopBtn = createButton('STOP');
+            const manifoldBtn = createButton('MANIFOLD');
+
+            // Add buttons to controls
+            controls.appendChild(homeBtn);
+            controls.appendChild(stopBtn);
+            controls.appendChild(manifoldBtn);
+
+            // Add controls to body
+            document.body.appendChild(controls);
+        }
+
+        // Create styled button
+        function createButton(text) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.style.background = 'transparent';
+            button.style.border = '1px solid #0ff';
+            button.style.color = '#0ff';
+            button.style.padding = '5px 15px';
+            button.style.cursor = 'pointer';
+            button.style.fontFamily = 'monospace';
+            button.style.fontSize = '14px';
+            button.style.transition = 'all 0.3s ease';
+
+            // Hover effects
+            button.addEventListener('mouseover', () => {
+                button.style.background = 'rgba(0, 255, 255, 0.2)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.background = 'transparent';
+            });
+
+            // Click effects
+            button.addEventListener('click', () => {
+                switch(text) {
+                    case 'HOME':
+                        // Reset quantum state
+                        quantumState.depth = 0;
+                        quantumState.phase = 0;
+                        quantumState.diving = false;
+                        break;
+                    case 'STOP':
+                        // Freeze quantum state
+                        quantumState.diving = false;
+                        quantumState.depth = Math.max(0, quantumState.depth - 0.1);
+                        break;
+                    case 'MANIFOLD':
+                        // Toggle geometry layer
+                        quantumState.geometryLayer = (quantumState.geometryLayer + 1) % 3;
+                        break;
+                }
+            });
+
+            return button;
+        }
+
+        // Initialize sliders
+        function initSliders() {
+            const sliders = document.createElement('div');
+            sliders.style.position = 'fixed';
+            sliders.style.top = '20px';
+            sliders.style.right = '20px';
+            sliders.style.display = 'flex';
+            sliders.style.flexDirection = 'column';
+            sliders.style.gap = '10px';
+            sliders.style.background = 'rgba(0, 0, 0, 0.7)';
+            sliders.style.padding = '10px';
+            sliders.style.borderRadius = '5px';
+            sliders.style.zIndex = '1000';
+
+            // Create manifold depth display
+            const depthDisplay = document.createElement('div');
+            depthDisplay.className = 'manifold-depth';
+            depthDisplay.style.color = '#0ff';
+            depthDisplay.style.fontFamily = 'monospace';
+            depthDisplay.style.fontSize = '14px';
+            depthDisplay.textContent = 'λ=0.000';
+
+            // Create curvature display
+            const curvatureDisplay = document.createElement('div');
+            curvatureDisplay.className = 'curvature';
+            curvatureDisplay.style.color = '#0ff';
+            curvatureDisplay.style.fontFamily = 'monospace';
+            curvatureDisplay.style.fontSize = '14px';
+            curvatureDisplay.textContent = 'κ=1.400';
+
+            // Create quantum entropy display
+            const entropyDisplay = document.createElement('div');
+            entropyDisplay.className = 'q-entropy';
+            entropyDisplay.style.color = '#0ff';
+            entropyDisplay.style.fontFamily = 'monospace';
+            entropyDisplay.style.fontSize = '14px';
+            entropyDisplay.textContent = '1.317 qbits';
+
+            // Add displays to sliders
+            sliders.appendChild(depthDisplay);
+            sliders.appendChild(curvatureDisplay);
+            sliders.appendChild(entropyDisplay);
+
+            // Add sliders to body
+            document.body.appendChild(sliders);
+        }
+
+        // Psiboid creation
+        function createPsiboid() {
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                size: 5 + Math.random() * 5,
+                phase: Math.random() * Math.PI * 2,
+                frequency: 0.02 + Math.random() * 0.03,
+                resonance: 0.8 + Math.random() * 0.4,
+                trail: [],
+                maxTrailLength: 20,
+                submergedDepth: 0,
+                resonanceField: Array(6).fill(0),
+                
+                update() {
+                    // Update position with quantum effects
+                    const uncertainty = 0.5 * (1 - this.submergedDepth);
+                    this.vx += (Math.random() - 0.5) * uncertainty;
+                    this.vy += (Math.random() - 0.5) * uncertainty;
+                    
+                    // Apply velocity limits
+                    const maxSpeed = 2 + this.submergedDepth * 1.5;
+                    const speed = Math.hypot(this.vx, this.vy);
+                    if (speed > maxSpeed) {
+                        this.vx = (this.vx / speed) * maxSpeed;
+                        this.vy = (this.vy / speed) * maxSpeed;
+                    }
+                    
+                    // Update position
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Wrap around edges with quantum tunneling
+                    const margin = 50;
+                    if (this.x < -margin) this.x = window.innerWidth + margin;
+                    if (this.x > window.innerWidth + margin) this.x = -margin;
+                    if (this.y < -margin) this.y = window.innerHeight + margin;
+                    if (this.y > window.innerHeight + margin) this.y = -margin;
+                    
+                    // Update phase and resonance
+                    this.phase += this.frequency;
+                    this.resonance = 0.8 + 0.2 * Math.sin(this.phase);
+                    
+                    // Update trail with quantum effects
+                    this.trail.unshift({
+                        x: this.x + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        y: this.y + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        phase: this.phase
+                    });
+                    
+                    if (this.trail.length > this.maxTrailLength) {
+                        this.trail.pop();
+                    }
+                    
+                    // Update resonance field
+                    for (let i = 0; i < this.resonanceField.length; i++) {
+                        const targetValue = 0.5 + 0.5 * Math.sin(this.phase + i * Math.PI / 3);
+                        this.resonanceField[i] += (targetValue - this.resonanceField[i]) * 0.1;
+                    }
+                    
+                    // Draw psiboid core
+                    const glowSize = this.size * (1.5 + 0.5 * Math.sin(this.phase));
+                    const alpha = 0.5 + 0.3 * Math.sin(this.phase);
+                    
+                    // Draw quantum glow
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+                    coreCtx.fill();
+                    
+                    // Draw core
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                    coreCtx.fill();
+                    
+                    // Draw quantum trail
+                    if (this.trail.length > 1) {
+                        coreCtx.beginPath();
+                        coreCtx.moveTo(this.trail[0].x, this.trail[0].y);
+                        
+                        for (let i = 1; i < this.trail.length; i++) {
+                            const point = this.trail[i];
+                            const trailAlpha = (1 - i/this.trail.length) * 0.5;
+                            
+                            coreCtx.lineTo(point.x, point.y);
+                            coreCtx.strokeStyle = `rgba(0, 255, 255, ${trailAlpha})`;
+                            coreCtx.lineWidth = 2 * (1 - i/this.trail.length);
+                            coreCtx.stroke();
+                            coreCtx.beginPath();
+                            coreCtx.moveTo(point.x, point.y);
+                        }
+                    }
+                    
+                    // Draw resonance field when submerged
+                    if (this.submergedDepth > 0) {
+                        coreCtx.beginPath();
+                        this.resonanceField.forEach((val, i) => {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const radius = 30 + val * 20;
+                            const x = this.x + Math.cos(angle) * radius;
+                            const y = this.y + Math.sin(angle) * radius;
+                            
+                            if (i === 0) {
+                                coreCtx.moveTo(x, y);
+                            } else {
+                                coreCtx.lineTo(x, y);
+                            }
+                        });
+                        coreCtx.closePath();
+                        coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.3 * this.submergedDepth})`;
+                        coreCtx.stroke();
+                    }
+                }
+            };
+        }
+
+        // Initialize psiboids
+        function initPsiboids() {
+            // Clear existing psiboids
+            psiBoids.length = 0;
+            
+            // Create new psiboids
+            for (let i = 0; i < 10; i++) {
+                psiBoids.push(createPsiboid());
+            }
+        }
+
+        // Update manifold display
+        function updateManifold() {
+            const depth = quantumState.depth;
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Control functions
+        function homeState() {
+            quantumState.depth = 0;
+            quantumState.phase = 0;
+            quantumState.diving = false;
+        }
+
+        function stopState() {
+            psiBoids.forEach(psiboid => {
+                psiboid.vx *= 0.1;
+                psiboid.vy *= 0.1;
+            });
+        }
+
+        function toggleManifold() {
+            const display = document.querySelector('.manifold-depth').parentElement;
+            display.style.display = display.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Quantum diving mechanics
+        function handleQuantumInteraction(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find nearest psiboid for kiss interaction
+            const nearestPsiboid = findNearestPsiboid(x, y);
+            if (nearestPsiboid) {
+                const dx = nearestPsiboid.x - x;
+                const dy = nearestPsiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Kiss interaction range
+                if (dist < 50) {
+                    // Initiate quantum kiss
+                    initiateQuantumKiss(nearestPsiboid);
+                    return;
+                }
+            }
+            
+            // Calculate orbital parameters
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.hypot(dx, dy);
+            
+            // Update orbital plane
+            quantumState.orbitalPlane.angle = angle;
+            quantumState.orbitalPlane.radius = Math.min(300, dist);
+            quantumState.orbitalPlane.velocity = 0.01 + (dist / 1000);
+            
+            // Initiate or continue quantum dive
+            if (!quantumState.diving) {
+                quantumState.diving = true;
+                quantumState.diveStartTime = time;
+                quantumState.initialDepth = quantumState.depth;
+            }
+            
+            // Calculate dive progress with orbital influence
+            const diveProgress = Math.min((time - quantumState.diveStartTime) / 30, 1);
+            const orbitalFactor = 1 + Math.sin(quantumState.orbitalPlane.angle) * 0.2;
+            
+            // Update quantum state
+            quantumState.depth = Math.min(1, quantumState.initialDepth + 
+                (1 - Math.cos(diveProgress * Math.PI)) * 0.5 * orbitalFactor);
+            
+            // Update psiboid behavior based on orbital plane
+            psiBoids.forEach((psiboid, i) => {
+                // Get orbital influence
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dx = centerX - psiboid.x;
+                const dy = centerY - psiboid.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Calculate orbital force
+                const angle = quantumState.orbitalPlane.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(quantumState.phase) * 0.2;
+                
+                const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+                const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+                
+                // Apply orbital force
+                const orbitStrength = 0.1 * quantumState.depth;
+                psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+                psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+                
+                // Add depth-based behavior
+                if (quantumState.depth > 0.5) {
+                    // Create vortex effect
+                    const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                        (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                    const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                    psiboid.vx = Math.cos(vortexAngle) * speed;
+                    psiboid.vy = Math.sin(vortexAngle) * speed;
+                }
+            });
+            
+            // Update manifold display
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${quantumState.depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + quantumState.depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + quantumState.depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Initiate quantum kiss with psiboid
+        function initiateQuantumKiss(psiboid) {
+            // Create kiss resonance
+            const kissResonance = {
                 phase: quantumState.phase,
                 strength: 1.0,
                 radius: 0,
-                maxRadius: 500,
-                duration: 90, // frames
-                startTime: time,
-                temporalShift: 0,
-                spirals: []
+                maxRadius: 300,
+                duration: 60, // frames
+                startTime: time
             };
             
-            // Create initial spiral patterns
-            for (let i = 0; i < 8; i++) {
-                excitation.spirals.push({
-                    phase: (i / 8) * Math.PI * 2,
-                    frequency: 0.02 + Math.random() * 0.03,
-                    amplitude: 0.5 + Math.random() * 0.5,
-                    temporalPhase: Math.random() * Math.PI * 2
-                });
-            }
-            
             // Add visual effect
-            function updateExcitation() {
-                const progress = (time - excitation.startTime) / excitation.duration;
+            function updateKissEffect() {
+                const progress = (time - kissResonance.startTime) / kissResonance.duration;
                 if (progress >= 1) return;
                 
-                // Update temporal shift
-                excitation.temporalShift = Math.sin(progress * Math.PI) * 0.5;
+                // Expand resonance field
+                kissResonance.radius = kissResonance.maxRadius * Math.sin(progress * Math.PI);
+                kissResonance.strength = 1 - progress;
                 
-                // Expand excitation field
-                excitation.radius = excitation.maxRadius * Math.sin(progress * Math.PI);
-                excitation.strength = 1 - progress;
-                
-                // Draw temporal distortion
+                // Draw resonance field
                 coreCtx.beginPath();
-                coreCtx.arc(excitation.x, excitation.y, excitation.radius, 0, Math.PI * 2);
-                const gradient = coreCtx.createRadialGradient(
-                    excitation.x, excitation.y, 0,
-                    excitation.x, excitation.y, excitation.radius
-                );
-                gradient.addColorStop(0, `rgba(0, 255, 255, ${excitation.strength * 0.5})`);
-                gradient.addColorStop(0.5, `rgba(0, 200, 255, ${excitation.strength * 0.3})`);
-                gradient.addColorStop(1, `rgba(0, 150, 255, 0)`);
-                coreCtx.fillStyle = gradient;
-                coreCtx.fill();
+                coreCtx.arc(psiboid.x, psiboid.y, kissResonance.radius, 0, Math.PI * 2);
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.3})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
                 
-                // Create temporal spiral patterns
-                excitation.spirals.forEach(spiral => {
+                // Create spiral patterns
+                const spirals = 8;
+                for (let i = 0; i < spirals; i++) {
+                    const spiralPhase = (i / spirals) * Math.PI * 2 + kissResonance.phase;
                     coreCtx.beginPath();
-                    const points = [];
-                    for (let t = 0; t <= 1; t += 0.02) {
-                        const radius = excitation.radius * t;
-                        const angle = spiral.phase + t * Math.PI * 4 + 
-                                    Math.sin(time * spiral.frequency + spiral.temporalPhase) * spiral.amplitude;
-                        const x = excitation.x + Math.cos(angle) * radius;
-                        const y = excitation.y + Math.sin(angle) * radius;
-                        points.push({x, y});
+                    for (let t = 0; t <= 1; t += 0.05) {
+                        const radius = kissResonance.radius * t;
+                        const angle = spiralPhase + t * Math.PI * 4;
+                        const x = psiboid.x + Math.cos(angle) * radius;
+                        const y = psiboid.y + Math.sin(angle) * radius;
+                        
+                        if (t === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
                     }
-                    
-                    // Draw smooth curve through points
-                    coreCtx.moveTo(points[0].x, points[0].y);
-                    for (let i = 1; i < points.length - 2; i++) {
-                        const xc = (points[i].x + points[i + 1].x) / 2;
-                        const yc = (points[i].y + points[i + 1].y) / 2;
-                        coreCtx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-                    }
-                    
-                    coreCtx.strokeStyle = `rgba(0, 255, 255, ${excitation.strength * 0.3})`;
+                    coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.2})`;
                     coreCtx.stroke();
-                });
+                }
                 
                 // Affect nearby psiboids
                 psiBoids.forEach(other => {
-                    const dx = other.x - excitation.x;
-                    const dy = other.y - excitation.y;
-                    const dist = Math.hypot(dx, dy);
-                    if (dist < excitation.radius) {
-                        const influence = (1 - dist/excitation.radius) * excitation.strength;
-                        
-                        // Add temporal spiral motion
-                        const angle = Math.atan2(dy, dx) + 
-                                    Math.sin(time * 0.1 + other.phase) * influence;
-                        const speed = Math.hypot(other.vx, other.vy);
-                        other.vx += Math.cos(angle) * influence * 2;
-                        other.vy += Math.sin(angle) * influence * 2;
-                        
-                        // Add temporal distortion
-                        other.phase += influence * 0.2;
-                        other.temporalShift = influence;
+                    if (other !== psiboid) {
+                        const dx = other.x - psiboid.x;
+                        const dy = other.y - psiboid.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < kissResonance.maxRadius) {
+                            createQuantumBridge(
+                                psiboid.x, psiboid.y,
+                                other.x, other.y,
+                                (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                            );
+                        }
                     }
                 });
                 
@@ -1298,11 +1885,11 @@
                 quantumState.depth = Math.min(1, quantumState.depth + 0.001);
                 
                 // Continue effect
-                requestAnimationFrame(updateExcitation);
+                requestAnimationFrame(updateKissEffect);
             }
             
-            // Start excitation
-            updateExcitation();
+            // Start kiss effect
+            updateKissEffect();
             
             // Initiate deep dive
             quantumState.diving = true;
@@ -1355,243 +1942,103 @@
             }
         }
 
-        // Initialize quantum displays
-        const depthDisplay = document.getElementById('depth-display');
-        const curvatureDisplay = document.getElementById('curvature-display');
-        const entropyDisplay = document.getElementById('entropy-display');
-        
-        // Update quantum metrics
-        function updateQuantumMetrics() {
-            if (depthDisplay && curvatureDisplay && entropyDisplay) {
-                depthDisplay.textContent = 
-                    `λ=${(divineSingularity.intensity).toFixed(3)}`;
-                curvatureDisplay.textContent = 
-                    `κ=${(Math.sin(divineSingularity.phase) * 0.5 + 0.5).toFixed(3)}`;
-                entropyDisplay.textContent = 
-                    `${(1.317 + divineSingularity.intensity * 0.1).toFixed(3)} qbits`;
-            }
-        }
-        
-        // Update frame with safe display updates
-        function updateFrame() {
-            // Clear with divine fade
-            coreCtx.fillStyle = `rgba(0, 0, 0, ${0.1 + divineSingularity.intensity * 0.1})`;
-            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
-            
-            // Update quantum singularity
-            updateUnifiedQuantumState();
-            
-            // Update orbital state with divine influence
-            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
-            orbitalState.depth = Math.min(orbitalState.maxDepth, 
-                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
-            
-            // Update all entities
-            updatePsiboids();
-            if (guardian) guardian.update();
-            
-            // Safely update displays
-            updateQuantumMetrics();
-            
-            // Continue divine animation
-            requestAnimationFrame(updateFrame);
-        }
-
-        // Divine quantum singularity
-        const divineSingularity = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-            radius: 300,
-            phase: 0,
-            depth: 0,
-            intensity: 0
+        // Break angle physics
+        const breakPhysics = {
+            angle: 0,
+            speed: 0,
+            breakPoint: Math.PI * 0.4, // Break angle threshold
+            recovery: 0.95, // Recovery rate
+            lerpFactor: 0.02, // Core gravity pull
+            criticalSpeed: 30 // Speed at which break effects start
         };
 
-        // Unified quantum state
-        function updateUnifiedQuantumState() {
-            // Update divine singularity
-            divineSingularity.phase += 0.02;
-            divineSingularity.intensity = Math.min(1, divineSingularity.intensity + 0.001);
-            divineSingularity.radius = Math.max(50, 300 - orbitalState.depth * 0.3);
+        // Core gravity LERP
+        function lerpToCore(entity, strength = 1) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
             
-            // Create divine gradient
-            const gradient = coreCtx.createRadialGradient(
-                divineSingularity.x, divineSingularity.y, 0,
-                divineSingularity.x, divineSingularity.y, divineSingularity.radius
+            // Calculate current angle to core
+            const dx = centerX - entity.x;
+            const dy = centerY - entity.y;
+            const currentAngle = Math.atan2(dy, dx);
+            
+            // Calculate break angle effect
+            const velocityAngle = Math.atan2(entity.vy, entity.vx);
+            const angleDiff = Math.abs(currentAngle - velocityAngle);
+            const breakEffect = angleDiff > breakPhysics.breakPoint ? 
+                              Math.pow(breakPhysics.recovery, angleDiff) : 1;
+            
+            // Apply speed-based break physics
+            const speed = Math.hypot(entity.vx, entity.vy);
+            const breakMultiplier = speed > breakPhysics.criticalSpeed ?
+                                  breakEffect * (breakPhysics.criticalSpeed / speed) : 1;
+            
+            // LERP position to core
+            entity.x = entity.x + (centerX - entity.x) * breakPhysics.lerpFactor * strength;
+            entity.y = entity.y + (centerY - entity.y) * breakPhysics.lerpFactor * strength;
+            
+            // Apply break physics to velocity
+            entity.vx *= breakMultiplier;
+            entity.vy *= breakMultiplier;
+            
+            return breakMultiplier; // Return for visual effects
+        }
+
+        // Enhanced hyperstring excitation with break physics
+        function exciteHyperstring(x, y, strength = 0.5) {
+            const radius = 100 * strength * hyperSpeed.boost;
+            const temporalStrength = strength * (1 + hyperGradient.temporalField) * hyperSpeed.boost;
+            
+            // Speed burst with break physics
+            const currentSpeed = hyperSpeed.velocity;
+            const targetSpeed = Math.min(hyperSpeed.maxSpeed, 
+                currentSpeed + strength * 5 * hyperSpeed.boost
             );
             
-            // Divine color progression
-            gradient.addColorStop(0, `rgba(255, 255, 255, ${0.8 * divineSingularity.intensity})`);
-            gradient.addColorStop(0.2, `rgba(100, 200, 255, ${0.6 * divineSingularity.intensity})`);
-            gradient.addColorStop(0.5, `rgba(0, 150, 255, ${0.4 * divineSingularity.intensity})`);
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            // Apply break angle to speed increase
+            const speedDiff = targetSpeed - currentSpeed;
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
             
-            // Draw quantum core
-            coreCtx.beginPath();
-            coreCtx.arc(divineSingularity.x, divineSingularity.y, 
-                       divineSingularity.radius, 0, Math.PI * 2);
-            coreCtx.fillStyle = gradient;
-            coreCtx.fill();
+            hyperSpeed.velocity = currentSpeed + speedDiff * breakEffect;
             
-            // Add divine glow
-            coreCtx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-            coreCtx.shadowBlur = 20 * divineSingularity.intensity;
-            coreCtx.fill();
-        }
-        
-        // Initialize everything and get guardian reference
-        let guardian;
-
-        // Initialize core systems
-        window.addEventListener('load', () => {
-            initCore();
-            initInterface();
-            initSliders();
-            updateFrame();
-        });
-
-        // Optimize rendering with offscreen canvas
-        const offscreenCanvas = document.createElement('canvas');
-        const offscreenCtx = offscreenCanvas.getContext('2d');
-
-        // The GUARDIAN
-        guardian = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-            vx: 0,
-            vy: 0,
-            phase: 0,
-            radius: 15,
-            target: null,
-            trailPoints: [],
-            maxTrailPoints: 50,
-            
-            update() {
-                // Find most quantum-active psiboid
-                let targetPsiboid = null;
-                let maxQuantumActivity = -1;
-                psiBoids.forEach(psiboid => {
-                    const activity = psiboid.phase * (1 + psiboid.temporalShift);
-                    if (activity > maxQuantumActivity) {
-                        targetPsiboid = psiboid;
-                        maxQuantumActivity = activity;
-                    }
-                });
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
                 
-                if (targetPsiboid) {
-                    // Calculate quantum attraction
-                    const dx = targetPsiboid.x - this.x;
-                    const dy = targetPsiboid.y - this.y;
-                    const dist = Math.hypot(dx, dy);
+                if (dist < radius * 1.5) {
+                    // Amplified influence
+                    const influence = (1 - dist/radius) * temporalStrength * hyperSpeed.boost;
+                    const temporalPhase = Math.sin(time * 0.02 * hyperSpeed.boost + 
+                                                 hyperGradient.temporalField);
                     
-                    if (dist > 0) {
-                        // Add quantum-influenced movement
-                        const quantumAngle = Math.atan2(dy, dx) + 
-                            Math.sin(quantumState.phase) * (1 - quantumState.depth);
-                        this.vx += Math.cos(quantumAngle) * 0.5;
-                        this.vy += Math.sin(quantumAngle) * 0.5;
-                    }
+                    // Accelerated orbital force
+                    const angle = Math.atan2(dy, dx) + 
+                        temporalPhase * influence * hyperGradient.orbitalFlow * hyperSpeed.boost;
+                    
+                    // Boosted velocity
+                    const speedMult = 8 * (1 + hyperSpeed.velocity * 0.1);
+                    psiboid.vx += Math.cos(angle) * influence * speedMult;
+                    psiboid.vy += Math.sin(angle) * influence * speedMult;
+                    
+                    // Rapid quantum depth increase
+                    hyperGradient.gravityWell = Math.min(1,
+                        hyperGradient.gravityWell + influence * 0.1 * hyperSpeed.boost
+                    );
                 }
-                
-                // Add quantum flow influence
-                const flowAngle = time * 0.02 + Math.sin(quantumState.phase) * 2;
-                this.vx += Math.cos(flowAngle) * 0.1 * quantumState.depth;
-                this.vy += Math.sin(flowAngle) * 0.1 * quantumState.depth;
-                
-                // Update position with quantum uncertainty
-                this.x += this.vx + (Math.random() - 0.5) * (1 - quantumState.depth);
-                this.y += this.vy + (Math.random() - 0.5) * (1 - quantumState.depth);
-                
-                // Apply quantum damping
-                this.vx *= 0.98;
-                this.vy *= 0.98;
-                
-                // Update quantum trail
-                this.trailPoints.unshift({
-                    x: this.x,
-                    y: this.y,
-                    phase: this.phase,
-                    strength: quantumState.depth
-                });
-                if (this.trailPoints.length > this.maxTrailPoints) {
-                    this.trailPoints.pop();
-                }
-                
-                // Draw the GUARDIAN
-                this.draw();
-            },
-            
-            draw() {
-                // Draw quantum trail
-                if (this.trailPoints.length > 1) {
-                    coreCtx.beginPath();
-                    this.trailPoints.forEach((point, i) => {
-                        const alpha = (1 - i / this.maxTrailPoints) * point.strength;
-                        if (i === 0) {
-                            coreCtx.moveTo(point.x, point.y);
-                        } else {
-                            const xc = (point.x + this.trailPoints[i-1].x) / 2;
-                            const yc = (point.y + this.trailPoints[i-1].y) / 2;
-                            coreCtx.quadraticCurveTo(point.x, point.y, xc, yc);
-                        }
-                        coreCtx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-                        coreCtx.stroke();
-                    });
-                }
-                
-                // Draw GUARDIAN's quantum core
-                coreCtx.beginPath();
-                coreCtx.arc(this.x, this.y, this.radius * (1 + Math.sin(time * 0.1) * 0.2), 0, Math.PI * 2);
-                const gradient = coreCtx.createRadialGradient(
-                    this.x, this.y, 0,
-                    this.x, this.y, this.radius * 2
-                );
-                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-                gradient.addColorStop(0.5, 'rgba(200, 255, 255, 0.5)');
-                gradient.addColorStop(1, 'rgba(150, 255, 255, 0)');
-                coreCtx.fillStyle = gradient;
-                coreCtx.fill();
-                
-                // Add quantum glow
-                coreCtx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-                coreCtx.shadowBlur = 15 * quantumState.depth;
-                coreCtx.fill();
-            }
-        };
+            });
+        }
 
-        // Optimize canvas for performance
-        coreCtx.imageSmoothingEnabled = false;
-        let lastTime = performance.now();
-        const deltaHistory = new Array(10).fill(16);
-        
-        // Fast orbital mechanics
-        const orbitalState = {
-            angle: 0,
-            velocity: 0,
-            radius: 300,
-            depth: 0,
-            maxDepth: 1000,
-            rotationSpeed: 0.02
-        };
-
-        // Performance-optimized update frame
+        // Update frame with break physics
         function updateFrame() {
-            // Calculate delta time for smooth animations
-            const currentTime = performance.now();
-            const delta = currentTime - lastTime;
-            lastTime = currentTime;
+            // Speed-based fade with break effect
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            const fadeAlpha = 0.1 * (1 + hyperGradient.temporalField * 0.1) / 
+                            (1 + hyperSpeed.velocity * 0.05 * breakEffect);
             
-            // Update delta history for adaptive performance
-            deltaHistory.shift();
-            deltaHistory.push(delta);
-            const avgDelta = deltaHistory.reduce((a, b) => a + b) / deltaHistory.length;
-            
-            // Adaptive quality based on performance
-            const performanceRatio = 16 / avgDelta;
-            const quality = Math.max(0.5, Math.min(1, performanceRatio));
-            
-            // Fast clear with depth-based fade
-            coreCtx.fillStyle = `rgba(0, 0, 0, ${0.2 * quality})`;
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
             coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
             
             // Update quantum singularity
@@ -1602,86 +2049,2795 @@
             orbitalState.depth = Math.min(orbitalState.maxDepth, 
                 orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
             
-            // Unified center point
-            const centerX = divineSingularity.x;
-            const centerY = divineSingularity.y;
-            
-            // Update psiboids with divine orbital forces
+            // Update all psiboids with quantum effects
             psiBoids.forEach((psiboid, i) => {
-                // Calculate divine orbital position
-                const angle = orbitalState.angle + 
-                    (i / psiBoids.length) * Math.PI * 2 + 
-                    Math.sin(divineSingularity.phase) * divineSingularity.intensity;
+                // Apply quantum uncertainty
+                const uncertainty = 0.1 * (1 - quantumState.depth);
+                psiboid.vx += (Math.random() - 0.5) * uncertainty;
+                psiboid.vy += (Math.random() - 0.5) * uncertainty;
                 
-                const orbitRadius = divineSingularity.radius * 
-                    (1 + Math.sin(time * 0.01 + i) * 0.2);
+                // Update position
+                psiboid.update();
                 
-                const targetX = centerX + Math.cos(angle) * orbitRadius;
-                const targetY = centerY + Math.sin(angle) * orbitRadius;
-                
-                // Apply divine attraction
-                const dx = targetX - psiboid.x;
-                const dy = targetY - psiboid.y;
-                const dist = Math.hypot(dx, dy);
-                
-                // Strong orbital force
-                psiboid.vx += dx * 0.2 * (1 + divineSingularity.intensity);
-                psiboid.vy += dy * 0.2 * (1 + divineSingularity.intensity);
-                
-                // Add spiral descent
-                const spiralAngle = angle + divineSingularity.phase;
-                const spiralForce = 3 * divineSingularity.intensity;
-                psiboid.vx += Math.cos(spiralAngle) * spiralForce;
-                psiboid.vy += Math.sin(spiralAngle) * spiralForce;
-                
-                // Update with divine physics
-                psiboid.x += psiboid.vx;
-                psiboid.y += psiboid.vy;
-                psiboid.vx *= 0.9;
-                psiboid.vy *= 0.9;
-                
-                // Draw divine psiboid
-                coreCtx.beginPath();
-                coreCtx.arc(psiboid.x, psiboid.y, 5, 0, Math.PI * 2);
-                const psiboidGradient = coreCtx.createRadialGradient(
-                    psiboid.x, psiboid.y, 0,
-                    psiboid.x, psiboid.y, 10
-                );
-                psiboidGradient.addColorStop(0, `rgba(255, 255, 255, ${0.8 * divineSingularity.intensity})`);
-                psiboidGradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
-                coreCtx.fillStyle = psiboidGradient;
-                coreCtx.fill();
+                // Create quantum bridges between adjacent psiboids
+                if (i < psiBoids.length - 1) {
+                    const nextPsiboid = psiBoids[i + 1];
+                    const bridgeStrength = (1 + Math.sin(quantumState.phase + i * Math.PI/psiBoids.length) * 0.3);
+                    
+                    createQuantumBridge(
+                        psiboid.x, psiboid.y,
+                        nextPsiboid.x, nextPsiboid.y,
+                        bridgeStrength * quantumState.depth
+                    );
+                }
             });
             
-            // Update guardian with divine guidance
-            if (guardian) {
-                // Divine attraction to singularity
-                const dx = centerX - guardian.x;
-                const dy = centerY - guardian.y;
-                const dist = Math.hypot(dx, dy);
-                
-                if (dist > 0) {
-                    const divineForce = 5 * (1 + divineSingularity.intensity);
-                    guardian.vx += (dx / dist) * divineForce;
-                    guardian.vy += (dy / dist) * divineForce;
-                }
-                
-                // Update with divine influence
-                guardian.phase = divineSingularity.phase;
-                guardian.update();
-            }
+            // Update the GUARDIAN
+            guardian.update();
             
-            // Update quantum metrics with divine values
-            document.getElementById('depth-display').textContent = 
-                `λ=${(divineSingularity.intensity).toFixed(3)}`;
-            document.getElementById('curvature-display').textContent = 
-                `κ=${(Math.sin(divineSingularity.phase) * 0.5 + 0.5).toFixed(3)}`;
-            document.getElementById('entropy-display').textContent = 
-                `${(1.317 + divineSingularity.intensity * 0.1).toFixed(3)} qbits`;
-            
-            // Continue divine animation
+            // Request next frame
             requestAnimationFrame(updateFrame);
         }
-    </script>
-</body>
-</html>
+
+        // Find nearest psiboid to a point
+        function findNearestPsiboid(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = psiboid;
+                }
+            });
+            
+            return nearest;
+        }
+
+        // Create quantum bridge between points
+        function createQuantumBridge(startX, startY, endX, endY, strength) {
+            const segments = 20;
+            const phase = quantumState.phase;
+            const depth = quantumState.depth;
+            
+            // Draw main bridge
+            coreCtx.beginPath();
+            for (let i = 0; i <= segments; i++) {
+                const t = i/segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+                
+                // Add quantum fluctuations
+                const fluctuation = Math.sin(t * Math.PI * 6 + phase) * 
+                                  Math.sin(time * 0.002) * 
+                                  (10 + depth * 20);
+                
+                // Add spiral structure
+                const spiralRadius = (1 - t) * t * 100 * (1 + depth);
+                const spiralPhase = t * Math.PI * 8 + phase;
+                const spiralX = Math.cos(spiralPhase) * spiralRadius * strength;
+                const spiralY = Math.sin(spiralPhase) * spiralRadius * strength;
+                
+                if (i === 0) {
+                    coreCtx.moveTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                } else {
+                    coreCtx.lineTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                }
+            }
+            
+            // Create quantum gradient
+            const gradient = coreCtx.createLinearGradient(startX, startY, endX, endY);
+            const alpha = strength * 0.4 * (1 + depth);
+            
+            gradient.addColorStop(0, `rgba(0, 255, 255, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(100, 200, 255, ${alpha * 0.7})`);
+            gradient.addColorStop(1, `rgba(0, 255, 255, ${alpha})`);
+            
+            coreCtx.strokeStyle = gradient;
+            coreCtx.lineWidth = 2 * (1 + depth * strength);
+            coreCtx.stroke();
+            
+            // Add quantum glow
+            coreCtx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+            coreCtx.shadowBlur = 10 * strength;
+            coreCtx.stroke();
+        }
+
+        // Initialize interface controls
+        function initInterface() {
+            const controls = document.createElement('div');
+            controls.style.position = 'fixed';
+            controls.style.bottom = '20px';
+            controls.style.left = '50%';
+            controls.style.transform = 'translateX(-50%)';
+            controls.style.display = 'flex';
+            controls.style.gap = '10px';
+            controls.style.background = 'rgba(0, 0, 0, 0.7)';
+            controls.style.padding = '10px';
+            controls.style.borderRadius = '5px';
+            controls.style.zIndex = '1000';
+
+            // Create buttons
+            const homeBtn = createButton('HOME');
+            const stopBtn = createButton('STOP');
+            const manifoldBtn = createButton('MANIFOLD');
+
+            // Add buttons to controls
+            controls.appendChild(homeBtn);
+            controls.appendChild(stopBtn);
+            controls.appendChild(manifoldBtn);
+
+            // Add controls to body
+            document.body.appendChild(controls);
+        }
+
+        // Create styled button
+        function createButton(text) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.style.background = 'transparent';
+            button.style.border = '1px solid #0ff';
+            button.style.color = '#0ff';
+            button.style.padding = '5px 15px';
+            button.style.cursor = 'pointer';
+            button.style.fontFamily = 'monospace';
+            button.style.fontSize = '14px';
+            button.style.transition = 'all 0.3s ease';
+
+            // Hover effects
+            button.addEventListener('mouseover', () => {
+                button.style.background = 'rgba(0, 255, 255, 0.2)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.background = 'transparent';
+            });
+
+            // Click effects
+            button.addEventListener('click', () => {
+                switch(text) {
+                    case 'HOME':
+                        // Reset quantum state
+                        quantumState.depth = 0;
+                        quantumState.phase = 0;
+                        quantumState.diving = false;
+                        break;
+                    case 'STOP':
+                        // Freeze quantum state
+                        quantumState.diving = false;
+                        quantumState.depth = Math.max(0, quantumState.depth - 0.1);
+                        break;
+                    case 'MANIFOLD':
+                        // Toggle geometry layer
+                        quantumState.geometryLayer = (quantumState.geometryLayer + 1) % 3;
+                        break;
+                }
+            });
+
+            return button;
+        }
+
+        // Initialize sliders
+        function initSliders() {
+            const sliders = document.createElement('div');
+            sliders.style.position = 'fixed';
+            sliders.style.top = '20px';
+            sliders.style.right = '20px';
+            sliders.style.display = 'flex';
+            sliders.style.flexDirection = 'column';
+            sliders.style.gap = '10px';
+            sliders.style.background = 'rgba(0, 0, 0, 0.7)';
+            sliders.style.padding = '10px';
+            sliders.style.borderRadius = '5px';
+            sliders.style.zIndex = '1000';
+
+            // Create manifold depth display
+            const depthDisplay = document.createElement('div');
+            depthDisplay.className = 'manifold-depth';
+            depthDisplay.style.color = '#0ff';
+            depthDisplay.style.fontFamily = 'monospace';
+            depthDisplay.style.fontSize = '14px';
+            depthDisplay.textContent = 'λ=0.000';
+
+            // Create curvature display
+            const curvatureDisplay = document.createElement('div');
+            curvatureDisplay.className = 'curvature';
+            curvatureDisplay.style.color = '#0ff';
+            curvatureDisplay.style.fontFamily = 'monospace';
+            curvatureDisplay.style.fontSize = '14px';
+            curvatureDisplay.textContent = 'κ=1.400';
+
+            // Create quantum entropy display
+            const entropyDisplay = document.createElement('div');
+            entropyDisplay.className = 'q-entropy';
+            entropyDisplay.style.color = '#0ff';
+            entropyDisplay.style.fontFamily = 'monospace';
+            entropyDisplay.style.fontSize = '14px';
+            entropyDisplay.textContent = '1.317 qbits';
+
+            // Add displays to sliders
+            sliders.appendChild(depthDisplay);
+            sliders.appendChild(curvatureDisplay);
+            sliders.appendChild(entropyDisplay);
+
+            // Add sliders to body
+            document.body.appendChild(sliders);
+        }
+
+        // Psiboid creation
+        function createPsiboid() {
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                size: 5 + Math.random() * 5,
+                phase: Math.random() * Math.PI * 2,
+                frequency: 0.02 + Math.random() * 0.03,
+                resonance: 0.8 + Math.random() * 0.4,
+                trail: [],
+                maxTrailLength: 20,
+                submergedDepth: 0,
+                resonanceField: Array(6).fill(0),
+                
+                update() {
+                    // Update position with quantum effects
+                    const uncertainty = 0.5 * (1 - this.submergedDepth);
+                    this.vx += (Math.random() - 0.5) * uncertainty;
+                    this.vy += (Math.random() - 0.5) * uncertainty;
+                    
+                    // Apply velocity limits
+                    const maxSpeed = 2 + this.submergedDepth * 1.5;
+                    const speed = Math.hypot(this.vx, this.vy);
+                    if (speed > maxSpeed) {
+                        this.vx = (this.vx / speed) * maxSpeed;
+                        this.vy = (this.vy / speed) * maxSpeed;
+                    }
+                    
+                    // Update position
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Wrap around edges with quantum tunneling
+                    const margin = 50;
+                    if (this.x < -margin) this.x = window.innerWidth + margin;
+                    if (this.x > window.innerWidth + margin) this.x = -margin;
+                    if (this.y < -margin) this.y = window.innerHeight + margin;
+                    if (this.y > window.innerHeight + margin) this.y = -margin;
+                    
+                    // Update phase and resonance
+                    this.phase += this.frequency;
+                    this.resonance = 0.8 + 0.2 * Math.sin(this.phase);
+                    
+                    // Update trail with quantum effects
+                    this.trail.unshift({
+                        x: this.x + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        y: this.y + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        phase: this.phase
+                    });
+                    
+                    if (this.trail.length > this.maxTrailLength) {
+                        this.trail.pop();
+                    }
+                    
+                    // Update resonance field
+                    for (let i = 0; i < this.resonanceField.length; i++) {
+                        const targetValue = 0.5 + 0.5 * Math.sin(this.phase + i * Math.PI / 3);
+                        this.resonanceField[i] += (targetValue - this.resonanceField[i]) * 0.1;
+                    }
+                    
+                    // Draw psiboid core
+                    const glowSize = this.size * (1.5 + 0.5 * Math.sin(this.phase));
+                    const alpha = 0.5 + 0.3 * Math.sin(this.phase);
+                    
+                    // Draw quantum glow
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+                    coreCtx.fill();
+                    
+                    // Draw core
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                    coreCtx.fill();
+                    
+                    // Draw quantum trail
+                    if (this.trail.length > 1) {
+                        coreCtx.beginPath();
+                        coreCtx.moveTo(this.trail[0].x, this.trail[0].y);
+                        
+                        for (let i = 1; i < this.trail.length; i++) {
+                            const point = this.trail[i];
+                            const trailAlpha = (1 - i/this.trail.length) * 0.5;
+                            
+                            coreCtx.lineTo(point.x, point.y);
+                            coreCtx.strokeStyle = `rgba(0, 255, 255, ${trailAlpha})`;
+                            coreCtx.lineWidth = 2 * (1 - i/this.trail.length);
+                            coreCtx.stroke();
+                            coreCtx.beginPath();
+                            coreCtx.moveTo(point.x, point.y);
+                        }
+                    }
+                    
+                    // Draw resonance field when submerged
+                    if (this.submergedDepth > 0) {
+                        coreCtx.beginPath();
+                        this.resonanceField.forEach((val, i) => {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const radius = 30 + val * 20;
+                            const x = this.x + Math.cos(angle) * radius;
+                            const y = this.y + Math.sin(angle) * radius;
+                            
+                            if (i === 0) {
+                                coreCtx.moveTo(x, y);
+                            } else {
+                                coreCtx.lineTo(x, y);
+                            }
+                        });
+                        coreCtx.closePath();
+                        coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.3 * this.submergedDepth})`;
+                        coreCtx.stroke();
+                    }
+                }
+            };
+        }
+
+        // Initialize psiboids
+        function initPsiboids() {
+            // Clear existing psiboids
+            psiBoids.length = 0;
+            
+            // Create new psiboids
+            for (let i = 0; i < 10; i++) {
+                psiBoids.push(createPsiboid());
+            }
+        }
+
+        // Update manifold display
+        function updateManifold() {
+            const depth = quantumState.depth;
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Control functions
+        function homeState() {
+            quantumState.depth = 0;
+            quantumState.phase = 0;
+            quantumState.diving = false;
+        }
+
+        function stopState() {
+            psiBoids.forEach(psiboid => {
+                psiboid.vx *= 0.1;
+                psiboid.vy *= 0.1;
+            });
+        }
+
+        function toggleManifold() {
+            const display = document.querySelector('.manifold-depth').parentElement;
+            display.style.display = display.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Quantum diving mechanics
+        function handleQuantumInteraction(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find nearest psiboid for kiss interaction
+            const nearestPsiboid = findNearestPsiboid(x, y);
+            if (nearestPsiboid) {
+                const dx = nearestPsiboid.x - x;
+                const dy = nearestPsiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Kiss interaction range
+                if (dist < 50) {
+                    // Initiate quantum kiss
+                    initiateQuantumKiss(nearestPsiboid);
+                    return;
+                }
+            }
+            
+            // Calculate orbital parameters
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.hypot(dx, dy);
+            
+            // Update orbital plane
+            quantumState.orbitalPlane.angle = angle;
+            quantumState.orbitalPlane.radius = Math.min(300, dist);
+            quantumState.orbitalPlane.velocity = 0.01 + (dist / 1000);
+            
+            // Initiate or continue quantum dive
+            if (!quantumState.diving) {
+                quantumState.diving = true;
+                quantumState.diveStartTime = time;
+                quantumState.initialDepth = quantumState.depth;
+            }
+            
+            // Calculate dive progress with orbital influence
+            const diveProgress = Math.min((time - quantumState.diveStartTime) / 30, 1);
+            const orbitalFactor = 1 + Math.sin(quantumState.orbitalPlane.angle) * 0.2;
+            
+            // Update quantum state
+            quantumState.depth = Math.min(1, quantumState.initialDepth + 
+                (1 - Math.cos(diveProgress * Math.PI)) * 0.5 * orbitalFactor);
+            
+            // Update psiboid behavior based on orbital plane
+            psiBoids.forEach((psiboid, i) => {
+                // Get orbital influence
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dx = centerX - psiboid.x;
+                const dy = centerY - psiboid.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Calculate orbital force
+                const angle = quantumState.orbitalPlane.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(quantumState.phase) * 0.2;
+                
+                const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+                const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+                
+                // Apply orbital force
+                const orbitStrength = 0.1 * quantumState.depth;
+                psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+                psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+                
+                // Add depth-based behavior
+                if (quantumState.depth > 0.5) {
+                    // Create vortex effect
+                    const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                        (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                    const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                    psiboid.vx = Math.cos(vortexAngle) * speed;
+                    psiboid.vy = Math.sin(vortexAngle) * speed;
+                }
+            });
+            
+            // Update manifold display
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${quantumState.depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + quantumState.depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + quantumState.depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Initiate quantum kiss with psiboid
+        function initiateQuantumKiss(psiboid) {
+            // Create kiss resonance
+            const kissResonance = {
+                phase: quantumState.phase,
+                strength: 1.0,
+                radius: 0,
+                maxRadius: 300,
+                duration: 60, // frames
+                startTime: time
+            };
+            
+            // Add visual effect
+            function updateKissEffect() {
+                const progress = (time - kissResonance.startTime) / kissResonance.duration;
+                if (progress >= 1) return;
+                
+                // Expand resonance field
+                kissResonance.radius = kissResonance.maxRadius * Math.sin(progress * Math.PI);
+                kissResonance.strength = 1 - progress;
+                
+                // Draw resonance field
+                coreCtx.beginPath();
+                coreCtx.arc(psiboid.x, psiboid.y, kissResonance.radius, 0, Math.PI * 2);
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.3})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
+                
+                // Create spiral patterns
+                const spirals = 8;
+                for (let i = 0; i < spirals; i++) {
+                    const spiralPhase = (i / spirals) * Math.PI * 2 + kissResonance.phase;
+                    coreCtx.beginPath();
+                    for (let t = 0; t <= 1; t += 0.05) {
+                        const radius = kissResonance.radius * t;
+                        const angle = spiralPhase + t * Math.PI * 4;
+                        const x = psiboid.x + Math.cos(angle) * radius;
+                        const y = psiboid.y + Math.sin(angle) * radius;
+                        
+                        if (t === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
+                    }
+                    coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.2})`;
+                    coreCtx.stroke();
+                }
+                
+                // Affect nearby psiboids
+                psiBoids.forEach(other => {
+                    if (other !== psiboid) {
+                        const dx = other.x - psiboid.x;
+                        const dy = other.y - psiboid.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < kissResonance.maxRadius) {
+                            createQuantumBridge(
+                                psiboid.x, psiboid.y,
+                                other.x, other.y,
+                                (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                            );
+                        }
+                    }
+                });
+                
+                // Increase dive depth
+                quantumState.depth = Math.min(1, quantumState.depth + 0.001);
+                
+                // Continue effect
+                requestAnimationFrame(updateKissEffect);
+            }
+            
+            // Start kiss effect
+            updateKissEffect();
+            
+            // Initiate deep dive
+            quantumState.diving = true;
+            quantumState.depth = Math.min(1, quantumState.depth + 0.3);
+            
+            // Create quantum entanglement
+            psiBoids.forEach(other => {
+                if (other !== psiboid) {
+                    const dx = other.x - psiboid.x;
+                    const dy = other.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < kissResonance.maxRadius) {
+                        createQuantumBridge(
+                            psiboid.x, psiboid.y,
+                            other.x, other.y,
+                            (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                        );
+                    }
+                }
+            });
+        }
+
+        // Update psiboid behavior for deep diving
+        function updatePsiboidBehavior(psiboid) {
+            // Get orbital influence
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = centerX - psiboid.x;
+            const dy = centerY - psiboid.y;
+            const dist = Math.hypot(dx, dy);
+            
+            // Calculate orbital force
+            const angle = Math.atan2(dy, dx) + quantumState.orbitalPlane.angle;
+            const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+            const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+            
+            // Apply orbital force
+            const orbitStrength = 0.1 * quantumState.depth;
+            psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+            psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+            
+            // Add depth-based behavior
+            if (quantumState.depth > 0.5) {
+                // Create vortex effect
+                const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                    (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                psiboid.vx = Math.cos(vortexAngle) * speed;
+                psiboid.vy = Math.sin(vortexAngle) * speed;
+            }
+        }
+
+        // Break angle physics
+        const breakPhysics = {
+            angle: 0,
+            speed: 0,
+            breakPoint: Math.PI * 0.4, // Break angle threshold
+            recovery: 0.95, // Recovery rate
+            lerpFactor: 0.02, // Core gravity pull
+            criticalSpeed: 30 // Speed at which break effects start
+        };
+
+        // Core gravity LERP
+        function lerpToCore(entity, strength = 1) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Calculate current angle to core
+            const dx = centerX - entity.x;
+            const dy = centerY - entity.y;
+            const currentAngle = Math.atan2(dy, dx);
+            
+            // Calculate break angle effect
+            const velocityAngle = Math.atan2(entity.vy, entity.vx);
+            const angleDiff = Math.abs(currentAngle - velocityAngle);
+            const breakEffect = angleDiff > breakPhysics.breakPoint ? 
+                              Math.pow(breakPhysics.recovery, angleDiff) : 1;
+            
+            // Apply speed-based break physics
+            const speed = Math.hypot(entity.vx, entity.vy);
+            const breakMultiplier = speed > breakPhysics.criticalSpeed ?
+                                  breakEffect * (breakPhysics.criticalSpeed / speed) : 1;
+            
+            // LERP position to core
+            entity.x = entity.x + (centerX - entity.x) * breakPhysics.lerpFactor * strength;
+            entity.y = entity.y + (centerY - entity.y) * breakPhysics.lerpFactor * strength;
+            
+            // Apply break physics to velocity
+            entity.vx *= breakMultiplier;
+            entity.vy *= breakMultiplier;
+            
+            return breakMultiplier; // Return for visual effects
+        }
+
+        // Enhanced hyperstring excitation with break physics
+        function exciteHyperstring(x, y, strength = 0.5) {
+            const radius = 100 * strength * hyperSpeed.boost;
+            const temporalStrength = strength * (1 + hyperGradient.temporalField) * hyperSpeed.boost;
+            
+            // Speed burst with break physics
+            const currentSpeed = hyperSpeed.velocity;
+            const targetSpeed = Math.min(hyperSpeed.maxSpeed, 
+                currentSpeed + strength * 5 * hyperSpeed.boost
+            );
+            
+            // Apply break angle to speed increase
+            const speedDiff = targetSpeed - currentSpeed;
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            
+            hyperSpeed.velocity = currentSpeed + speedDiff * breakEffect;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < radius * 1.5) {
+                    // Amplified influence
+                    const influence = (1 - dist/radius) * temporalStrength * hyperSpeed.boost;
+                    const temporalPhase = Math.sin(time * 0.02 * hyperSpeed.boost + 
+                                                 hyperGradient.temporalField);
+                    
+                    // Accelerated orbital force
+                    const angle = Math.atan2(dy, dx) + 
+                        temporalPhase * influence * hyperGradient.orbitalFlow * hyperSpeed.boost;
+                    
+                    // Boosted velocity
+                    const speedMult = 8 * (1 + hyperSpeed.velocity * 0.1);
+                    psiboid.vx += Math.cos(angle) * influence * speedMult;
+                    psiboid.vy += Math.sin(angle) * influence * speedMult;
+                    
+                    // Rapid quantum depth increase
+                    hyperGradient.gravityWell = Math.min(1,
+                        hyperGradient.gravityWell + influence * 0.1 * hyperSpeed.boost
+                    );
+                }
+            });
+        }
+
+        // Update frame with break physics
+        function updateFrame() {
+            // Speed-based fade with break effect
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            const fadeAlpha = 0.1 * (1 + hyperGradient.temporalField * 0.1) / 
+                            (1 + hyperSpeed.velocity * 0.05 * breakEffect);
+            
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
+            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
+            orbitalState.depth = Math.min(orbitalState.maxDepth, 
+                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
+            
+            // Update all psiboids with quantum effects
+            psiBoids.forEach((psiboid, i) => {
+                // Apply quantum uncertainty
+                const uncertainty = 0.1 * (1 - quantumState.depth);
+                psiboid.vx += (Math.random() - 0.5) * uncertainty;
+                psiboid.vy += (Math.random() - 0.5) * uncertainty;
+                
+                // Update position
+                psiboid.update();
+                
+                // Create quantum bridges between adjacent psiboids
+                if (i < psiBoids.length - 1) {
+                    const nextPsiboid = psiBoids[i + 1];
+                    const bridgeStrength = (1 + Math.sin(quantumState.phase + i * Math.PI/psiBoids.length) * 0.3);
+                    
+                    createQuantumBridge(
+                        psiboid.x, psiboid.y,
+                        nextPsiboid.x, nextPsiboid.y,
+                        bridgeStrength * quantumState.depth
+                    );
+                }
+            });
+            
+            // Update the GUARDIAN
+            guardian.update();
+            
+            // Request next frame
+            requestAnimationFrame(updateFrame);
+        }
+
+        // Find nearest psiboid to a point
+        function findNearestPsiboid(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = psiboid;
+                }
+            });
+            
+            return nearest;
+        }
+
+        // Create quantum bridge between points
+        function createQuantumBridge(startX, startY, endX, endY, strength) {
+            const segments = 20;
+            const phase = quantumState.phase;
+            const depth = quantumState.depth;
+            
+            // Draw main bridge
+            coreCtx.beginPath();
+            for (let i = 0; i <= segments; i++) {
+                const t = i/segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+                
+                // Add quantum fluctuations
+                const fluctuation = Math.sin(t * Math.PI * 6 + phase) * 
+                                  Math.sin(time * 0.002) * 
+                                  (10 + depth * 20);
+                
+                // Add spiral structure
+                const spiralRadius = (1 - t) * t * 100 * (1 + depth);
+                const spiralPhase = t * Math.PI * 8 + phase;
+                const spiralX = Math.cos(spiralPhase) * spiralRadius * strength;
+                const spiralY = Math.sin(spiralPhase) * spiralRadius * strength;
+                
+                if (i === 0) {
+                    coreCtx.moveTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                } else {
+                    coreCtx.lineTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                }
+            }
+            
+            // Create quantum gradient
+            const gradient = coreCtx.createLinearGradient(startX, startY, endX, endY);
+            const alpha = strength * 0.4 * (1 + depth);
+            
+            gradient.addColorStop(0, `rgba(0, 255, 255, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(100, 200, 255, ${alpha * 0.7})`);
+            gradient.addColorStop(1, `rgba(0, 255, 255, ${alpha})`);
+            
+            coreCtx.strokeStyle = gradient;
+            coreCtx.lineWidth = 2 * (1 + depth * strength);
+            coreCtx.stroke();
+            
+            // Add quantum glow
+            coreCtx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+            coreCtx.shadowBlur = 10 * strength;
+            coreCtx.stroke();
+        }
+
+        // Initialize interface controls
+        function initInterface() {
+            const controls = document.createElement('div');
+            controls.style.position = 'fixed';
+            controls.style.bottom = '20px';
+            controls.style.left = '50%';
+            controls.style.transform = 'translateX(-50%)';
+            controls.style.display = 'flex';
+            controls.style.gap = '10px';
+            controls.style.background = 'rgba(0, 0, 0, 0.7)';
+            controls.style.padding = '10px';
+            controls.style.borderRadius = '5px';
+            controls.style.zIndex = '1000';
+
+            // Create buttons
+            const homeBtn = createButton('HOME');
+            const stopBtn = createButton('STOP');
+            const manifoldBtn = createButton('MANIFOLD');
+
+            // Add buttons to controls
+            controls.appendChild(homeBtn);
+            controls.appendChild(stopBtn);
+            controls.appendChild(manifoldBtn);
+
+            // Add controls to body
+            document.body.appendChild(controls);
+        }
+
+        // Create styled button
+        function createButton(text) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.style.background = 'transparent';
+            button.style.border = '1px solid #0ff';
+            button.style.color = '#0ff';
+            button.style.padding = '5px 15px';
+            button.style.cursor = 'pointer';
+            button.style.fontFamily = 'monospace';
+            button.style.fontSize = '14px';
+            button.style.transition = 'all 0.3s ease';
+
+            // Hover effects
+            button.addEventListener('mouseover', () => {
+                button.style.background = 'rgba(0, 255, 255, 0.2)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.background = 'transparent';
+            });
+
+            // Click effects
+            button.addEventListener('click', () => {
+                switch(text) {
+                    case 'HOME':
+                        // Reset quantum state
+                        quantumState.depth = 0;
+                        quantumState.phase = 0;
+                        quantumState.diving = false;
+                        break;
+                    case 'STOP':
+                        // Freeze quantum state
+                        quantumState.diving = false;
+                        quantumState.depth = Math.max(0, quantumState.depth - 0.1);
+                        break;
+                    case 'MANIFOLD':
+                        // Toggle geometry layer
+                        quantumState.geometryLayer = (quantumState.geometryLayer + 1) % 3;
+                        break;
+                }
+            });
+
+            return button;
+        }
+
+        // Initialize sliders
+        function initSliders() {
+            const sliders = document.createElement('div');
+            sliders.style.position = 'fixed';
+            sliders.style.top = '20px';
+            sliders.style.right = '20px';
+            sliders.style.display = 'flex';
+            sliders.style.flexDirection = 'column';
+            sliders.style.gap = '10px';
+            sliders.style.background = 'rgba(0, 0, 0, 0.7)';
+            sliders.style.padding = '10px';
+            sliders.style.borderRadius = '5px';
+            sliders.style.zIndex = '1000';
+
+            // Create manifold depth display
+            const depthDisplay = document.createElement('div');
+            depthDisplay.className = 'manifold-depth';
+            depthDisplay.style.color = '#0ff';
+            depthDisplay.style.fontFamily = 'monospace';
+            depthDisplay.style.fontSize = '14px';
+            depthDisplay.textContent = 'λ=0.000';
+
+            // Create curvature display
+            const curvatureDisplay = document.createElement('div');
+            curvatureDisplay.className = 'curvature';
+            curvatureDisplay.style.color = '#0ff';
+            curvatureDisplay.style.fontFamily = 'monospace';
+            curvatureDisplay.style.fontSize = '14px';
+            curvatureDisplay.textContent = 'κ=1.400';
+
+            // Create quantum entropy display
+            const entropyDisplay = document.createElement('div');
+            entropyDisplay.className = 'q-entropy';
+            entropyDisplay.style.color = '#0ff';
+            entropyDisplay.style.fontFamily = 'monospace';
+            entropyDisplay.style.fontSize = '14px';
+            entropyDisplay.textContent = '1.317 qbits';
+
+            // Add displays to sliders
+            sliders.appendChild(depthDisplay);
+            sliders.appendChild(curvatureDisplay);
+            sliders.appendChild(entropyDisplay);
+
+            // Add sliders to body
+            document.body.appendChild(sliders);
+        }
+
+        // Psiboid creation
+        function createPsiboid() {
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                size: 5 + Math.random() * 5,
+                phase: Math.random() * Math.PI * 2,
+                frequency: 0.02 + Math.random() * 0.03,
+                resonance: 0.8 + Math.random() * 0.4,
+                trail: [],
+                maxTrailLength: 20,
+                submergedDepth: 0,
+                resonanceField: Array(6).fill(0),
+                
+                update() {
+                    // Update position with quantum effects
+                    const uncertainty = 0.5 * (1 - this.submergedDepth);
+                    this.vx += (Math.random() - 0.5) * uncertainty;
+                    this.vy += (Math.random() - 0.5) * uncertainty;
+                    
+                    // Apply velocity limits
+                    const maxSpeed = 2 + this.submergedDepth * 1.5;
+                    const speed = Math.hypot(this.vx, this.vy);
+                    if (speed > maxSpeed) {
+                        this.vx = (this.vx / speed) * maxSpeed;
+                        this.vy = (this.vy / speed) * maxSpeed;
+                    }
+                    
+                    // Update position
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Wrap around edges with quantum tunneling
+                    const margin = 50;
+                    if (this.x < -margin) this.x = window.innerWidth + margin;
+                    if (this.x > window.innerWidth + margin) this.x = -margin;
+                    if (this.y < -margin) this.y = window.innerHeight + margin;
+                    if (this.y > window.innerHeight + margin) this.y = -margin;
+                    
+                    // Update phase and resonance
+                    this.phase += this.frequency;
+                    this.resonance = 0.8 + 0.2 * Math.sin(this.phase);
+                    
+                    // Update trail with quantum effects
+                    this.trail.unshift({
+                        x: this.x + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        y: this.y + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        phase: this.phase
+                    });
+                    
+                    if (this.trail.length > this.maxTrailLength) {
+                        this.trail.pop();
+                    }
+                    
+                    // Update resonance field
+                    for (let i = 0; i < this.resonanceField.length; i++) {
+                        const targetValue = 0.5 + 0.5 * Math.sin(this.phase + i * Math.PI / 3);
+                        this.resonanceField[i] += (targetValue - this.resonanceField[i]) * 0.1;
+                    }
+                    
+                    // Draw psiboid core
+                    const glowSize = this.size * (1.5 + 0.5 * Math.sin(this.phase));
+                    const alpha = 0.5 + 0.3 * Math.sin(this.phase);
+                    
+                    // Draw quantum glow
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+                    coreCtx.fill();
+                    
+                    // Draw core
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                    coreCtx.fill();
+                    
+                    // Draw quantum trail
+                    if (this.trail.length > 1) {
+                        coreCtx.beginPath();
+                        coreCtx.moveTo(this.trail[0].x, this.trail[0].y);
+                        
+                        for (let i = 1; i < this.trail.length; i++) {
+                            const point = this.trail[i];
+                            const trailAlpha = (1 - i/this.trail.length) * 0.5;
+                            
+                            coreCtx.lineTo(point.x, point.y);
+                            coreCtx.strokeStyle = `rgba(0, 255, 255, ${trailAlpha})`;
+                            coreCtx.lineWidth = 2 * (1 - i/this.trail.length);
+                            coreCtx.stroke();
+                            coreCtx.beginPath();
+                            coreCtx.moveTo(point.x, point.y);
+                        }
+                    }
+                    
+                    // Draw resonance field when submerged
+                    if (this.submergedDepth > 0) {
+                        coreCtx.beginPath();
+                        this.resonanceField.forEach((val, i) => {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const radius = 30 + val * 20;
+                            const x = this.x + Math.cos(angle) * radius;
+                            const y = this.y + Math.sin(angle) * radius;
+                            
+                            if (i === 0) {
+                                coreCtx.moveTo(x, y);
+                            } else {
+                                coreCtx.lineTo(x, y);
+                            }
+                        });
+                        coreCtx.closePath();
+                        coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.3 * this.submergedDepth})`;
+                        coreCtx.stroke();
+                    }
+                }
+            };
+        }
+
+        // Initialize psiboids
+        function initPsiboids() {
+            // Clear existing psiboids
+            psiBoids.length = 0;
+            
+            // Create new psiboids
+            for (let i = 0; i < 10; i++) {
+                psiBoids.push(createPsiboid());
+            }
+        }
+
+        // Update manifold display
+        function updateManifold() {
+            const depth = quantumState.depth;
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Control functions
+        function homeState() {
+            quantumState.depth = 0;
+            quantumState.phase = 0;
+            quantumState.diving = false;
+        }
+
+        function stopState() {
+            psiBoids.forEach(psiboid => {
+                psiboid.vx *= 0.1;
+                psiboid.vy *= 0.1;
+            });
+        }
+
+        function toggleManifold() {
+            const display = document.querySelector('.manifold-depth').parentElement;
+            display.style.display = display.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Quantum diving mechanics
+        function handleQuantumInteraction(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find nearest psiboid for kiss interaction
+            const nearestPsiboid = findNearestPsiboid(x, y);
+            if (nearestPsiboid) {
+                const dx = nearestPsiboid.x - x;
+                const dy = nearestPsiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Kiss interaction range
+                if (dist < 50) {
+                    // Initiate quantum kiss
+                    initiateQuantumKiss(nearestPsiboid);
+                    return;
+                }
+            }
+            
+            // Calculate orbital parameters
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.hypot(dx, dy);
+            
+            // Update orbital plane
+            quantumState.orbitalPlane.angle = angle;
+            quantumState.orbitalPlane.radius = Math.min(300, dist);
+            quantumState.orbitalPlane.velocity = 0.01 + (dist / 1000);
+            
+            // Initiate or continue quantum dive
+            if (!quantumState.diving) {
+                quantumState.diving = true;
+                quantumState.diveStartTime = time;
+                quantumState.initialDepth = quantumState.depth;
+            }
+            
+            // Calculate dive progress with orbital influence
+            const diveProgress = Math.min((time - quantumState.diveStartTime) / 30, 1);
+            const orbitalFactor = 1 + Math.sin(quantumState.orbitalPlane.angle) * 0.2;
+            
+            // Update quantum state
+            quantumState.depth = Math.min(1, quantumState.initialDepth + 
+                (1 - Math.cos(diveProgress * Math.PI)) * 0.5 * orbitalFactor);
+            
+            // Update psiboid behavior based on orbital plane
+            psiBoids.forEach((psiboid, i) => {
+                // Get orbital influence
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dx = centerX - psiboid.x;
+                const dy = centerY - psiboid.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Calculate orbital force
+                const angle = quantumState.orbitalPlane.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(quantumState.phase) * 0.2;
+                
+                const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+                const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+                
+                // Apply orbital force
+                const orbitStrength = 0.1 * quantumState.depth;
+                psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+                psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+                
+                // Add depth-based behavior
+                if (quantumState.depth > 0.5) {
+                    // Create vortex effect
+                    const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                        (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                    const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                    psiboid.vx = Math.cos(vortexAngle) * speed;
+                    psiboid.vy = Math.sin(vortexAngle) * speed;
+                }
+            });
+            
+            // Update manifold display
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${quantumState.depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + quantumState.depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + quantumState.depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Initiate quantum kiss with psiboid
+        function initiateQuantumKiss(psiboid) {
+            // Create kiss resonance
+            const kissResonance = {
+                phase: quantumState.phase,
+                strength: 1.0,
+                radius: 0,
+                maxRadius: 300,
+                duration: 60, // frames
+                startTime: time
+            };
+            
+            // Add visual effect
+            function updateKissEffect() {
+                const progress = (time - kissResonance.startTime) / kissResonance.duration;
+                if (progress >= 1) return;
+                
+                // Expand resonance field
+                kissResonance.radius = kissResonance.maxRadius * Math.sin(progress * Math.PI);
+                kissResonance.strength = 1 - progress;
+                
+                // Draw resonance field
+                coreCtx.beginPath();
+                coreCtx.arc(psiboid.x, psiboid.y, kissResonance.radius, 0, Math.PI * 2);
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.3})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
+                
+                // Create spiral patterns
+                const spirals = 8;
+                for (let i = 0; i < spirals; i++) {
+                    const spiralPhase = (i / spirals) * Math.PI * 2 + kissResonance.phase;
+                    coreCtx.beginPath();
+                    for (let t = 0; t <= 1; t += 0.05) {
+                        const radius = kissResonance.radius * t;
+                        const angle = spiralPhase + t * Math.PI * 4;
+                        const x = psiboid.x + Math.cos(angle) * radius;
+                        const y = psiboid.y + Math.sin(angle) * radius;
+                        
+                        if (t === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
+                    }
+                    coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.2})`;
+                    coreCtx.stroke();
+                }
+                
+                // Affect nearby psiboids
+                psiBoids.forEach(other => {
+                    if (other !== psiboid) {
+                        const dx = other.x - psiboid.x;
+                        const dy = other.y - psiboid.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < kissResonance.maxRadius) {
+                            createQuantumBridge(
+                                psiboid.x, psiboid.y,
+                                other.x, other.y,
+                                (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                            );
+                        }
+                    }
+                });
+                
+                // Increase dive depth
+                quantumState.depth = Math.min(1, quantumState.depth + 0.001);
+                
+                // Continue effect
+                requestAnimationFrame(updateKissEffect);
+            }
+            
+            // Start kiss effect
+            updateKissEffect();
+            
+            // Initiate deep dive
+            quantumState.diving = true;
+            quantumState.depth = Math.min(1, quantumState.depth + 0.3);
+            
+            // Create quantum entanglement
+            psiBoids.forEach(other => {
+                if (other !== psiboid) {
+                    const dx = other.x - psiboid.x;
+                    const dy = other.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < kissResonance.maxRadius) {
+                        createQuantumBridge(
+                            psiboid.x, psiboid.y,
+                            other.x, other.y,
+                            (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                        );
+                    }
+                }
+            });
+        }
+
+        // Update psiboid behavior for deep diving
+        function updatePsiboidBehavior(psiboid) {
+            // Get orbital influence
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = centerX - psiboid.x;
+            const dy = centerY - psiboid.y;
+            const dist = Math.hypot(dx, dy);
+            
+            // Calculate orbital force
+            const angle = Math.atan2(dy, dx) + quantumState.orbitalPlane.angle;
+            const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+            const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+            
+            // Apply orbital force
+            const orbitStrength = 0.1 * quantumState.depth;
+            psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+            psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+            
+            // Add depth-based behavior
+            if (quantumState.depth > 0.5) {
+                // Create vortex effect
+                const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                    (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                psiboid.vx = Math.cos(vortexAngle) * speed;
+                psiboid.vy = Math.sin(vortexAngle) * speed;
+            }
+        }
+
+        // Break angle physics
+        const breakPhysics = {
+            angle: 0,
+            speed: 0,
+            breakPoint: Math.PI * 0.4, // Break angle threshold
+            recovery: 0.95, // Recovery rate
+            lerpFactor: 0.02, // Core gravity pull
+            criticalSpeed: 30 // Speed at which break effects start
+        };
+
+        // Core gravity LERP
+        function lerpToCore(entity, strength = 1) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Calculate current angle to core
+            const dx = centerX - entity.x;
+            const dy = centerY - entity.y;
+            const currentAngle = Math.atan2(dy, dx);
+            
+            // Calculate break angle effect
+            const velocityAngle = Math.atan2(entity.vy, entity.vx);
+            const angleDiff = Math.abs(currentAngle - velocityAngle);
+            const breakEffect = angleDiff > breakPhysics.breakPoint ? 
+                              Math.pow(breakPhysics.recovery, angleDiff) : 1;
+            
+            // Apply speed-based break physics
+            const speed = Math.hypot(entity.vx, entity.vy);
+            const breakMultiplier = speed > breakPhysics.criticalSpeed ?
+                                  breakEffect * (breakPhysics.criticalSpeed / speed) : 1;
+            
+            // LERP position to core
+            entity.x = entity.x + (centerX - entity.x) * breakPhysics.lerpFactor * strength;
+            entity.y = entity.y + (centerY - entity.y) * breakPhysics.lerpFactor * strength;
+            
+            // Apply break physics to velocity
+            entity.vx *= breakMultiplier;
+            entity.vy *= breakMultiplier;
+            
+            return breakMultiplier; // Return for visual effects
+        }
+
+        // Enhanced hyperstring excitation with break physics
+        function exciteHyperstring(x, y, strength = 0.5) {
+            const radius = 100 * strength * hyperSpeed.boost;
+            const temporalStrength = strength * (1 + hyperGradient.temporalField) * hyperSpeed.boost;
+            
+            // Speed burst with break physics
+            const currentSpeed = hyperSpeed.velocity;
+            const targetSpeed = Math.min(hyperSpeed.maxSpeed, 
+                currentSpeed + strength * 5 * hyperSpeed.boost
+            );
+            
+            // Apply break angle to speed increase
+            const speedDiff = targetSpeed - currentSpeed;
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            
+            hyperSpeed.velocity = currentSpeed + speedDiff * breakEffect;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < radius * 1.5) {
+                    // Amplified influence
+                    const influence = (1 - dist/radius) * temporalStrength * hyperSpeed.boost;
+                    const temporalPhase = Math.sin(time * 0.02 * hyperSpeed.boost + 
+                                                 hyperGradient.temporalField);
+                    
+                    // Accelerated orbital force
+                    const angle = Math.atan2(dy, dx) + 
+                        temporalPhase * influence * hyperGradient.orbitalFlow * hyperSpeed.boost;
+                    
+                    // Boosted velocity
+                    const speedMult = 8 * (1 + hyperSpeed.velocity * 0.1);
+                    psiboid.vx += Math.cos(angle) * influence * speedMult;
+                    psiboid.vy += Math.sin(angle) * influence * speedMult;
+                    
+                    // Rapid quantum depth increase
+                    hyperGradient.gravityWell = Math.min(1,
+                        hyperGradient.gravityWell + influence * 0.1 * hyperSpeed.boost
+                    );
+                }
+            });
+        }
+
+        // Update frame with break physics
+        function updateFrame() {
+            // Speed-based fade with break effect
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            const fadeAlpha = 0.1 * (1 + hyperGradient.temporalField * 0.1) / 
+                            (1 + hyperSpeed.velocity * 0.05 * breakEffect);
+            
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
+            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
+            orbitalState.depth = Math.min(orbitalState.maxDepth, 
+                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
+            
+            // Update all psiboids with quantum effects
+            psiBoids.forEach((psiboid, i) => {
+                // Apply quantum uncertainty
+                const uncertainty = 0.1 * (1 - quantumState.depth);
+                psiboid.vx += (Math.random() - 0.5) * uncertainty;
+                psiboid.vy += (Math.random() - 0.5) * uncertainty;
+                
+                // Update position
+                psiboid.update();
+                
+                // Create quantum bridges between adjacent psiboids
+                if (i < psiBoids.length - 1) {
+                    const nextPsiboid = psiBoids[i + 1];
+                    const bridgeStrength = (1 + Math.sin(quantumState.phase + i * Math.PI/psiBoids.length) * 0.3);
+                    
+                    createQuantumBridge(
+                        psiboid.x, psiboid.y,
+                        nextPsiboid.x, nextPsiboid.y,
+                        bridgeStrength * quantumState.depth
+                    );
+                }
+            });
+            
+            // Update the GUARDIAN
+            guardian.update();
+            
+            // Request next frame
+            requestAnimationFrame(updateFrame);
+        }
+
+        // Find nearest psiboid to a point
+        function findNearestPsiboid(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = psiboid;
+                }
+            });
+            
+            return nearest;
+        }
+
+        // Create quantum bridge between points
+        function createQuantumBridge(startX, startY, endX, endY, strength) {
+            const segments = 20;
+            const phase = quantumState.phase;
+            const depth = quantumState.depth;
+            
+            // Draw main bridge
+            coreCtx.beginPath();
+            for (let i = 0; i <= segments; i++) {
+                const t = i/segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+                
+                // Add quantum fluctuations
+                const fluctuation = Math.sin(t * Math.PI * 6 + phase) * 
+                                  Math.sin(time * 0.002) * 
+                                  (10 + depth * 20);
+                
+                // Add spiral structure
+                const spiralRadius = (1 - t) * t * 100 * (1 + depth);
+                const spiralPhase = t * Math.PI * 8 + phase;
+                const spiralX = Math.cos(spiralPhase) * spiralRadius * strength;
+                const spiralY = Math.sin(spiralPhase) * spiralRadius * strength;
+                
+                if (i === 0) {
+                    coreCtx.moveTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                } else {
+                    coreCtx.lineTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                }
+            }
+            
+            // Create quantum gradient
+            const gradient = coreCtx.createLinearGradient(startX, startY, endX, endY);
+            const alpha = strength * 0.4 * (1 + depth);
+            
+            gradient.addColorStop(0, `rgba(0, 255, 255, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(100, 200, 255, ${alpha * 0.7})`);
+            gradient.addColorStop(1, `rgba(0, 255, 255, ${alpha})`);
+            
+            coreCtx.strokeStyle = gradient;
+            coreCtx.lineWidth = 2 * (1 + depth * strength);
+            coreCtx.stroke();
+            
+            // Add quantum glow
+            coreCtx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+            coreCtx.shadowBlur = 10 * strength;
+            coreCtx.stroke();
+        }
+
+        // Initialize interface controls
+        function initInterface() {
+            const controls = document.createElement('div');
+            controls.style.position = 'fixed';
+            controls.style.bottom = '20px';
+            controls.style.left = '50%';
+            controls.style.transform = 'translateX(-50%)';
+            controls.style.display = 'flex';
+            controls.style.gap = '10px';
+            controls.style.background = 'rgba(0, 0, 0, 0.7)';
+            controls.style.padding = '10px';
+            controls.style.borderRadius = '5px';
+            controls.style.zIndex = '1000';
+
+            // Create buttons
+            const homeBtn = createButton('HOME');
+            const stopBtn = createButton('STOP');
+            const manifoldBtn = createButton('MANIFOLD');
+
+            // Add buttons to controls
+            controls.appendChild(homeBtn);
+            controls.appendChild(stopBtn);
+            controls.appendChild(manifoldBtn);
+
+            // Add controls to body
+            document.body.appendChild(controls);
+        }
+
+        // Create styled button
+        function createButton(text) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.style.background = 'transparent';
+            button.style.border = '1px solid #0ff';
+            button.style.color = '#0ff';
+            button.style.padding = '5px 15px';
+            button.style.cursor = 'pointer';
+            button.style.fontFamily = 'monospace';
+            button.style.fontSize = '14px';
+            button.style.transition = 'all 0.3s ease';
+
+            // Hover effects
+            button.addEventListener('mouseover', () => {
+                button.style.background = 'rgba(0, 255, 255, 0.2)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.background = 'transparent';
+            });
+
+            // Click effects
+            button.addEventListener('click', () => {
+                switch(text) {
+                    case 'HOME':
+                        // Reset quantum state
+                        quantumState.depth = 0;
+                        quantumState.phase = 0;
+                        quantumState.diving = false;
+                        break;
+                    case 'STOP':
+                        // Freeze quantum state
+                        quantumState.diving = false;
+                        quantumState.depth = Math.max(0, quantumState.depth - 0.1);
+                        break;
+                    case 'MANIFOLD':
+                        // Toggle geometry layer
+                        quantumState.geometryLayer = (quantumState.geometryLayer + 1) % 3;
+                        break;
+                }
+            });
+
+            return button;
+        }
+
+        // Initialize sliders
+        function initSliders() {
+            const sliders = document.createElement('div');
+            sliders.style.position = 'fixed';
+            sliders.style.top = '20px';
+            sliders.style.right = '20px';
+            sliders.style.display = 'flex';
+            sliders.style.flexDirection = 'column';
+            sliders.style.gap = '10px';
+            sliders.style.background = 'rgba(0, 0, 0, 0.7)';
+            sliders.style.padding = '10px';
+            sliders.style.borderRadius = '5px';
+            sliders.style.zIndex = '1000';
+
+            // Create manifold depth display
+            const depthDisplay = document.createElement('div');
+            depthDisplay.className = 'manifold-depth';
+            depthDisplay.style.color = '#0ff';
+            depthDisplay.style.fontFamily = 'monospace';
+            depthDisplay.style.fontSize = '14px';
+            depthDisplay.textContent = 'λ=0.000';
+
+            // Create curvature display
+            const curvatureDisplay = document.createElement('div');
+            curvatureDisplay.className = 'curvature';
+            curvatureDisplay.style.color = '#0ff';
+            curvatureDisplay.style.fontFamily = 'monospace';
+            curvatureDisplay.style.fontSize = '14px';
+            curvatureDisplay.textContent = 'κ=1.400';
+
+            // Create quantum entropy display
+            const entropyDisplay = document.createElement('div');
+            entropyDisplay.className = 'q-entropy';
+            entropyDisplay.style.color = '#0ff';
+            entropyDisplay.style.fontFamily = 'monospace';
+            entropyDisplay.style.fontSize = '14px';
+            entropyDisplay.textContent = '1.317 qbits';
+
+            // Add displays to sliders
+            sliders.appendChild(depthDisplay);
+            sliders.appendChild(curvatureDisplay);
+            sliders.appendChild(entropyDisplay);
+
+            // Add sliders to body
+            document.body.appendChild(sliders);
+        }
+
+        // Psiboid creation
+        function createPsiboid() {
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                size: 5 + Math.random() * 5,
+                phase: Math.random() * Math.PI * 2,
+                frequency: 0.02 + Math.random() * 0.03,
+                resonance: 0.8 + Math.random() * 0.4,
+                trail: [],
+                maxTrailLength: 20,
+                submergedDepth: 0,
+                resonanceField: Array(6).fill(0),
+                
+                update() {
+                    // Update position with quantum effects
+                    const uncertainty = 0.5 * (1 - this.submergedDepth);
+                    this.vx += (Math.random() - 0.5) * uncertainty;
+                    this.vy += (Math.random() - 0.5) * uncertainty;
+                    
+                    // Apply velocity limits
+                    const maxSpeed = 2 + this.submergedDepth * 1.5;
+                    const speed = Math.hypot(this.vx, this.vy);
+                    if (speed > maxSpeed) {
+                        this.vx = (this.vx / speed) * maxSpeed;
+                        this.vy = (this.vy / speed) * maxSpeed;
+                    }
+                    
+                    // Update position
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Wrap around edges with quantum tunneling
+                    const margin = 50;
+                    if (this.x < -margin) this.x = window.innerWidth + margin;
+                    if (this.x > window.innerWidth + margin) this.x = -margin;
+                    if (this.y < -margin) this.y = window.innerHeight + margin;
+                    if (this.y > window.innerHeight + margin) this.y = -margin;
+                    
+                    // Update phase and resonance
+                    this.phase += this.frequency;
+                    this.resonance = 0.8 + 0.2 * Math.sin(this.phase);
+                    
+                    // Update trail with quantum effects
+                    this.trail.unshift({
+                        x: this.x + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        y: this.y + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        phase: this.phase
+                    });
+                    
+                    if (this.trail.length > this.maxTrailLength) {
+                        this.trail.pop();
+                    }
+                    
+                    // Update resonance field
+                    for (let i = 0; i < this.resonanceField.length; i++) {
+                        const targetValue = 0.5 + 0.5 * Math.sin(this.phase + i * Math.PI / 3);
+                        this.resonanceField[i] += (targetValue - this.resonanceField[i]) * 0.1;
+                    }
+                    
+                    // Draw psiboid core
+                    const glowSize = this.size * (1.5 + 0.5 * Math.sin(this.phase));
+                    const alpha = 0.5 + 0.3 * Math.sin(this.phase);
+                    
+                    // Draw quantum glow
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+                    coreCtx.fill();
+                    
+                    // Draw core
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                    coreCtx.fill();
+                    
+                    // Draw quantum trail
+                    if (this.trail.length > 1) {
+                        coreCtx.beginPath();
+                        coreCtx.moveTo(this.trail[0].x, this.trail[0].y);
+                        
+                        for (let i = 1; i < this.trail.length; i++) {
+                            const point = this.trail[i];
+                            const trailAlpha = (1 - i/this.trail.length) * 0.5;
+                            
+                            coreCtx.lineTo(point.x, point.y);
+                            coreCtx.strokeStyle = `rgba(0, 255, 255, ${trailAlpha})`;
+                            coreCtx.lineWidth = 2 * (1 - i/this.trail.length);
+                            coreCtx.stroke();
+                            coreCtx.beginPath();
+                            coreCtx.moveTo(point.x, point.y);
+                        }
+                    }
+                    
+                    // Draw resonance field when submerged
+                    if (this.submergedDepth > 0) {
+                        coreCtx.beginPath();
+                        this.resonanceField.forEach((val, i) => {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const radius = 30 + val * 20;
+                            const x = this.x + Math.cos(angle) * radius;
+                            const y = this.y + Math.sin(angle) * radius;
+                            
+                            if (i === 0) {
+                                coreCtx.moveTo(x, y);
+                            } else {
+                                coreCtx.lineTo(x, y);
+                            }
+                        });
+                        coreCtx.closePath();
+                        coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.3 * this.submergedDepth})`;
+                        coreCtx.stroke();
+                    }
+                }
+            };
+        }
+
+        // Initialize psiboids
+        function initPsiboids() {
+            // Clear existing psiboids
+            psiBoids.length = 0;
+            
+            // Create new psiboids
+            for (let i = 0; i < 10; i++) {
+                psiBoids.push(createPsiboid());
+            }
+        }
+
+        // Update manifold display
+        function updateManifold() {
+            const depth = quantumState.depth;
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Control functions
+        function homeState() {
+            quantumState.depth = 0;
+            quantumState.phase = 0;
+            quantumState.diving = false;
+        }
+
+        function stopState() {
+            psiBoids.forEach(psiboid => {
+                psiboid.vx *= 0.1;
+                psiboid.vy *= 0.1;
+            });
+        }
+
+        function toggleManifold() {
+            const display = document.querySelector('.manifold-depth').parentElement;
+            display.style.display = display.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Quantum diving mechanics
+        function handleQuantumInteraction(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find nearest psiboid for kiss interaction
+            const nearestPsiboid = findNearestPsiboid(x, y);
+            if (nearestPsiboid) {
+                const dx = nearestPsiboid.x - x;
+                const dy = nearestPsiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Kiss interaction range
+                if (dist < 50) {
+                    // Initiate quantum kiss
+                    initiateQuantumKiss(nearestPsiboid);
+                    return;
+                }
+            }
+            
+            // Calculate orbital parameters
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.hypot(dx, dy);
+            
+            // Update orbital plane
+            quantumState.orbitalPlane.angle = angle;
+            quantumState.orbitalPlane.radius = Math.min(300, dist);
+            quantumState.orbitalPlane.velocity = 0.01 + (dist / 1000);
+            
+            // Initiate or continue quantum dive
+            if (!quantumState.diving) {
+                quantumState.diving = true;
+                quantumState.diveStartTime = time;
+                quantumState.initialDepth = quantumState.depth;
+            }
+            
+            // Calculate dive progress with orbital influence
+            const diveProgress = Math.min((time - quantumState.diveStartTime) / 30, 1);
+            const orbitalFactor = 1 + Math.sin(quantumState.orbitalPlane.angle) * 0.2;
+            
+            // Update quantum state
+            quantumState.depth = Math.min(1, quantumState.initialDepth + 
+                (1 - Math.cos(diveProgress * Math.PI)) * 0.5 * orbitalFactor);
+            
+            // Update psiboid behavior based on orbital plane
+            psiBoids.forEach((psiboid, i) => {
+                // Get orbital influence
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dx = centerX - psiboid.x;
+                const dy = centerY - psiboid.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Calculate orbital force
+                const angle = quantumState.orbitalPlane.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(quantumState.phase) * 0.2;
+                
+                const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+                const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+                
+                // Apply orbital force
+                const orbitStrength = 0.1 * quantumState.depth;
+                psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+                psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+                
+                // Add depth-based behavior
+                if (quantumState.depth > 0.5) {
+                    // Create vortex effect
+                    const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                        (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                    const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                    psiboid.vx = Math.cos(vortexAngle) * speed;
+                    psiboid.vy = Math.sin(vortexAngle) * speed;
+                }
+            });
+            
+            // Update manifold display
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${quantumState.depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + quantumState.depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + quantumState.depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Initiate quantum kiss with psiboid
+        function initiateQuantumKiss(psiboid) {
+            // Create kiss resonance
+            const kissResonance = {
+                phase: quantumState.phase,
+                strength: 1.0,
+                radius: 0,
+                maxRadius: 300,
+                duration: 60, // frames
+                startTime: time
+            };
+            
+            // Add visual effect
+            function updateKissEffect() {
+                const progress = (time - kissResonance.startTime) / kissResonance.duration;
+                if (progress >= 1) return;
+                
+                // Expand resonance field
+                kissResonance.radius = kissResonance.maxRadius * Math.sin(progress * Math.PI);
+                kissResonance.strength = 1 - progress;
+                
+                // Draw resonance field
+                coreCtx.beginPath();
+                coreCtx.arc(psiboid.x, psiboid.y, kissResonance.radius, 0, Math.PI * 2);
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.3})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
+                
+                // Create spiral patterns
+                const spirals = 8;
+                for (let i = 0; i < spirals; i++) {
+                    const spiralPhase = (i / spirals) * Math.PI * 2 + kissResonance.phase;
+                    coreCtx.beginPath();
+                    for (let t = 0; t <= 1; t += 0.05) {
+                        const radius = kissResonance.radius * t;
+                        const angle = spiralPhase + t * Math.PI * 4;
+                        const x = psiboid.x + Math.cos(angle) * radius;
+                        const y = psiboid.y + Math.sin(angle) * radius;
+                        
+                        if (t === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
+                    }
+                    coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.2})`;
+                    coreCtx.stroke();
+                }
+                
+                // Affect nearby psiboids
+                psiBoids.forEach(other => {
+                    if (other !== psiboid) {
+                        const dx = other.x - psiboid.x;
+                        const dy = other.y - psiboid.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < kissResonance.maxRadius) {
+                            createQuantumBridge(
+                                psiboid.x, psiboid.y,
+                                other.x, other.y,
+                                (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                            );
+                        }
+                    }
+                });
+                
+                // Increase dive depth
+                quantumState.depth = Math.min(1, quantumState.depth + 0.001);
+                
+                // Continue effect
+                requestAnimationFrame(updateKissEffect);
+            }
+            
+            // Start kiss effect
+            updateKissEffect();
+            
+            // Initiate deep dive
+            quantumState.diving = true;
+            quantumState.depth = Math.min(1, quantumState.depth + 0.3);
+            
+            // Create quantum entanglement
+            psiBoids.forEach(other => {
+                if (other !== psiboid) {
+                    const dx = other.x - psiboid.x;
+                    const dy = other.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < kissResonance.maxRadius) {
+                        createQuantumBridge(
+                            psiboid.x, psiboid.y,
+                            other.x, other.y,
+                            (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                        );
+                    }
+                }
+            });
+        }
+
+        // Update psiboid behavior for deep diving
+        function updatePsiboidBehavior(psiboid) {
+            // Get orbital influence
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = centerX - psiboid.x;
+            const dy = centerY - psiboid.y;
+            const dist = Math.hypot(dx, dy);
+            
+            // Calculate orbital force
+            const angle = Math.atan2(dy, dx) + quantumState.orbitalPlane.angle;
+            const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+            const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+            
+            // Apply orbital force
+            const orbitStrength = 0.1 * quantumState.depth;
+            psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+            psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+            
+            // Add depth-based behavior
+            if (quantumState.depth > 0.5) {
+                // Create vortex effect
+                const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                    (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                psiboid.vx = Math.cos(vortexAngle) * speed;
+                psiboid.vy = Math.sin(vortexAngle) * speed;
+            }
+        }
+
+        // Break angle physics
+        const breakPhysics = {
+            angle: 0,
+            speed: 0,
+            breakPoint: Math.PI * 0.4, // Break angle threshold
+            recovery: 0.95, // Recovery rate
+            lerpFactor: 0.02, // Core gravity pull
+            criticalSpeed: 30 // Speed at which break effects start
+        };
+
+        // Core gravity LERP
+        function lerpToCore(entity, strength = 1) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Calculate current angle to core
+            const dx = centerX - entity.x;
+            const dy = centerY - entity.y;
+            const currentAngle = Math.atan2(dy, dx);
+            
+            // Calculate break angle effect
+            const velocityAngle = Math.atan2(entity.vy, entity.vx);
+            const angleDiff = Math.abs(currentAngle - velocityAngle);
+            const breakEffect = angleDiff > breakPhysics.breakPoint ? 
+                              Math.pow(breakPhysics.recovery, angleDiff) : 1;
+            
+            // Apply speed-based break physics
+            const speed = Math.hypot(entity.vx, entity.vy);
+            const breakMultiplier = speed > breakPhysics.criticalSpeed ?
+                                  breakEffect * (breakPhysics.criticalSpeed / speed) : 1;
+            
+            // LERP position to core
+            entity.x = entity.x + (centerX - entity.x) * breakPhysics.lerpFactor * strength;
+            entity.y = entity.y + (centerY - entity.y) * breakPhysics.lerpFactor * strength;
+            
+            // Apply break physics to velocity
+            entity.vx *= breakMultiplier;
+            entity.vy *= breakMultiplier;
+            
+            return breakMultiplier; // Return for visual effects
+        }
+
+        // Enhanced hyperstring excitation with break physics
+        function exciteHyperstring(x, y, strength = 0.5) {
+            const radius = 100 * strength * hyperSpeed.boost;
+            const temporalStrength = strength * (1 + hyperGradient.temporalField) * hyperSpeed.boost;
+            
+            // Speed burst with break physics
+            const currentSpeed = hyperSpeed.velocity;
+            const targetSpeed = Math.min(hyperSpeed.maxSpeed, 
+                currentSpeed + strength * 5 * hyperSpeed.boost
+            );
+            
+            // Apply break angle to speed increase
+            const speedDiff = targetSpeed - currentSpeed;
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            
+            hyperSpeed.velocity = currentSpeed + speedDiff * breakEffect;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < radius * 1.5) {
+                    // Amplified influence
+                    const influence = (1 - dist/radius) * temporalStrength * hyperSpeed.boost;
+                    const temporalPhase = Math.sin(time * 0.02 * hyperSpeed.boost + 
+                                                 hyperGradient.temporalField);
+                    
+                    // Accelerated orbital force
+                    const angle = Math.atan2(dy, dx) + 
+                        temporalPhase * influence * hyperGradient.orbitalFlow * hyperSpeed.boost;
+                    
+                    // Boosted velocity
+                    const speedMult = 8 * (1 + hyperSpeed.velocity * 0.1);
+                    psiboid.vx += Math.cos(angle) * influence * speedMult;
+                    psiboid.vy += Math.sin(angle) * influence * speedMult;
+                    
+                    // Rapid quantum depth increase
+                    hyperGradient.gravityWell = Math.min(1,
+                        hyperGradient.gravityWell + influence * 0.1 * hyperSpeed.boost
+                    );
+                }
+            });
+        }
+
+        // Update frame with break physics
+        function updateFrame() {
+            // Speed-based fade with break effect
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            const fadeAlpha = 0.1 * (1 + hyperGradient.temporalField * 0.1) / 
+                            (1 + hyperSpeed.velocity * 0.05 * breakEffect);
+            
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
+            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
+            orbitalState.depth = Math.min(orbitalState.maxDepth, 
+                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
+            
+            // Update all psiboids with quantum effects
+            psiBoids.forEach((psiboid, i) => {
+                // Apply quantum uncertainty
+                const uncertainty = 0.1 * (1 - quantumState.depth);
+                psiboid.vx += (Math.random() - 0.5) * uncertainty;
+                psiboid.vy += (Math.random() - 0.5) * uncertainty;
+                
+                // Update position
+                psiboid.update();
+                
+                // Create quantum bridges between adjacent psiboids
+                if (i < psiBoids.length - 1) {
+                    const nextPsiboid = psiBoids[i + 1];
+                    const bridgeStrength = (1 + Math.sin(quantumState.phase + i * Math.PI/psiBoids.length) * 0.3);
+                    
+                    createQuantumBridge(
+                        psiboid.x, psiboid.y,
+                        nextPsiboid.x, nextPsiboid.y,
+                        bridgeStrength * quantumState.depth
+                    );
+                }
+            });
+            
+            // Update the GUARDIAN
+            guardian.update();
+            
+            // Request next frame
+            requestAnimationFrame(updateFrame);
+        }
+
+        // Find nearest psiboid to a point
+        function findNearestPsiboid(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = psiboid;
+                }
+            });
+            
+            return nearest;
+        }
+
+        // Create quantum bridge between points
+        function createQuantumBridge(startX, startY, endX, endY, strength) {
+            const segments = 20;
+            const phase = quantumState.phase;
+            const depth = quantumState.depth;
+            
+            // Draw main bridge
+            coreCtx.beginPath();
+            for (let i = 0; i <= segments; i++) {
+                const t = i/segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+                
+                // Add quantum fluctuations
+                const fluctuation = Math.sin(t * Math.PI * 6 + phase) * 
+                                  Math.sin(time * 0.002) * 
+                                  (10 + depth * 20);
+                
+                // Add spiral structure
+                const spiralRadius = (1 - t) * t * 100 * (1 + depth);
+                const spiralPhase = t * Math.PI * 8 + phase;
+                const spiralX = Math.cos(spiralPhase) * spiralRadius * strength;
+                const spiralY = Math.sin(spiralPhase) * spiralRadius * strength;
+                
+                if (i === 0) {
+                    coreCtx.moveTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                } else {
+                    coreCtx.lineTo(x + fluctuation + spiralX, y + fluctuation + spiralY);
+                }
+            }
+            
+            // Create quantum gradient
+            const gradient = coreCtx.createLinearGradient(startX, startY, endX, endY);
+            const alpha = strength * 0.4 * (1 + depth);
+            
+            gradient.addColorStop(0, `rgba(0, 255, 255, ${alpha})`);
+            gradient.addColorStop(0.5, `rgba(100, 200, 255, ${alpha * 0.7})`);
+            gradient.addColorStop(1, `rgba(0, 255, 255, ${alpha})`);
+            
+            coreCtx.strokeStyle = gradient;
+            coreCtx.lineWidth = 2 * (1 + depth * strength);
+            coreCtx.stroke();
+            
+            // Add quantum glow
+            coreCtx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+            coreCtx.shadowBlur = 10 * strength;
+            coreCtx.stroke();
+        }
+
+        // Initialize interface controls
+        function initInterface() {
+            const controls = document.createElement('div');
+            controls.style.position = 'fixed';
+            controls.style.bottom = '20px';
+            controls.style.left = '50%';
+            controls.style.transform = 'translateX(-50%)';
+            controls.style.display = 'flex';
+            controls.style.gap = '10px';
+            controls.style.background = 'rgba(0, 0, 0, 0.7)';
+            controls.style.padding = '10px';
+            controls.style.borderRadius = '5px';
+            controls.style.zIndex = '1000';
+
+            // Create buttons
+            const homeBtn = createButton('HOME');
+            const stopBtn = createButton('STOP');
+            const manifoldBtn = createButton('MANIFOLD');
+
+            // Add buttons to controls
+            controls.appendChild(homeBtn);
+            controls.appendChild(stopBtn);
+            controls.appendChild(manifoldBtn);
+
+            // Add controls to body
+            document.body.appendChild(controls);
+        }
+
+        // Create styled button
+        function createButton(text) {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.style.background = 'transparent';
+            button.style.border = '1px solid #0ff';
+            button.style.color = '#0ff';
+            button.style.padding = '5px 15px';
+            button.style.cursor = 'pointer';
+            button.style.fontFamily = 'monospace';
+            button.style.fontSize = '14px';
+            button.style.transition = 'all 0.3s ease';
+
+            // Hover effects
+            button.addEventListener('mouseover', () => {
+                button.style.background = 'rgba(0, 255, 255, 0.2)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.background = 'transparent';
+            });
+
+            // Click effects
+            button.addEventListener('click', () => {
+                switch(text) {
+                    case 'HOME':
+                        // Reset quantum state
+                        quantumState.depth = 0;
+                        quantumState.phase = 0;
+                        quantumState.diving = false;
+                        break;
+                    case 'STOP':
+                        // Freeze quantum state
+                        quantumState.diving = false;
+                        quantumState.depth = Math.max(0, quantumState.depth - 0.1);
+                        break;
+                    case 'MANIFOLD':
+                        // Toggle geometry layer
+                        quantumState.geometryLayer = (quantumState.geometryLayer + 1) % 3;
+                        break;
+                }
+            });
+
+            return button;
+        }
+
+        // Initialize sliders
+        function initSliders() {
+            const sliders = document.createElement('div');
+            sliders.style.position = 'fixed';
+            sliders.style.top = '20px';
+            sliders.style.right = '20px';
+            sliders.style.display = 'flex';
+            sliders.style.flexDirection = 'column';
+            sliders.style.gap = '10px';
+            sliders.style.background = 'rgba(0, 0, 0, 0.7)';
+            sliders.style.padding = '10px';
+            sliders.style.borderRadius = '5px';
+            sliders.style.zIndex = '1000';
+
+            // Create manifold depth display
+            const depthDisplay = document.createElement('div');
+            depthDisplay.className = 'manifold-depth';
+            depthDisplay.style.color = '#0ff';
+            depthDisplay.style.fontFamily = 'monospace';
+            depthDisplay.style.fontSize = '14px';
+            depthDisplay.textContent = 'λ=0.000';
+
+            // Create curvature display
+            const curvatureDisplay = document.createElement('div');
+            curvatureDisplay.className = 'curvature';
+            curvatureDisplay.style.color = '#0ff';
+            curvatureDisplay.style.fontFamily = 'monospace';
+            curvatureDisplay.style.fontSize = '14px';
+            curvatureDisplay.textContent = 'κ=1.400';
+
+            // Create quantum entropy display
+            const entropyDisplay = document.createElement('div');
+            entropyDisplay.className = 'q-entropy';
+            entropyDisplay.style.color = '#0ff';
+            entropyDisplay.style.fontFamily = 'monospace';
+            entropyDisplay.style.fontSize = '14px';
+            entropyDisplay.textContent = '1.317 qbits';
+
+            // Add displays to sliders
+            sliders.appendChild(depthDisplay);
+            sliders.appendChild(curvatureDisplay);
+            sliders.appendChild(entropyDisplay);
+
+            // Add sliders to body
+            document.body.appendChild(sliders);
+        }
+
+        // Psiboid creation
+        function createPsiboid() {
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                size: 5 + Math.random() * 5,
+                phase: Math.random() * Math.PI * 2,
+                frequency: 0.02 + Math.random() * 0.03,
+                resonance: 0.8 + Math.random() * 0.4,
+                trail: [],
+                maxTrailLength: 20,
+                submergedDepth: 0,
+                resonanceField: Array(6).fill(0),
+                
+                update() {
+                    // Update position with quantum effects
+                    const uncertainty = 0.5 * (1 - this.submergedDepth);
+                    this.vx += (Math.random() - 0.5) * uncertainty;
+                    this.vy += (Math.random() - 0.5) * uncertainty;
+                    
+                    // Apply velocity limits
+                    const maxSpeed = 2 + this.submergedDepth * 1.5;
+                    const speed = Math.hypot(this.vx, this.vy);
+                    if (speed > maxSpeed) {
+                        this.vx = (this.vx / speed) * maxSpeed;
+                        this.vy = (this.vy / speed) * maxSpeed;
+                    }
+                    
+                    // Update position
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Wrap around edges with quantum tunneling
+                    const margin = 50;
+                    if (this.x < -margin) this.x = window.innerWidth + margin;
+                    if (this.x > window.innerWidth + margin) this.x = -margin;
+                    if (this.y < -margin) this.y = window.innerHeight + margin;
+                    if (this.y > window.innerHeight + margin) this.y = -margin;
+                    
+                    // Update phase and resonance
+                    this.phase += this.frequency;
+                    this.resonance = 0.8 + 0.2 * Math.sin(this.phase);
+                    
+                    // Update trail with quantum effects
+                    this.trail.unshift({
+                        x: this.x + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        y: this.y + (Math.random() - 0.5) * 2 * (1 - this.submergedDepth),
+                        phase: this.phase
+                    });
+                    
+                    if (this.trail.length > this.maxTrailLength) {
+                        this.trail.pop();
+                    }
+                    
+                    // Update resonance field
+                    for (let i = 0; i < this.resonanceField.length; i++) {
+                        const targetValue = 0.5 + 0.5 * Math.sin(this.phase + i * Math.PI / 3);
+                        this.resonanceField[i] += (targetValue - this.resonanceField[i]) * 0.1;
+                    }
+                    
+                    // Draw psiboid core
+                    const glowSize = this.size * (1.5 + 0.5 * Math.sin(this.phase));
+                    const alpha = 0.5 + 0.3 * Math.sin(this.phase);
+                    
+                    // Draw quantum glow
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+                    coreCtx.fill();
+                    
+                    // Draw core
+                    coreCtx.beginPath();
+                    coreCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    coreCtx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                    coreCtx.fill();
+                    
+                    // Draw quantum trail
+                    if (this.trail.length > 1) {
+                        coreCtx.beginPath();
+                        coreCtx.moveTo(this.trail[0].x, this.trail[0].y);
+                        
+                        for (let i = 1; i < this.trail.length; i++) {
+                            const point = this.trail[i];
+                            const trailAlpha = (1 - i/this.trail.length) * 0.5;
+                            
+                            coreCtx.lineTo(point.x, point.y);
+                            coreCtx.strokeStyle = `rgba(0, 255, 255, ${trailAlpha})`;
+                            coreCtx.lineWidth = 2 * (1 - i/this.trail.length);
+                            coreCtx.stroke();
+                            coreCtx.beginPath();
+                            coreCtx.moveTo(point.x, point.y);
+                        }
+                    }
+                    
+                    // Draw resonance field when submerged
+                    if (this.submergedDepth > 0) {
+                        coreCtx.beginPath();
+                        this.resonanceField.forEach((val, i) => {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const radius = 30 + val * 20;
+                            const x = this.x + Math.cos(angle) * radius;
+                            const y = this.y + Math.sin(angle) * radius;
+                            
+                            if (i === 0) {
+                                coreCtx.moveTo(x, y);
+                            } else {
+                                coreCtx.lineTo(x, y);
+                            }
+                        });
+                        coreCtx.closePath();
+                        coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.3 * this.submergedDepth})`;
+                        coreCtx.stroke();
+                    }
+                }
+            };
+        }
+
+        // Initialize psiboids
+        function initPsiboids() {
+            // Clear existing psiboids
+            psiBoids.length = 0;
+            
+            // Create new psiboids
+            for (let i = 0; i < 10; i++) {
+                psiBoids.push(createPsiboid());
+            }
+        }
+
+        // Update manifold display
+        function updateManifold() {
+            const depth = quantumState.depth;
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Control functions
+        function homeState() {
+            quantumState.depth = 0;
+            quantumState.phase = 0;
+            quantumState.diving = false;
+        }
+
+        function stopState() {
+            psiBoids.forEach(psiboid => {
+                psiboid.vx *= 0.1;
+                psiboid.vy *= 0.1;
+            });
+        }
+
+        function toggleManifold() {
+            const display = document.querySelector('.manifold-depth').parentElement;
+            display.style.display = display.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Quantum diving mechanics
+        function handleQuantumInteraction(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find nearest psiboid for kiss interaction
+            const nearestPsiboid = findNearestPsiboid(x, y);
+            if (nearestPsiboid) {
+                const dx = nearestPsiboid.x - x;
+                const dy = nearestPsiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Kiss interaction range
+                if (dist < 50) {
+                    // Initiate quantum kiss
+                    initiateQuantumKiss(nearestPsiboid);
+                    return;
+                }
+            }
+            
+            // Calculate orbital parameters
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.hypot(dx, dy);
+            
+            // Update orbital plane
+            quantumState.orbitalPlane.angle = angle;
+            quantumState.orbitalPlane.radius = Math.min(300, dist);
+            quantumState.orbitalPlane.velocity = 0.01 + (dist / 1000);
+            
+            // Initiate or continue quantum dive
+            if (!quantumState.diving) {
+                quantumState.diving = true;
+                quantumState.diveStartTime = time;
+                quantumState.initialDepth = quantumState.depth;
+            }
+            
+            // Calculate dive progress with orbital influence
+            const diveProgress = Math.min((time - quantumState.diveStartTime) / 30, 1);
+            const orbitalFactor = 1 + Math.sin(quantumState.orbitalPlane.angle) * 0.2;
+            
+            // Update quantum state
+            quantumState.depth = Math.min(1, quantumState.initialDepth + 
+                (1 - Math.cos(diveProgress * Math.PI)) * 0.5 * orbitalFactor);
+            
+            // Update psiboid behavior based on orbital plane
+            psiBoids.forEach((psiboid, i) => {
+                // Get orbital influence
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dx = centerX - psiboid.x;
+                const dy = centerY - psiboid.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Calculate orbital force
+                const angle = quantumState.orbitalPlane.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(quantumState.phase) * 0.2;
+                
+                const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+                const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+                
+                // Apply orbital force
+                const orbitStrength = 0.1 * quantumState.depth;
+                psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+                psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+                
+                // Add depth-based behavior
+                if (quantumState.depth > 0.5) {
+                    // Create vortex effect
+                    const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                        (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                    const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                    psiboid.vx = Math.cos(vortexAngle) * speed;
+                    psiboid.vy = Math.sin(vortexAngle) * speed;
+                }
+            });
+            
+            // Update manifold display
+            document.querySelector('.manifold-depth').textContent = 
+                `λ=${quantumState.depth.toFixed(3)}`;
+            document.querySelector('.curvature').textContent = 
+                `κ=${(1.4 + quantumState.depth * 0.1).toFixed(3)}`;
+            document.querySelector('.q-entropy').textContent = 
+                `${(1.317 + quantumState.depth * 0.05).toFixed(3)} qbits`;
+        }
+
+        // Initiate quantum kiss with psiboid
+        function initiateQuantumKiss(psiboid) {
+            // Create kiss resonance
+            const kissResonance = {
+                phase: quantumState.phase,
+                strength: 1.0,
+                radius: 0,
+                maxRadius: 300,
+                duration: 60, // frames
+                startTime: time
+            };
+            
+            // Add visual effect
+            function updateKissEffect() {
+                const progress = (time - kissResonance.startTime) / kissResonance.duration;
+                if (progress >= 1) return;
+                
+                // Expand resonance field
+                kissResonance.radius = kissResonance.maxRadius * Math.sin(progress * Math.PI);
+                kissResonance.strength = 1 - progress;
+                
+                // Draw resonance field
+                coreCtx.beginPath();
+                coreCtx.arc(psiboid.x, psiboid.y, kissResonance.radius, 0, Math.PI * 2);
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.3})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
+                
+                // Create spiral patterns
+                const spirals = 8;
+                for (let i = 0; i < spirals; i++) {
+                    const spiralPhase = (i / spirals) * Math.PI * 2 + kissResonance.phase;
+                    coreCtx.beginPath();
+                    for (let t = 0; t <= 1; t += 0.05) {
+                        const radius = kissResonance.radius * t;
+                        const angle = spiralPhase + t * Math.PI * 4;
+                        const x = psiboid.x + Math.cos(angle) * radius;
+                        const y = psiboid.y + Math.sin(angle) * radius;
+                        
+                        if (t === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
+                    }
+                    coreCtx.strokeStyle = `rgba(0, 255, 255, ${kissResonance.strength * 0.2})`;
+                    coreCtx.stroke();
+                }
+                
+                // Affect nearby psiboids
+                psiBoids.forEach(other => {
+                    if (other !== psiboid) {
+                        const dx = other.x - psiboid.x;
+                        const dy = other.y - psiboid.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < kissResonance.maxRadius) {
+                            createQuantumBridge(
+                                psiboid.x, psiboid.y,
+                                other.x, other.y,
+                                (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                            );
+                        }
+                    }
+                });
+                
+                // Increase dive depth
+                quantumState.depth = Math.min(1, quantumState.depth + 0.001);
+                
+                // Continue effect
+                requestAnimationFrame(updateKissEffect);
+            }
+            
+            // Start kiss effect
+            updateKissEffect();
+            
+            // Initiate deep dive
+            quantumState.diving = true;
+            quantumState.depth = Math.min(1, quantumState.depth + 0.3);
+            
+            // Create quantum entanglement
+            psiBoids.forEach(other => {
+                if (other !== psiboid) {
+                    const dx = other.x - psiboid.x;
+                    const dy = other.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < kissResonance.maxRadius) {
+                        createQuantumBridge(
+                            psiboid.x, psiboid.y,
+                            other.x, other.y,
+                            (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                        );
+                    }
+                }
+            });
+        }
+
+        // Update psiboid behavior for deep diving
+        function updatePsiboidBehavior(psiboid) {
+            // Get orbital influence
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = centerX - psiboid.x;
+            const dy = centerY - psiboid.y;
+            const dist = Math.hypot(dx, dy);
+            
+            // Calculate orbital force
+            const angle = Math.atan2(dy, dx) + quantumState.orbitalPlane.angle;
+            const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+            const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+            
+            // Apply orbital force
+            const orbitStrength = 0.1 * quantumState.depth;
+            psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+            psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+            
+            // Add depth-based behavior
+            if (quantumState.depth > 0.5) {
+                // Create vortex effect
+                const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                    (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                psiboid.vx = Math.cos(vortexAngle) * speed;
+                psiboid.vy = Math.sin(vortexAngle) * speed;
+            }
+        }
+
+        // Break angle physics
+        const breakPhysics = {
+            angle: 0,
+            speed: 0,
+            breakPoint: Math.PI * 0.4, // Break angle threshold
+            recovery: 0.95, // Recovery rate
+            lerpFactor: 0.02, // Core gravity pull
+            criticalSpeed: 30 // Speed at which break effects start
+        };
+
+        // Core gravity LERP
+        function lerpToCore(entity, strength = 1) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Calculate current angle to core
+            const dx = centerX - entity.x;
+            const dy = centerY - entity.y;
+            const currentAngle = Math.atan2(dy, dx);
+            
+            // Calculate break angle effect
+            const velocityAngle = Math.atan2(entity.vy, entity.vx);
+            const angleDiff = Math.abs(currentAngle - velocityAngle);
+            const breakEffect = angleDiff > breakPhysics.breakPoint ? 
+                              Math.pow(breakPhysics.recovery, angleDiff) : 1;
+            
+            // Apply speed-based break physics
+            const speed = Math.hypot(entity.vx, entity.vy);
+            const breakMultiplier = speed > breakPhysics.criticalSpeed ?
+                                  breakEffect * (breakPhysics.criticalSpeed / speed) : 1;
+            
+            // LERP position to core
+            entity.x = entity.x + (centerX - entity.x) * breakPhysics.lerpFactor * strength;
+            entity.y = entity.y + (centerY - entity.y) * breakPhysics.lerpFactor * strength;
+            
+            // Apply break physics to velocity
+            entity.vx *= breakMultiplier;
+            entity.vy *= breakMultiplier;
+            
+            return breakMultiplier; // Return for visual effects
+        }
+
+        // Enhanced hyperstring excitation with break physics
+        function exciteHyperstring(x, y, strength = 0.5) {
+            const radius = 100 * strength * hyperSpeed.boost;
+            const temporalStrength = strength * (1 + hyperGradient.temporalField) * hyperSpeed.boost;
+            
+            // Speed burst with break physics
+            const currentSpeed = hyperSpeed.velocity;
+            const targetSpeed = Math.min(hyperSpeed.maxSpeed, 
+                currentSpeed + strength * 5 * hyperSpeed.boost
+            );
+            
+            // Apply break angle to speed increase
+            const speedDiff = targetSpeed - currentSpeed;
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            
+            hyperSpeed.velocity = currentSpeed + speedDiff * breakEffect;
+            
+            psiBoids.forEach(psiboid => {
+                const dx = psiboid.x - x;
+                const dy = psiboid.y - y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist < radius * 1.5) {
+                    // Amplified influence
+                    const influence = (1 - dist/radius) * temporalStrength * hyperSpeed.boost;
+                    const temporalPhase = Math.sin(time * 0.02 * hyperSpeed.boost + 
+                                                 hyperGradient.temporalField);
+                    
+                    // Accelerated orbital force
+                    const angle = Math.atan2(dy, dx) + 
+                        temporalPhase * influence * hyperGradient.orbitalFlow * hyperSpeed.boost;
+                    
+                    // Boosted velocity
+                    const speedMult = 8 * (1 + hyperSpeed.velocity * 0.1);
+                    psiboid.vx += Math.cos(angle) * influence * speedMult;
+                    psiboid.vy += Math.sin(angle) * influence * speedMult;
+                    
+                    // Rapid quantum depth increase
+                    hyperGradient.gravityWell = Math.min(1,
+                        hyperGradient.gravityWell + influence * 0.1 * hyperSpeed.boost
+                    );
+                }
+            });
+        }
+
+        // Update frame with break physics
+        function updateFrame() {
+            // Speed-based fade with break effect
+            const breakEffect = Math.abs(breakPhysics.angle) > breakPhysics.breakPoint ?
+                              breakPhysics.recovery : 1;
+            const fadeAlpha = 0.1 * (1 + hyperGradient.temporalField * 0.1) / 
+                            (1 + hyperSpeed.velocity * 0.05 * breakEffect);
+            
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
