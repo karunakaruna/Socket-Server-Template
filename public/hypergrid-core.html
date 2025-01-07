@@ -696,7 +696,7 @@
                 const rippleCount = Math.floor(10 * diveDepth);
                 for (let i = 0; i < rippleCount; i++) {
                     const ripplePhase = (time + i/rippleCount) * Math.PI * 2;
-                    const rippleSize = (200 + Math.sin(ripplePhase) * 50) * (1 + diveDepth);
+                    const rippleSize = (200 + Math.sin(ripplePhase) * 100) * (1 + diveDepth);
                     const alpha = 0.1 * (1 - i/rippleCount) * Math.sin(ripplePhase);
                     
                     coreCtx.strokeStyle = `hsla(${180 + diveDepth * 40}, 100%, 50%, ${alpha})`;
@@ -771,6 +771,121 @@
             coreCtx.restore();
             
             requestAnimationFrame(drawOortCloud);
+        }
+
+        // Prevent text selection while interacting
+        document.body.style.userSelect = 'none';
+        coreCanvas.style.zIndex = '1000'; // Ensure canvas is on top
+        
+        // Add motion trails
+        const trailCanvas = document.createElement('canvas');
+        trailCanvas.style.position = 'absolute';
+        trailCanvas.style.top = '0';
+        trailCanvas.style.left = '0';
+        trailCanvas.style.width = '100%';
+        trailCanvas.style.height = '100%';
+        trailCanvas.style.zIndex = '999';
+        document.body.appendChild(trailCanvas);
+        const trailCtx = trailCanvas.getContext('2d');
+
+        function resizeCanvases() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            coreCanvas.width = width;
+            coreCanvas.height = height;
+            trailCanvas.width = width;
+            trailCanvas.height = height;
+            mouseX = width / 2;
+            mouseY = height / 2;
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
+        // Enhanced movement perception
+        let playerTrail = [];
+        const maxTrailLength = 20;
+        
+        function updateDiving(time) {
+            // Clear previous frame with fade
+            trailCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+            
+            // WASD/Arrow keys to swim with enhanced feedback
+            const moveSpeed = 0.1 * (1 + playerEnergy);
+            let dx = 0, dy = 0;
+            
+            if (keyState.has('w') || keyState.has('arrowup')) dy -= moveSpeed * 5;
+            if (keyState.has('s') || keyState.has('arrowdown')) dy += moveSpeed * 5;
+            if (keyState.has('a') || keyState.has('arrowleft')) dx -= moveSpeed * 5;
+            if (keyState.has('d') || keyState.has('arrowright')) dx += moveSpeed * 5;
+            
+            // Update player position with momentum
+            mouseX += dx;
+            mouseY += dy;
+            
+            // Add to trail
+            if (dx !== 0 || dy !== 0) {
+                playerTrail.push({x: mouseX, y: mouseY, energy: playerEnergy});
+                if (playerTrail.length > maxTrailLength) playerTrail.shift();
+            }
+            
+            // Draw movement trail
+            if (playerTrail.length > 1) {
+                trailCtx.beginPath();
+                trailCtx.moveTo(playerTrail[0].x, playerTrail[0].y);
+                
+                for (let i = 1; i < playerTrail.length; i++) {
+                    const point = playerTrail[i];
+                    trailCtx.lineTo(point.x, point.y);
+                }
+                
+                trailCtx.strokeStyle = `hsla(180, 100%, 50%, ${0.3 + playerEnergy * 0.5})`;
+                trailCtx.lineWidth = 2 + playerEnergy * 3;
+                trailCtx.stroke();
+            }
+            
+            // Space to dive deeper with enhanced feedback
+            if (keyState.has(' ')) {
+                diveDepth += 0.02 * (1 + playerEnergy);
+                dimensionalPhase += 0.01;
+                
+                // Add diving ripples
+                const rippleCount = Math.floor(20 * diveDepth);
+                for (let i = 0; i < rippleCount; i++) {
+                    const ripplePhase = (time + i/rippleCount) * Math.PI * 2;
+                    const rippleSize = (100 + Math.sin(ripplePhase) * 30) * (1 + diveDepth);
+                    const alpha = 0.2 * (1 - i/rippleCount) * Math.sin(ripplePhase);
+                    
+                    trailCtx.strokeStyle = `hsla(${180 + diveDepth * 60}, 100%, 50%, ${alpha})`;
+                    trailCtx.lineWidth = 2;
+                    trailCtx.beginPath();
+                    trailCtx.arc(mouseX, mouseY, rippleSize, 0, Math.PI * 2);
+                    trailCtx.stroke();
+                }
+            } else {
+                diveDepth *= 0.99;
+            }
+            
+            // Update player energy with visual feedback
+            if (mousePressed) {
+                playerEnergy = Math.min(1, playerEnergy + 0.01);
+                
+                // Energy gathering effect
+                trailCtx.beginPath();
+                trailCtx.arc(mouseX, mouseY, 20 + playerEnergy * 20, 0, Math.PI * 2);
+                trailCtx.strokeStyle = `hsla(60, 100%, 50%, ${0.3 + playerEnergy * 0.5})`;
+                trailCtx.lineWidth = 2;
+                trailCtx.stroke();
+            } else {
+                playerEnergy *= 0.99;
+            }
+
+            // Apply diving effects
+            const scale = 1 + diveDepth;
+            coreCtx.save();
+            coreCtx.translate(coreCanvas.width/2, coreCanvas.height/2);
+            coreCtx.scale(scale, scale);
+            coreCtx.translate(-coreCanvas.width/2, -coreCanvas.height/2);
         }
 
         // Add instructions overlay
