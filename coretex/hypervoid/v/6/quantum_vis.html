@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HyperVoid Quantum Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: black;
+            color: #00ff00;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid #00ff00;
+        }
+        #status {
+            color: yellow;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        .error {
+            color: red;
+        }
+        .connected {
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <h2>HyperVoid Quantum Visualization</h2>
+    <div id="status">Connecting to visualization server...</div>
+    <div class="container">
+        <div>
+            <h3>Quantum State Vector</h3>
+            <canvas id="stateCanvas" width="300" height="300"></canvas>
+        </div>
+        <div>
+            <h3>Quantum Foam</h3>
+            <canvas id="foamCanvas" width="300" height="300"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        const stateCanvas = document.getElementById('stateCanvas');
+        const foamCanvas = document.getElementById('foamCanvas');
+        const stateCtx = stateCanvas.getContext('2d');
+        const foamCtx = foamCanvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+        
+        function connectWebSocket() {
+            // Setup WebSocket connection
+            const ws = new WebSocket('ws://localhost:8769');
+            
+            ws.onopen = function() {
+                statusDiv.textContent = 'Connected to visualization server';
+                statusDiv.className = 'connected';
+                console.log('WebSocket connected');
+            };
+            
+            ws.onclose = function() {
+                statusDiv.textContent = 'Disconnected from server - reconnecting...';
+                statusDiv.className = 'error';
+                console.log('WebSocket closed, reconnecting...');
+                setTimeout(connectWebSocket, 1000);  // Try to reconnect after 1 second
+            };
+            
+            ws.onerror = function(error) {
+                statusDiv.textContent = 'Error connecting to server';
+                statusDiv.className = 'error';
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'state_update') {
+                        drawState(data.state);
+                        drawFoam(data.foam);
+                        console.log('Received state update:', data);
+                    }
+                } catch (e) {
+                    console.error('Error processing message:', e);
+                }
+            };
+            
+            return ws;
+        }
+        
+        function drawGrid(ctx) {
+            ctx.strokeStyle = '#003300';
+            ctx.lineWidth = 1;
+            
+            // Draw grid lines
+            for (let i = -3; i <= 3; i++) {
+                // Vertical lines
+                ctx.beginPath();
+                ctx.moveTo(150 + i*50, 0);
+                ctx.lineTo(150 + i*50, 300);
+                ctx.stroke();
+                
+                // Horizontal lines
+                ctx.beginPath();
+                ctx.moveTo(0, 150 + i*50);
+                ctx.lineTo(300, 150 + i*50);
+                ctx.stroke();
+            }
+            
+            // Draw axes
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            
+            // X axis
+            ctx.beginPath();
+            ctx.moveTo(0, 150);
+            ctx.lineTo(300, 150);
+            ctx.stroke();
+            
+            // Y axis
+            ctx.beginPath();
+            ctx.moveTo(150, 0);
+            ctx.lineTo(150, 300);
+            ctx.stroke();
+        }
+        
+        function drawState(state) {
+            // Clear canvas
+            stateCtx.fillStyle = 'black';
+            stateCtx.fillRect(0, 0, 300, 300);
+            
+            // Draw grid
+            drawGrid(stateCtx);
+            
+            // Draw state vector
+            stateCtx.strokeStyle = '#00ff00';
+            stateCtx.lineWidth = 2;
+            
+            const x = 150 + state[0] * 100;
+            const y = 150 - state[1] * 100;
+            
+            stateCtx.beginPath();
+            stateCtx.moveTo(150, 150);
+            stateCtx.lineTo(x, y);
+            
+            // Draw arrow head
+            const angle = Math.atan2(y - 150, x - 150);
+            stateCtx.lineTo(
+                x - 10 * Math.cos(angle - Math.PI / 6),
+                y - 10 * Math.sin(angle - Math.PI / 6)
+            );
+            stateCtx.moveTo(x, y);
+            stateCtx.lineTo(
+                x - 10 * Math.cos(angle + Math.PI / 6),
+                y - 10 * Math.sin(angle + Math.PI / 6)
+            );
+            
+            stateCtx.stroke();
+        }
+        
+        function drawFoam(foam) {
+            const cellWidth = 300 / 32;
+            const cellHeight = 300 / 32;
+            
+            for (let i = 0; i < 32; i++) {
+                for (let j = 0; j < 32; j++) {
+                    const value = foam[i][j];
+                    const hue = (1 - value) * 240; // Blue (240) to Red (0)
+                    foamCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    foamCtx.fillRect(
+                        j * cellWidth,
+                        i * cellHeight,
+                        cellWidth,
+                        cellHeight
+                    );
+                }
+            }
+        }
+        
+        // Initial setup
+        stateCtx.fillStyle = 'black';
+        stateCtx.fillRect(0, 0, 300, 300);
+        drawGrid(stateCtx);
+        
+        foamCtx.fillStyle = 'black';
+        foamCtx.fillRect(0, 0, 300, 300);
+        
+        // Start WebSocket connection
+        console.log('Starting WebSocket connection...');
+        connectWebSocket();
+    </script>
+</body>
+</html>
