@@ -436,6 +436,10 @@
         const psiBoids = [];
         const keyState = new Set();
 
+        // Track dimensional information and echoes
+        let dimensionalEchoes = [];
+        let discoveredPatterns = new Set();
+
         // Canvas setup
         const coreCanvas = document.createElement('canvas');
         coreCanvas.style.position = 'absolute';
@@ -456,7 +460,8 @@
             
             // Initialize psi-boids
             psiBoids.length = 0;
-            for (let i = 0; i < 500; i++) {
+            const NUM_BOIDS = 500; // Increased from original
+            for (let i = 0; i < NUM_BOIDS; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const radius = Math.random() * 400;
                 psiBoids.push(new PsiBoid(
@@ -494,6 +499,9 @@
                 this.dimension = Math.random() * 4;
                 this.purpose = Math.floor(Math.random() * 4); // Different types of quantum fish
                 this.pathPhase = Math.random() * Math.PI * 2;
+                this.discoveredInfo = new Set();
+                this.searchPhase = 0;
+                this.lastEchoTime = 0;
             }
 
             update(boids, time) {
@@ -592,6 +600,21 @@
                         break;
                 }
                 
+                // Information gathering behavior
+                if (this.energy > 0.3) {
+                    this.searchPhase += 0.05 + this.energy * 0.05;
+                    
+                    // Search for dimensional patterns
+                    if (time - this.lastEchoTime > 2) {
+                        const pattern = this.detectPattern();
+                        if (pattern && !discoveredPatterns.has(pattern)) {
+                            discoveredPatterns.add(pattern);
+                            dimensionalEchoes.push(new DimensionalEcho(this.x, this.y, pattern));
+                            this.lastEchoTime = time;
+                        }
+                    }
+                }
+                
                 // Update position
                 this.x += this.vx;
                 this.y += this.vy;
@@ -617,6 +640,19 @@
                 if (mousePressed && playerDist < 100) {
                     this.energy = Math.min(1, this.energy + 0.1);
                 }
+            }
+
+            detectPattern() {
+                const distToCore = Math.sqrt(
+                    (coreCanvas.width/2 - this.x) ** 2 + 
+                    (coreCanvas.height/2 - this.y) ** 2
+                );
+                
+                // Different patterns emerge at different distances and energy levels
+                if (distToCore < 100 && this.energy > 0.7) return 'vortex';
+                if (distToCore > 200 && this.energy > 0.5) return 'lattice';
+                if (this.quantum > 0.8) return 'wave';
+                return null;
             }
 
             draw(ctx) {
@@ -657,6 +693,149 @@
             }
         }
 
+        class DimensionalEcho {
+            constructor(x, y, pattern) {
+                this.x = x;
+                this.y = y;
+                this.pattern = pattern;
+                this.strength = 1.0;
+                this.phase = Math.random() * Math.PI * 2;
+                this.frequency = 1 + Math.random() * 2;
+                this.dimension = Math.random() * 4;
+            }
+            
+            draw(ctx, time) {
+                const alpha = this.strength * 0.3;
+                const size = 30 + Math.sin(time * this.frequency + this.phase) * 10;
+                
+                // Draw dimensional pattern
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(time * 0.5);
+                
+                ctx.strokeStyle = `hsla(${180 + this.dimension * 40}, 100%, 70%, ${alpha})`;
+                ctx.lineWidth = 1;
+                
+                switch(this.pattern) {
+                    case 'vortex':
+                        for(let i = 0; i < 5; i++) {
+                            const angle = (i / 5) * Math.PI * 2 + time;
+                            const radius = size * (1 + Math.sin(angle + time));
+                            ctx.beginPath();
+                            ctx.arc(0, 0, radius, 0, Math.PI * 0.5);
+                            ctx.stroke();
+                        }
+                        break;
+                    case 'lattice':
+                        for(let i = -2; i <= 2; i++) {
+                            for(let j = -2; j <= 2; j++) {
+                                ctx.beginPath();
+                                ctx.arc(i * size/2, j * size/2, 2, 0, Math.PI * 2);
+                                ctx.stroke();
+                            }
+                        }
+                        break;
+                    case 'wave':
+                        ctx.beginPath();
+                        for(let i = -size; i <= size; i += 5) {
+                            const y = Math.sin(i * 0.1 + time) * 10;
+                            ctx.lineTo(i, y);
+                        }
+                        ctx.stroke();
+                        break;
+                }
+                
+                ctx.restore();
+                
+                this.strength *= 0.99;
+            }
+        }
+
+        // Increase particle count and add deep structures
+        const DEPTH_LAYERS = 5;
+        let quantumStructures = [];
+        
+        // Initialize quantum structures at different depths
+        function initQuantumStructures() {
+            for (let layer = 0; layer < DEPTH_LAYERS; layer++) {
+                const depth = layer + 1;
+                const structures = [];
+                
+                // Add geometric structures for this layer
+                const numStructures = 3 + Math.floor(Math.random() * 5);
+                for (let i = 0; i < numStructures; i++) {
+                    structures.push({
+                        type: ['tetrahedron', 'cube', 'octahedron', 'dodecahedron'][Math.floor(Math.random() * 4)],
+                        x: coreCanvas.width/2 + (Math.random() - 0.5) * 300,
+                        y: coreCanvas.height/2 + (Math.random() - 0.5) * 300,
+                        rotation: Math.random() * Math.PI * 2,
+                        size: 50 + Math.random() * 100,
+                        depth: depth,
+                        phase: Math.random() * Math.PI * 2,
+                        frequency: 0.5 + Math.random()
+                    });
+                }
+                quantumStructures.push(structures);
+            }
+        }
+
+        // Draw a platonic solid
+        function drawPlatonicSolid(ctx, type, x, y, size, rotation, alpha) {
+            ctx.strokeStyle = `hsla(180, 100%, 70%, ${alpha})`;
+            ctx.lineWidth = 2;
+            
+            switch(type) {
+                case 'tetrahedron':
+                    // Draw tetrahedron projection
+                    ctx.beginPath();
+                    for (let i = 0; i < 4; i++) {
+                        const angle1 = rotation + i * Math.PI * 2/3;
+                        const angle2 = rotation + ((i+1) % 3) * Math.PI * 2/3;
+                        ctx.moveTo(x + Math.cos(angle1) * size, y + Math.sin(angle1) * size);
+                        ctx.lineTo(x + Math.cos(angle2) * size, y + Math.sin(angle2) * size);
+                        // Connect to apex
+                        ctx.moveTo(x + Math.cos(angle1) * size, y + Math.sin(angle1) * size);
+                        ctx.lineTo(x, y - size);
+                    }
+                    break;
+                    
+                case 'cube':
+                    // Draw cube projection
+                    const corners = [];
+                    for (let i = 0; i < 4; i++) {
+                        const angle = rotation + i * Math.PI/2;
+                        corners.push({
+                            x: x + Math.cos(angle) * size,
+                            y: y + Math.sin(angle) * size
+                        });
+                    }
+                    ctx.beginPath();
+                    // Draw front face
+                    for (let i = 0; i < 4; i++) {
+                        ctx.moveTo(corners[i].x, corners[i].y);
+                        ctx.lineTo(corners[(i+1)%4].x, corners[(i+1)%4].y);
+                    }
+                    // Draw depth lines
+                    for (let i = 0; i < 4; i++) {
+                        ctx.moveTo(corners[i].x, corners[i].y);
+                        ctx.lineTo(corners[i].x - size/2, corners[i].y - size/2);
+                    }
+                    break;
+                    
+                default:
+                    // Simpler geometric form for other types
+                    ctx.beginPath();
+                    const points = type === 'octahedron' ? 8 : 12;
+                    for (let i = 0; i < points; i++) {
+                        const angle = rotation + i * Math.PI * 2/points;
+                        const radius = size * (1 + Math.sin(angle * 3) * 0.2);
+                        ctx.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+                    }
+                    ctx.closePath();
+            }
+            ctx.stroke();
+        }
+
         // Diving mechanics
         function updateDiving(time) {
             // Clear previous frame
@@ -673,6 +852,40 @@
             if (keyState.has(' ')) {
                 diveDepth += 0.02 * (1 + playerEnergy);
                 dimensionalPhase += 0.01;
+                
+                // Dimensional shifting effect
+                const shiftCount = Math.floor(10 * diveDepth);
+                for (let i = 0; i < shiftCount; i++) {
+                    const angle = (i / shiftCount) * Math.PI * 2;
+                    const radius = 100 * (1 + diveDepth);
+                    const x = mouseX + Math.cos(angle) * radius;
+                    const y = mouseY + Math.sin(angle) * radius;
+                    
+                    trailCtx.beginPath();
+                    trailCtx.moveTo(mouseX, mouseY);
+                    trailCtx.lineTo(x, y);
+                    const gradient = trailCtx.createLinearGradient(mouseX, mouseY, x, y);
+                    gradient.addColorStop(0, `hsla(${180 + diveDepth * 60}, 100%, 50%, 0.5)`);
+                    gradient.addColorStop(1, 'transparent');
+                    trailCtx.strokeStyle = gradient;
+                    trailCtx.lineWidth = 1;
+                    trailCtx.stroke();
+                }
+                
+                // Reveal neighboring dimensions
+                if (diveDepth > 0.5) {
+                    const echoCount = Math.floor(diveDepth * 10);
+                    for (let i = 0; i < echoCount; i++) {
+                        const angle = time + (i / echoCount) * Math.PI * 2;
+                        const x = mouseX + Math.cos(angle) * 100;
+                        const y = mouseY + Math.sin(angle) * 100;
+                        
+                        trailCtx.beginPath();
+                        trailCtx.arc(x, y, 5, 0, Math.PI * 2);
+                        trailCtx.fillStyle = `hsla(${180 + i * 30}, 100%, 50%, 0.3)`;
+                        trailCtx.fill();
+                    }
+                }
             } else {
                 diveDepth *= 0.99; // Slowly return unless actively diving
             }
@@ -717,58 +930,113 @@
         function drawOortCloud(timestamp) {
             const time = timestamp * 0.001;
             
-            // Clear canvas with slight fade
-            coreCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
-            
-            // Save context for transforms
-            coreCtx.save();
-            
-            // Apply diving effects
-            updateDiving(time);
-            
-            // Draw core
-            const centerX = coreCanvas.width / 2;
-            const centerY = coreCanvas.height / 2;
-            const baseRadius = 150;
+            // Clear both canvases with fade effect
+            trailCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+            coreCtx.clearRect(0, 0, coreCanvas.width, coreCanvas.height);
 
-            // Core glow
-            const pulseSize = 1 + Math.sin(time * 2) * 0.1;
-            const gradient = coreCtx.createRadialGradient(
-                centerX, centerY, 0,
-                centerX, centerY, baseRadius * pulseSize
-            );
-            gradient.addColorStop(0, 'rgba(0, 255, 255, 0.4)');
-            gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.1)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-            coreCtx.fillStyle = gradient;
-            coreCtx.beginPath();
-            coreCtx.arc(centerX, centerY, baseRadius * pulseSize, 0, Math.PI * 2);
-            coreCtx.fill();
-
-            // Core outline with dimensional ripples
-            const rippleCount = 3;
-            for (let i = 0; i < rippleCount; i++) {
-                const ripplePhase = time * 2 + i/rippleCount * Math.PI * 2;
-                const rippleSize = baseRadius * (1 + Math.sin(ripplePhase) * 0.1);
-                const alpha = 0.8 * (1 - i/rippleCount);
-
-                coreCtx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
-                coreCtx.lineWidth = 2;
-                coreCtx.beginPath();
-                coreCtx.arc(centerX, centerY, rippleSize, 0, Math.PI * 2);
-                coreCtx.stroke();
-            }
-            
             // Update and draw psi-boids
             psiBoids.forEach(boid => {
                 boid.update(psiBoids, time);
                 boid.draw(coreCtx);
             });
+
+            // Draw the core with enhanced effects
+            const coreGlow = coreCtx.createRadialGradient(
+                coreCanvas.width/2, coreCanvas.height/2, 0,
+                coreCanvas.width/2, coreCanvas.height/2, 200
+            );
+            coreGlow.addColorStop(0, `hsla(180, 100%, 50%, ${0.3 + Math.sin(time) * 0.1})`);
+            coreGlow.addColorStop(0.5, `hsla(180, 100%, 30%, ${0.2 + diveDepth * 0.3})`);
+            coreGlow.addColorStop(1, 'transparent');
             
-            // Restore context
-            coreCtx.restore();
+            coreCtx.fillStyle = coreGlow;
+            coreCtx.beginPath();
+            coreCtx.arc(coreCanvas.width/2, coreCanvas.height/2, 200, 0, Math.PI * 2);
+            coreCtx.fill();
+
+            // Draw dimensional ripples when diving
+            if (diveDepth > 0.1) {
+                const rippleCount = Math.floor(20 * diveDepth);
+                for (let i = 0; i < rippleCount; i++) {
+                    const ripplePhase = (time + i/rippleCount) * Math.PI * 2;
+                    const rippleSize = (100 + Math.sin(ripplePhase) * 30) * (1 + diveDepth);
+                    const alpha = 0.2 * (1 - i/rippleCount) * Math.sin(ripplePhase);
+                    
+                    coreCtx.strokeStyle = `hsla(${180 + i * 20}, 100%, 50%, ${alpha})`;
+                    coreCtx.lineWidth = 2;
+                    coreCtx.beginPath();
+                    coreCtx.arc(
+                        coreCanvas.width/2, 
+                        coreCanvas.height/2, 
+                        rippleSize, 
+                        0, Math.PI * 2
+                    );
+                    coreCtx.stroke();
+                }
+            }
+
+            // Draw dimensional echoes with enhanced visibility
+            dimensionalEchoes = dimensionalEchoes.filter(echo => echo.strength > 0.1);
+            dimensionalEchoes.forEach(echo => {
+                echo.draw(trailCtx, time);
+                
+                // Add connecting lines to nearby echoes for dimensional mapping
+                dimensionalEchoes.forEach(other => {
+                    const dx = echo.x - other.x;
+                    const dy = echo.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200 && echo !== other) {
+                        trailCtx.beginPath();
+                        trailCtx.moveTo(echo.x, echo.y);
+                        trailCtx.lineTo(other.x, other.y);
+                        trailCtx.strokeStyle = `hsla(${180 + echo.dimension * 30}, 100%, 70%, ${echo.strength * 0.2})`;
+                        trailCtx.lineWidth = 1;
+                        trailCtx.stroke();
+                    }
+                });
+            });
+
+            // Draw information HUD
+            if (diveDepth > 0.3) {
+                const patternCount = discoveredPatterns.size;
+                trailCtx.font = '20px monospace';
+                trailCtx.fillStyle = `hsla(180, 100%, 70%, ${0.7 + diveDepth * 0.3})`;
+                trailCtx.fillText(`Dimensional Patterns: ${patternCount}`, 20, 40);
+                
+                if (patternCount > 0) {
+                    trailCtx.font = '16px monospace';
+                    let y = 70;
+                    discoveredPatterns.forEach(pattern => {
+                        trailCtx.fillText(`∙ ${pattern} pattern detected`, 25, y);
+                        y += 25;
+                    });
+                }
+            }
+
+            // Update diving state
+            updateDiving(time);
+            
+            // Draw quantum structures based on dive depth
+            quantumStructures.forEach((layer, layerIndex) => {
+                const layerDepth = layerIndex + 1;
+                if (diveDepth > layerDepth * 0.2) { // Only show structures when deep enough
+                    const layerAlpha = Math.min(1, (diveDepth - layerDepth * 0.2) * 2);
+                    
+                    layer.forEach(structure => {
+                        const wobble = Math.sin(time * structure.frequency + structure.phase) * 10;
+                        drawPlatonicSolid(
+                            trailCtx,
+                            structure.type,
+                            structure.x + wobble,
+                            structure.y + wobble,
+                            structure.size * (1 + Math.sin(time + structure.phase) * 0.1),
+                            structure.rotation + time * 0.1,
+                            layerAlpha * 0.5
+                        );
+                    });
+                }
+            });
             
             requestAnimationFrame(drawOortCloud);
         }
@@ -904,6 +1172,9 @@
         `;
         document.body.appendChild(instructions);
 
+        // Initialize quantum structures
+        initQuantumStructures();
+        
         // Start everything
         initCanvas();
         requestAnimationFrame(drawOortCloud);
