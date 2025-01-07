@@ -186,6 +186,125 @@
         .core-indicator.visible {
             display: block;
         }
+
+        /* Control panel styles */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .control-btn {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+
+        .control-btn.active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: rgba(0, 255, 255, 0.8);
+        }
+
+        /* Manifold visualization */
+        .manifold-vis {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .manifold-stats {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            right: 15px;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.8;
+        }
+
+        .manifold-stats span {
+            color: #f0f;
+        }
+
+        .manifold-axis-label {
+            position: absolute;
+            color: rgba(0, 255, 255, 0.6);
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+        }
+
+        .manifold-axis-label.x {
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .manifold-axis-label.y {
+            top: 50%;
+            left: 5px;
+            transform: rotate(-90deg) translateX(-50%);
+            transform-origin: left center;
+        }
+
+        .manifold-vis.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .manifold-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .manifold-label {
+            position: absolute;
+            top: -20px;
+            left: 15px;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -224,6 +343,27 @@
     </div>
     <div class="core-proximity"></div>
     <div class="core-indicator">CORE PROXIMITY ALERT v2.1</div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="control-btn" id="homeBtn">HOME</div>
+        <div class="control-btn" id="stopBtn">STOP</div>
+        <div class="control-btn" id="manifoldBtn">MANIFOLD</div>
+    </div>
+
+    <!-- Manifold Visualization -->
+    <div class="manifold-vis">
+        <div class="manifold-label">MANIFOLD TOPOLOGY</div>
+        <canvas id="manifoldCanvas" class="manifold-canvas"></canvas>
+        <div class="manifold-axis-label x">SPATIAL POSITION</div>
+        <div class="manifold-axis-label y">CURVATURE</div>
+        <div class="manifold-stats">
+            <div>λ=<span id="manifoldDepth">0.000</span></div>
+            <div>κ=<span id="manifoldCurv">0.000</span></div>
+            <div>∇=<span id="manifoldGrad">0.000</span></div>
+        </div>
+    </div>
+
     <script>
         const canvas = document.getElementById('glCanvas');
         const gl = canvas.getContext('webgl');
@@ -395,19 +535,17 @@
         }
 
         // Set up initial state
-        const navigatorState = {
-            isDragging: false,
-            targetVector: { x: 100, y: 100 },
-            pinchStart: null,
-            lastPinchDistance: 0,
+        let navigatorState = {
+            position: { x: 0, y: 0, z: 0, w: 0 },
+            velocity: { x: 0, y: 0, z: 0, w: 0 },
             wProjection: 1.0,
             hyperCurvature: 1.0,
             lastFrameTime: 0,
-            position: { x: 0, y: 0, z: 0, w: 0 },
-            velocity: { x: 0, y: 0, z: 0, w: 0 },
             speed: 0.01,
             focalLength: 1.0,
-            zoomSpeed: 0.001  // Reduced zoom speed
+            zoomSpeed: 0.001,
+            spinning: true,
+            showManifold: false
         };
 
         const baseFreqs = {
@@ -471,8 +609,8 @@
             if (keys.has(' ')) {
                 // Exponential zoom for smoother close-ups
                 navigatorState.wProjection *= (1 - zoomSpeed);
-                // Allow extremely close zoom
-                navigatorState.wProjection = Math.max(0.001, navigatorState.wProjection);
+                // Allow extremely close zoom (0.03 instead of 0.05)
+                navigatorState.wProjection = Math.max(0.03, navigatorState.wProjection);
             }
             if (keys.has('c')) {
                 navigatorState.wProjection *= (1 + zoomSpeed);
@@ -563,6 +701,9 @@
 
             // Draw points
             gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+            // Update manifold visualization
+            updateManifold();
 
             requestAnimationFrame(render);
         }
@@ -708,6 +849,207 @@
                 0, 0, 0, 1
             ]);
         }
+
+        // Control panel functionality
+        document.getElementById('homeBtn').addEventListener('click', () => {
+            navigatorState.position = { x: 0, y: 0, z: 0, w: 0 };
+            navigatorState.velocity = { x: 0, y: 0, z: 0, w: 0 };
+            navigatorState.wProjection = 1.0;
+            navigatorState.focalLength = 1.0;
+            Object.keys(freqs).forEach(key => freqs[key] = 0);
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            const btn = this;
+            navigatorState.spinning = !navigatorState.spinning;
+            btn.classList.toggle('active');
+            if (!navigatorState.spinning) {
+                Object.keys(baseFreqs).forEach(key => baseFreqs[key] = 0);
+            } else {
+                // Restore gentle spin
+                baseFreqs.wx = 0.0002;
+                baseFreqs.wy = 0.0001;
+            }
+        });
+
+        document.getElementById('manifoldBtn').addEventListener('click', function() {
+            const btn = this;
+            navigatorState.showManifold = !navigatorState.showManifold;
+            btn.classList.toggle('active');
+            const manifoldVis = document.querySelector('.manifold-vis');
+            if (navigatorState.showManifold) {
+                manifoldVis.style.display = 'block';
+                // Force a resize to ensure canvas is properly initialized
+                setTimeout(() => {
+                    initManifoldCanvas();
+                    updateManifold();
+                }, 50);
+            } else {
+                manifoldVis.style.display = 'none';
+            }
+        });
+
+        // Manifold visualization
+        const manifoldCanvas = document.getElementById('manifoldCanvas');
+        const manifoldCtx = manifoldCanvas.getContext('2d');
+        
+        function updateManifold() {
+            if (!navigatorState.showManifold) return;
+            
+            const width = manifoldCanvas.width;
+            const height = manifoldCanvas.height;
+            
+            // Clear with slight fade for trail effect
+            manifoldCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            manifoldCtx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            manifoldCtx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+            manifoldCtx.lineWidth = 0.5;
+            
+            // Draw grid with perspective distortion
+            const gridSize = 20;
+            const perspectiveStrength = Math.exp(-navigatorState.wProjection);
+            
+            for (let i = 0; i < width; i += gridSize) {
+                manifoldCtx.beginPath();
+                manifoldCtx.moveTo(i, 0);
+                const distortion = Math.sin(i * 0.1) * 10 * perspectiveStrength;
+                manifoldCtx.lineTo(i + distortion, height);
+                manifoldCtx.stroke();
+            }
+            for (let i = 0; i < height; i += gridSize) {
+                manifoldCtx.beginPath();
+                manifoldCtx.moveTo(0, i);
+                const distortion = Math.cos(i * 0.1) * 10 * perspectiveStrength;
+                manifoldCtx.lineTo(width, i + distortion);
+                manifoldCtx.stroke();
+            }
+            
+            const time = performance.now() * 0.001;
+            
+            // Draw core influence zone
+            const coreX = width / 2;
+            const coreY = height / 2;
+            const coreRadius = 50 * Math.exp(-navigatorState.wProjection);
+            
+            const coreGradient = manifoldCtx.createRadialGradient(
+                coreX, coreY, 0,
+                coreX, coreY, coreRadius
+            );
+            coreGradient.addColorStop(0, 'rgba(0, 255, 255, 0.1)');
+            coreGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            manifoldCtx.fillStyle = coreGradient;
+            manifoldCtx.beginPath();
+            manifoldCtx.arc(coreX, coreY, coreRadius, 0, Math.PI * 2);
+            manifoldCtx.fill();
+            
+            // Draw manifold waves
+            manifoldCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+            manifoldCtx.lineWidth = 1;
+            
+            const waveCount = 3;
+            for (let w = 0; w < waveCount; w++) {
+                manifoldCtx.beginPath();
+                for (let x = 0; x < width; x += 2) {
+                    const distFromCore = Math.abs(x - width/2) / width;
+                    const amplitude = 30 * Math.exp(-navigatorState.wProjection * 2);
+                    const frequency = 0.02 + w * 0.01;
+                    const phase = time * (1 + w * 0.5);
+                    
+                    const y = height/2 + 
+                        amplitude * Math.sin(x * frequency + phase) * 
+                        Math.exp(-distFromCore * 2);
+                    
+                    if (x === 0) manifoldCtx.moveTo(x, y);
+                    else manifoldCtx.lineTo(x, y);
+                }
+                manifoldCtx.stroke();
+            }
+            
+            // Draw quantum fluctuations
+            manifoldCtx.strokeStyle = 'rgba(255, 0, 255, 0.2)';
+            for (let i = 0; i < 3; i++) {
+                manifoldCtx.beginPath();
+                for (let x = 0; x < width; x += 2) {
+                    const distFromCore = Math.abs(x - width/2) / width;
+                    const y = height/2 + 
+                        15 * Math.sin(x * 0.1 + time * 2 + i) * 
+                        Math.exp(-navigatorState.wProjection) *
+                        Math.exp(-distFromCore * 3);
+                    if (x === 0) manifoldCtx.moveTo(x, y);
+                    else manifoldCtx.lineTo(x, y);
+                }
+                manifoldCtx.stroke();
+            }
+            
+            // Draw position indicator
+            const posX = width/2 + navigatorState.position.x * width/4;
+            const posY = height/2 + navigatorState.position.y * height/4;
+            
+            // Position trail
+            manifoldCtx.strokeStyle = 'rgba(255, 0, 255, 0.3)';
+            manifoldCtx.lineWidth = 2;
+            manifoldCtx.beginPath();
+            manifoldCtx.moveTo(width/2, height/2);
+            manifoldCtx.lineTo(posX, posY);
+            manifoldCtx.stroke();
+            
+            // Glow effect
+            const posGradient = manifoldCtx.createRadialGradient(
+                posX, posY, 0,
+                posX, posY, 10
+            );
+            posGradient.addColorStop(0, 'rgba(255, 0, 255, 0.8)');
+            posGradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
+            
+            manifoldCtx.fillStyle = posGradient;
+            manifoldCtx.beginPath();
+            manifoldCtx.arc(posX, posY, 10, 0, Math.PI * 2);
+            manifoldCtx.fill();
+            
+            // Center point
+            manifoldCtx.fillStyle = '#f0f';
+            manifoldCtx.beginPath();
+            manifoldCtx.arc(posX, posY, 3, 0, Math.PI * 2);
+            manifoldCtx.fill();
+
+            // Update stats
+            document.getElementById('manifoldDepth').textContent = 
+                navigatorState.wProjection.toFixed(3);
+            document.getElementById('manifoldCurv').textContent = 
+                navigatorState.hyperCurvature.toFixed(3);
+            const distanceFromCore = Math.sqrt(
+                navigatorState.position.x * navigatorState.position.x +
+                navigatorState.position.y * navigatorState.position.y
+            ).toFixed(3);
+            document.getElementById('manifoldGrad').textContent = distanceFromCore;
+        }
+
+        function initManifoldCanvas() {
+            const manifoldVis = document.querySelector('.manifold-vis');
+            const canvas = document.getElementById('manifoldCanvas');
+            
+            // Set canvas size to match container
+            canvas.width = manifoldVis.clientWidth - 30;  // Account for padding
+            canvas.height = manifoldVis.clientHeight - 60;  // Account for padding and stats
+            
+            manifoldCtx = canvas.getContext('2d');
+            manifoldCtx.imageSmoothingEnabled = true;
+        }
+
+        // Initialize manifold canvas size
+        function resizeManifold() {
+            const canvas = document.getElementById('manifoldCanvas');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            manifoldCtx.scale(dpr, dpr);
+        }
+        
+        window.addEventListener('resize', resizeManifold);
+        resizeManifold();
     </script>
 </body>
 </html>
