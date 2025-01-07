@@ -1216,102 +1216,188 @@
         const coreCtx = coreCanvas.getContext('2d');
         document.body.appendChild(coreCanvas);
 
+        // Add mouse tracking
+        let mouseX = coreCanvas.width / 2;
+        let mouseY = coreCanvas.height / 2;
+        
+        coreCanvas.addEventListener('mousemove', function(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        class PsiBoid {
+            constructor(x, y, z) {
+                this.x = x;
+                this.y = y;
+                this.z = z || 0;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.vz = (Math.random() - 0.5) * 2;
+                this.quantum = Math.random(); // Quantum state
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update(boids, time) {
+                // Quantum probability field influence
+                this.quantum = (this.quantum + Math.sin(time + this.phase) * 0.1) % 1;
+                
+                // Calculate center of nearby boids
+                let cx = 0, cy = 0, cz = 0;
+                let count = 0;
+                const neighborRadius = 50;
+                
+                boids.forEach(other => {
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const dz = other.z - this.z;
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    
+                    if (dist < neighborRadius && dist > 0) {
+                        cx += other.x;
+                        cy += other.y;
+                        cz += other.z;
+                        count++;
+                        
+                        // Quantum entanglement effect
+                        if (Math.random() < 0.1) {
+                            this.quantum = (this.quantum + other.quantum) / 2;
+                        }
+                    }
+                });
+
+                if (count > 0) {
+                    // Cohesion to center of flock
+                    this.vx += (cx/count - this.x) * 0.01;
+                    this.vy += (cy/count - this.y) * 0.01;
+                    this.vz += (cz/count - this.z) * 0.01;
+                }
+
+                // Mouse attraction
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const mouseDist = Math.sqrt(dx*dx + dy*dy);
+                const mouseInfluence = Math.exp(-mouseDist/200) * 0.5;
+                
+                this.vx += dx * mouseInfluence * 0.001;
+                this.vy += dy * mouseInfluence * 0.001;
+
+                // Core attraction
+                const centerX = coreCanvas.width/2;
+                const centerY = coreCanvas.height/2;
+                const toCenterX = centerX - this.x;
+                const toCenterY = centerY - this.y;
+                const centerDist = Math.sqrt(toCenterX*toCenterX + toCenterY*toCenterY);
+                
+                this.vx += toCenterX * 0.0001;
+                this.vy += toCenterY * 0.0001;
+
+                // Update position with quantum uncertainty
+                const uncertainty = 0.1 * Math.sin(time * 10 + this.phase);
+                this.x += this.vx + uncertainty;
+                this.y += this.vy + uncertainty;
+                this.z += this.vz + uncertainty;
+
+                // Damping
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+                this.vz *= 0.99;
+
+                // Keep within bounds
+                const bounds = 500;
+                if (Math.abs(this.z) > bounds) this.vz *= -0.5;
+            }
+
+            draw(ctx) {
+                // Calculate size based on z-position
+                const perspective = 1000 / (1000 - this.z);
+                const size = 1.5 * perspective;
+                
+                // Calculate alpha based on quantum state and z-position
+                const alpha = (0.3 + this.quantum * 0.7) * Math.max(0, 1 - Math.abs(this.z)/500);
+                
+                ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Initialize psi-boids
+        const psiBoids = [];
+        for (let i = 0; i < 500; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 400;
+            psiBoids.push(new PsiBoid(
+                coreCanvas.width/2 + Math.cos(angle) * radius,
+                coreCanvas.height/2 + Math.sin(angle) * radius,
+                (Math.random() - 0.5) * 200
+            ));
+        }
+
         function drawOortCloud(timestamp) {
             const time = timestamp * 0.001;
             const centerX = coreCanvas.width / 2;
             const centerY = coreCanvas.height / 2;
+
+            // Clear with slight fade for trail effect
+            coreCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+
+            // Update and draw psi-boids first
+            psiBoids.forEach(boid => {
+                boid.update(psiBoids, time);
+                boid.draw(coreCtx);
+            });
+
+            // Draw core elements
+            drawCore(time);
+            drawRings(time);
+            drawRays(time);
             
-            // Draw quantum field particles
-            const fieldParticleCount = 2000;
-            const fieldRadius = 600;
+            // Update any spawned particles
+            updateParticles();
+
+            requestAnimationFrame(drawOortCloud);
+        }
+
+        // Initialize canvas and start animation
+        function initCanvas() {
+            coreCanvas.width = window.innerWidth;
+            coreCanvas.height = window.innerHeight;
             
-            for (let i = 0; i < fieldParticleCount; i++) {
-                const angle = (i / fieldParticleCount) * Math.PI * 2;
-                const baseRadius = fieldRadius * (0.2 + Math.random() * 0.8);
-                
-                // Create organic movement
-                const wobble = Math.sin(time * 2 + i * 0.1) * 20;
-                const spiral = Math.sin(time + i * 0.05) * 30;
-                
-                // Quantum probability field effect
-                const probability = Math.sin(angle * 4 + time) * 0.5 + 0.5;
-                const radius = baseRadius + wobble + spiral;
-                
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-                
-                // Vary colors based on probability and position
-                const hue = 180 + Math.sin(angle + time) * 30;
-                const alpha = 0.3 * probability * Math.exp(-radius/fieldRadius);
-                
-                coreCtx.fillStyle = `hsla(${hue}, 100%, 50%, ${alpha})`;
-                coreCtx.beginPath();
-                coreCtx.arc(x, y, 1.5, 0, Math.PI * 2);
-                coreCtx.fill();
+            // Reinitialize psi-boids with new dimensions
+            psiBoids.length = 0; // Clear existing boids
+            for (let i = 0; i < 500; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 400;
+                psiBoids.push(new PsiBoid(
+                    coreCanvas.width/2 + Math.cos(angle) * radius,
+                    coreCanvas.height/2 + Math.sin(angle) * radius,
+                    (Math.random() - 0.5) * 200
+                ));
             }
-            
-            // Draw quantum rays with interference patterns
-            const rayCount = 32;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', initCanvas);
+
+        // Start everything
+        initCanvas();
+        requestAnimationFrame(drawOortCloud);
+
+        function drawCore(time) {
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
             const baseRadius = 150;
             
-            for (let i = 0; i < rayCount; i++) {
-                const angle = (i / rayCount) * Math.PI * 2;
-                const rayLength = 400 * (1 + Math.sin(time + i * 0.2) * 0.1);
-                const interference = Math.sin(angle * 8 + time * 3) * 0.5 + 0.5;
-                
-                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.4 * interference})`;
-                coreCtx.lineWidth = 1 + interference;
-                
-                // Add wave-like distortion to rays
-                const points = 8;
-                coreCtx.beginPath();
-                coreCtx.moveTo(
-                    centerX + Math.cos(angle) * baseRadius,
-                    centerY + Math.sin(angle) * baseRadius
-                );
-                
-                for (let p = 1; p <= points; p++) {
-                    const t = p / points;
-                    const r = baseRadius + (rayLength - baseRadius) * t;
-                    const wave = Math.sin(t * Math.PI * 4 + time * 2) * 20;
-                    const x = centerX + Math.cos(angle) * r + Math.cos(angle + Math.PI/2) * wave;
-                    const y = centerY + Math.sin(angle) * r + Math.sin(angle + Math.PI/2) * wave;
-                    coreCtx.lineTo(x, y);
-                }
-                coreCtx.stroke();
-            }
-            
-            // Draw quantum rings with probability waves
-            const ringCount = 4;
-            for (let r = 0; r < ringCount; r++) {
-                coreCtx.beginPath();
-                const segments = 100;
-                const ringRadius = baseRadius + r * 30;
-                
-                for (let i = 0; i <= segments; i++) {
-                    const angle = (i / segments) * Math.PI * 2;
-                    const wave = Math.sin(angle * 12 + time * 2) * 10;
-                    const probability = Math.sin(angle * 6 + time + r) * 0.5 + 0.5;
-                    const waveRadius = ringRadius + wave * probability;
-                    
-                    const x = centerX + Math.cos(angle) * waveRadius;
-                    const y = centerY + Math.sin(angle) * waveRadius;
-                    
-                    if (i === 0) coreCtx.moveTo(x, y);
-                    else coreCtx.lineTo(x, y);
-                }
-                coreCtx.closePath();
-                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.6 - r * 0.1})`;
-                coreCtx.stroke();
-            }
-            
-            // Draw core with quantum glow
+            // Draw core glow
             const pulseSize = 1 + Math.sin(time * 2) * 0.1;
             const gradient = coreCtx.createRadialGradient(
                 centerX, centerY, 0,
                 centerX, centerY, baseRadius * pulseSize
             );
-            gradient.addColorStop(0, 'rgba(0, 255, 255, 0.3)');
+            gradient.addColorStop(0, 'rgba(0, 255, 255, 0.4)');
             gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.1)');
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
             
@@ -1320,75 +1406,150 @@
             coreCtx.arc(centerX, centerY, baseRadius * pulseSize, 0, Math.PI * 2);
             coreCtx.fill();
             
-            // Add subtle quantum fluctuations
-            for (let i = 0; i < 20; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * baseRadius;
-                const x = centerX + Math.cos(angle) * distance;
-                const y = centerY + Math.sin(angle) * distance;
-                
-                coreCtx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            // Draw core outline
+            coreCtx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+            coreCtx.lineWidth = 2;
+            coreCtx.beginPath();
+            coreCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+            coreCtx.stroke();
+        }
+
+        function drawRings(time) {
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
+            const baseRadius = 150;
+            
+            // Draw original core rings
+            const ringCount = 3;
+            for (let r = 0; r < ringCount; r++) {
                 coreCtx.beginPath();
-                coreCtx.arc(x, y, 2, 0, Math.PI * 2);
-                coreCtx.fill();
+                const segments = 100;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    const ringRadius = baseRadius + r * 20;
+                    const waveRadius = ringRadius + Math.sin(angle * 8 + time * 2) * 5;
+                    
+                    const x = centerX + Math.cos(angle) * waveRadius;
+                    const y = centerY + Math.sin(angle) * waveRadius;
+                    
+                    if (i === 0) coreCtx.moveTo(x, y);
+                    else coreCtx.lineTo(x, y);
+                }
+                coreCtx.closePath();
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.8 - r * 0.2})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
             }
         }
 
-        function animate(timestamp) {
-            // Clear WebGL canvas
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        function drawRays(time) {
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
+            const baseRadius = 150;
             
-            // Clear core canvas with fade effect
-            coreCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            // Draw original core rays
+            const rayCount = 32;
             
-            // Draw Oort cloud visualization
-            drawOortCloud(timestamp);
-            
-            // Update particle system
-            updateParticles();
-            
-            // Update manifold if visible
-            if (navigatorState.showManifold) {
-                updateManifold();
+            for (let i = 0; i < rayCount; i++) {
+                const angle = (i / rayCount) * Math.PI * 2;
+                const rayLength = 400 * (1 + Math.sin(time + i * 0.2) * 0.1);
+                const interference = Math.sin(angle * 8 + time * 3) * 0.5 + 0.5;
+                
+                // Draw the main ray
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.4 * interference})`;
+                coreCtx.lineWidth = 2;
+                
+                coreCtx.beginPath();
+                coreCtx.moveTo(
+                    centerX + Math.cos(angle) * baseRadius,
+                    centerY + Math.sin(angle) * baseRadius
+                );
+                coreCtx.lineTo(
+                    centerX + Math.cos(angle) * rayLength,
+                    centerY + Math.sin(angle) * rayLength
+                );
+                coreCtx.stroke();
+
+                // Add organic wave patterns along the ray
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.2 * interference})`;
+                coreCtx.lineWidth = 1;
+                const wavePoints = 8;
+                for (let w = 0; w < 3; w++) {
+                    coreCtx.beginPath();
+                    for (let p = 0; p <= wavePoints; p++) {
+                        const t = p / wavePoints;
+                        const r = baseRadius + (rayLength - baseRadius) * t;
+                        const wave = Math.sin(t * Math.PI * 4 + time * 2 + w) * 20;
+                        const x = centerX + Math.cos(angle) * r + Math.cos(angle + Math.PI/2) * wave;
+                        const y = centerY + Math.sin(angle) * r + Math.sin(angle + Math.PI/2) * wave;
+                        if (p === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
+                    }
+                    coreCtx.stroke();
+                }
             }
-            
-            // Update state
-            if (navigatorState.spinning) {
-                navigatorState.phase += 0.01;
-            }
-            
-            requestAnimationFrame(animate);
         }
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            // Resize WebGL canvas
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            
-            // Resize core canvas
-            coreCanvas.width = window.innerWidth;
-            coreCanvas.height = window.innerHeight;
-        });
-
-        // Add click handler for dimensional collapse
+        // Add click handler for particle spawning
         coreCanvas.addEventListener('click', function(e) {
             const rect = coreCanvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            
-            // Spawn particle burst
             spawnParticles(x, y, 50);
-            
-            // Trigger dimensional shift
-            navigatorState.hyperCurvature *= 0.8;
-            navigatorState.wProjection *= 1.2;
         });
 
-        // Start animation loop
-        requestAnimationFrame(animate);
+        // Particle system
+        function spawnParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                const hue = 180 + Math.random() * 60; // Cyan to blue variation
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    size: 2 + Math.random() * 2,
+                    color: `hsla(${hue}, 100%, 50%`
+                });
+            }
+        }
+
+        function updateParticles() {
+            const time = performance.now() * 0.001;
+            
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Add spiral motion with z-depth
+                const dx = p.x - coreCanvas.width/2;
+                const dy = p.y - coreCanvas.height/2;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(dy, dx);
+                
+                p.vx += Math.cos(angle + Math.PI/2) * 0.2 / dist;
+                p.vy += Math.sin(angle + Math.PI/2) * 0.2 / dist;
+                
+                // Calculate perspective scale
+                const z = Math.sin(dist * 0.01 + time) * 100;
+                const scale = 1000 / (1000 - z);
+                
+                // Draw particle with trail
+                coreCtx.fillStyle = p.color.replace(')', `, ${p.life})`);
+                coreCtx.beginPath();
+                coreCtx.arc(p.x, p.y, p.size * p.life * scale, 0, Math.PI * 2);
+                coreCtx.fill();
+            }
+        }
     </script>
 </body>
 </html>
