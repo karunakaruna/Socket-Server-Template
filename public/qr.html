@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Encoder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #qrcode { margin: 20px auto; width: fit-content; position: relative; }
+        .controls { margin-top: 10px; }
+        .animated { animation: colorShift 3s infinite alternate; }
+        @keyframes colorShift {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h2>Custom QR Code Generator</h2>
+    <input type="text" id="qrText" placeholder="Enter text or URL" value="https://example.com" oninput="generateQR()">
+    <br>
+    <label>Size: <input type="number" id="qrSize" value="200" min="100" max="500" oninput="generateQR()"></label>
+    <label>Foreground Color: <input type="color" id="qrColor" value="#000000" oninput="generateQR()"></label>
+    <label>Background Color: <input type="color" id="qrBgColor" value="#ffffff" oninput="generateQR()"></label>
+    <br>
+    <button onclick="generateQR()">Generate QR Code</button>
+    <div id="qrcode" class="animated"></div>
+    <div class="controls">
+        <button onclick="downloadQR()">Download QR Code</button>
+    </div>
+    
+    <script>
+        function generateQR() {
+            document.getElementById("qrcode").innerHTML = "";
+            let qrText = document.getElementById("qrText").value;
+            let qrSize = parseInt(document.getElementById("qrSize").value);
+            let qrColor = document.getElementById("qrColor").value;
+            let qrBgColor = document.getElementById("qrBgColor").value;
+            
+            new QRCode(document.getElementById("qrcode"), {
+                text: qrText,
+                width: qrSize,
+                height: qrSize,
+                colorDark: qrColor,
+                colorLight: qrBgColor,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+        
+        function downloadQR() {
+            let canvas = document.querySelector("#qrcode canvas");
+            let link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = "qrcode.png";
+            link.click();
+        }
+    </script>
+</body>
+</html>

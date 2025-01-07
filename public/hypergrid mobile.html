@@ -1054,27 +1054,25 @@
             const delta = distance - navigatorState.lastPinchDistance;
             navigatorState.lastPinchDistance = distance;
 
-            // Calculate pinch direction and magnitude
-            const pinchSpeed = 0.005;
+            // Enhanced pinch speed for more responsive zooming
+            const pinchSpeed = 0.008;
             const pinchDelta = delta * pinchSpeed;
 
-            // Map pinch to both w-projection and hypercurvature
-            const pinchRatio = distance / navigatorState.pinchStart;
-            
-            // W-projection affects the depth perception
-            navigatorState.wProjection = Math.max(0.1, Math.min(2.0,
+            // Allow much closer zoom (0.05 instead of 0.1) and wider range
+            navigatorState.wProjection = Math.max(0.05, Math.min(2.5,
                 navigatorState.wProjection + pinchDelta
             ));
 
-            // Hypercurvature affects the manifold structure
-            navigatorState.hyperCurvature = Math.max(0.5, Math.min(2.0,
+            // Enhanced hypercurvature range
+            navigatorState.hyperCurvature = Math.max(0.3, Math.min(2.5,
                 navigatorState.hyperCurvature + pinchDelta * 0.5
             ));
 
-            // Add some cross-dimensional effects
+            // Enhanced cross-dimensional effects when close to core
+            const zoomFactor = Math.max(0.05, navigatorState.wProjection);
             Object.keys(baseFreqs).forEach(key => {
                 if (key.includes('w')) {
-                    baseFreqs[key] += pinchDelta * 0.01;
+                    baseFreqs[key] += pinchDelta * (0.015 / zoomFactor);
                 }
             });
         }

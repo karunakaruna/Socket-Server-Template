@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            border-radius: 50%;
+            cursor: crosshair;
+            background: radial-gradient(circle at 50% 50%,
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        #navigator-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+            backdrop-filter: blur(3px);
+        }
+
+        #navigator-grid::before,
+        #navigator-grid::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        #navigator-grid::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        #navigator-grid::after {
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        #navigator-vector {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px cyan;
+        }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            pointer-events: none;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .quantum-coordinate {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .coordinate-label {
+            width: 120px;
+            opacity: 0.7;
+        }
+
+        .coordinate-value {
+            font-family: 'Consolas', monospace;
+            color: #0ff;
+        }
+
+        .manifold-info {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .quantum-bar {
+            width: 100px;
+            height: 4px;
+            background: rgba(0, 255, 255, 0.2);
+            margin-left: 10px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .quantum-bar-fill {
+            height: 100%;
+            background: rgba(0, 255, 255, 0.8);
+            transition: width 0.3s ease;
+        }
+
+        .core-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at center,
+                rgba(0, 255, 255, 0.2) 0%,
+                rgba(0, 100, 255, 0.1) 50%,
+                transparent 100%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .core-active {
+            opacity: 1;
+            width: 200px;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="quantum-navigator">
+        <div id="navigator-grid"></div>
+        <div id="navigator-vector"></div>
+    </div>
+    <div id="quantum-hud">
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">W-Projection:</span>
+            <span class="coordinate-value">1.000</span>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">Core Distance:</span>
+            <span class="coordinate-value">1.000</span>
+        </div>
+        <div class="manifold-info">
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Manifold:</span>
+                <span class="coordinate-value">Stable</span>
+            </div>
+        </div>
+    </div>
+    <div class="core-effect"></div>
+    <script>
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('WebGL not available');
+            throw new Error('WebGL not available');
+        }
+
+        // Initialize state
+        const navigatorState = {
+            isDragging: false,
+            targetVector: { x: 100, y: 100 },
+            pinchStart: null,
+            lastPinchDistance: 0,
+            wProjection: 1.0,
+            hyperCurvature: 1.0,
+            coreDistance: 1.0,
+            lastFrameTime: 0
+        };
+
+        const baseFreqs = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0
+        };
+
+        const freqs = { ...baseFreqs };
+
+        // Enhanced vertex shader with core proximity effects
+        const vertexShaderSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            attribute float size;
+            
+            uniform mat4 matrix;
+            uniform float wProjection;
+            uniform float hyperCurvature;
+            uniform float coreDistance;
+            
+            varying vec4 vColor;
+            varying float vSize;
+            
+            void main() {
+                vec4 pos = matrix * position;
+                
+                // Enhanced core proximity effect
+                float dist = length(pos.xyz);
+                float coreEffect = smoothstep(0.0, 1.0, 1.0 - coreDistance);
+                float distortionFactor = 1.0 + coreEffect * (sin(dist * 10.0) * 0.1);
+                
+                // Apply hyperbolic distortion
+                float hyperEffect = 1.0 / (1.0 + dist * hyperCurvature);
+                pos.xyz *= hyperEffect * distortionFactor;
+                
+                // Enhanced w-projection with smooth transition
+                float w = mix(0.5, 2.0, wProjection);
+                gl_Position = vec4(pos.xyz / (w - pos.w), 1.0);
+                
+                // Dynamic point size based on depth and core proximity
+                float sizeScale = mix(1.0, 3.0, coreEffect);
+                gl_PointSize = size * hyperEffect * sizeScale;
+                
+                // Color enhancement near core
+                vColor = mix(color, vec4(1.0, 1.0, 1.0, color.a), coreEffect * 0.5);
+                vSize = size;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec4 vColor;
+            varying float vSize;
+            
+            void main() {
+                vec2 coord = gl_PointCoord * 2.0 - 1.0;
+                float r = length(coord);
+                if (r > 1.0) discard;
+                
+                // Enhanced glow effect
+                float glow = exp(-r * r * 2.0);
+                gl_FragColor = vec4(vColor.rgb, vColor.a * glow);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        // Create and set up shaders
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // Generate enhanced 4D points
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            
+            for (let w = -size; w <= size; w++) {
+                for (let x = -size; x <= size; x++) {
+                    for (let y = -size; y <= size; y++) {
+                        for (let z = -size; z <= size; z++) {
+                            if (Math.random() < 0.1) {  // Reduced density for better visibility
+                                points.push(w/size, x/size, y/size, z/size);
+                                
+                                // Enhanced color scheme
+                                const dist = Math.sqrt(w*w + x*x + y*y + z*z) / size;
+                                const hue = (dist * 360) % 360;
+                                const rgb = hslToRgb(hue/360, 0.8, 0.5);
+                                colors.push(...rgb, 0.8);
+                                
+                                // Dynamic point sizes
+                                sizes.push(Math.max(2, (1 - dist) * 5));
+                            }
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        }
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [r, g, b];
+        }
+
+        // Enhanced zoom handling
+        function handlePinchZoom(e) {
+            if (e.touches.length !== 2) {
+                navigatorState.pinchStart = null;
+                navigatorState.lastPinchDistance = 0;
+                return;
+            }
+
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const distance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+
+            if (!navigatorState.pinchStart) {
+                navigatorState.pinchStart = distance;
+                navigatorState.lastPinchDistance = distance;
+                return;
+            }
+
+            const delta = distance - navigatorState.lastPinchDistance;
+            navigatorState.lastPinchDistance = distance;
+
+            // Enhanced pinch speed and range
+            const pinchSpeed = 0.008;
+            const pinchDelta = delta * pinchSpeed;
+
+            // Allow much closer zoom (0.05 instead of 0.1) and wider range
+            navigatorState.wProjection = Math.max(0.05, Math.min(2.5,
+                navigatorState.wProjection + pinchDelta
+            ));
+
+            // Enhanced core proximity effect
+            const zoomFactor = navigatorState.wProjection;
+            navigatorState.coreDistance = Math.max(0.1, Math.min(1.0, zoomFactor));
+
+            // Update core effect visualization
+            const coreEffect = document.querySelector('.core-effect');
+            if (navigatorState.coreDistance < 0.5) {
+                coreEffect.classList.add('core-active');
+                coreEffect.style.opacity = (0.5 - navigatorState.coreDistance) * 2;
+            } else {
+                coreEffect.classList.remove('core-active');
+            }
+
+            // Enhanced cross-dimensional effects near core
+            const coreInfluence = Math.max(0, 1 - navigatorState.coreDistance);
+            Object.keys(baseFreqs).forEach(key => {
+                if (key.includes('w')) {
+                    baseFreqs[key] += pinchDelta * (0.015 / zoomFactor) * (1 + coreInfluence * 2);
+                }
+            });
+
+            updateQuantumHUD();
+        }
+
+        function updateQuantumHUD() {
+            const wProjectionValue = document.querySelector('.coordinate-value');
+            const coreDistanceValue = document.querySelectorAll('.coordinate-value')[1];
+            const manifoldValue = document.querySelectorAll('.coordinate-value')[2];
+
+            wProjectionValue.textContent = navigatorState.wProjection.toFixed(3);
+            coreDistanceValue.textContent = navigatorState.coreDistance.toFixed(3);
+
+            // Update manifold status based on core proximity
+            if (navigatorState.coreDistance < 0.3) {
+                manifoldValue.textContent = "Core Resonance";
+                manifoldValue.style.color = "#ff00ff";
+            } else if (navigatorState.coreDistance < 0.6) {
+                manifoldValue.textContent = "Transitioning";
+                manifoldValue.style.color = "#00ffff";
+            } else {
+                manifoldValue.textContent = "Stable";
+                manifoldValue.style.color = "#00ff00";
+            }
+        }
+
+        // Set up initial state
+        const gridSize = 12;
+        const { points, colors, sizes } = generatePoints(gridSize);
+
+        // Create and bind buffers
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+        // Initialize quantum navigator
+        function initQuantumNavigator() {
+            const navigator = document.getElementById('quantum-navigator');
+            
+            navigator.addEventListener('touchstart', handleStart);
+            navigator.addEventListener('touchmove', handleMove);
+            navigator.addEventListener('touchend', handleEnd);
+            navigator.addEventListener('touchcancel', handleEnd);
+            
+            // Add pinch zoom handling
+            document.addEventListener('touchmove', handlePinchZoom, { passive: false });
+        }
+
+        function handleStart(e) {
+            navigatorState.isDragging = true;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = e.target.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            updateRotationVector(x, y);
+        }
+
+        function handleMove(e) {
+            if (!navigatorState.isDragging) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = e.target.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            updateRotationVector(x, y);
+        }
+
+        function handleEnd() {
+            navigatorState.isDragging = false;
+        }
+
+        function updateRotationVector(x, y) {
+            const size = 200;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const dx = (x - centerX) / (size / 2);
+            const dy = (y - centerY) / (size / 2);
+            
+            const radius = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            baseFreqs.wx = 0.02 * dx;
+            baseFreqs.wy = 0.02 * dy;
+            baseFreqs.wz = 0.02 * radius;
+            baseFreqs.xy = 0.015 * Math.sin(angle);
+            baseFreqs.xz = 0.015 * (dx * Math.cos(angle));
+            baseFreqs.yz = 0.015 * (dy * Math.sin(angle));
+
+            const vector = document.getElementById('navigator-vector');
+            vector.style.left = `${x}px`;
+            vector.style.top = `${y}px`;
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+
+        function render(currentTime) {
+            const deltaTime = currentTime - navigatorState.lastFrameTime;
+            navigatorState.lastFrameTime = currentTime;
+
+            // Update rotation frequencies
+            Object.keys(freqs).forEach(key => {
+                freqs[key] += baseFreqs[key];
+            });
+
+            // Clear and set up GL state
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+            // Set up attributes and uniforms
+            const positionLocation = gl.getAttribLocation(program, 'position');
+            const colorLocation = gl.getAttribLocation(program, 'color');
+            const sizeLocation = gl.getAttribLocation(program, 'size');
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.enableVertexAttribArray(sizeLocation);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+            // Set uniforms
+            gl.uniform1f(gl.getUniformLocation(program, 'wProjection'), navigatorState.wProjection);
+            gl.uniform1f(gl.getUniformLocation(program, 'hyperCurvature'), navigatorState.hyperCurvature);
+            gl.uniform1f(gl.getUniformLocation(program, 'coreDistance'), navigatorState.coreDistance);
+
+            // Draw points
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+            requestAnimationFrame(render);
+        }
+
+        // Initialize
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        initQuantumNavigator();
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
