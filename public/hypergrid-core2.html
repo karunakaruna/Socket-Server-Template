@@ -74,6 +74,76 @@
             psiboids[i+1].entangled = psiboids[i];
         }
 
+        // Roark's quantum presence
+        const roark = {
+            x: 0, y: 0,
+            phase: 0,
+            depth: 0,
+            active: false,
+            trail: [],
+            maxTrail: 20,
+            
+            update() {
+                if(!this.active) return;
+                
+                this.phase += 0.05 * state.timeDilation;
+                this.depth = Math.min(1, this.depth + 0.01);
+                
+                // Update trail
+                this.trail.unshift({x: this.x, y: this.y, phase: this.phase});
+                if(this.trail.length > this.maxTrail) this.trail.pop();
+                
+                // Draw quantum wake
+                this.trail.forEach((point, i) => {
+                    const alpha = (1 - i/this.maxTrail) * 0.5;
+                    const size = 20 * (1 - i/this.maxTrail);
+                    
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0,255,255,${alpha})`;
+                    ctx.fill();
+                });
+                
+                // Draw Roark
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(this.phase) * 0.3})`;
+                ctx.fill();
+                
+                // Emit guidance pulses
+                if(Math.sin(this.phase) > 0.9) {
+                    createGuidancePulse(this.x, this.y);
+                }
+            }
+        };
+
+        // Guidance pulse system
+        const pulses = [];
+        
+        function createGuidancePulse(x, y) {
+            pulses.push({
+                x, y,
+                radius: 0,
+                alpha: 0.5,
+                maxRadius: 200
+            });
+        }
+
+        function updatePulses() {
+            for(let i = pulses.length - 1; i >= 0; i--) {
+                const pulse = pulses[i];
+                pulse.radius += 2 * state.timeDilation;
+                pulse.alpha *= 0.95;
+                
+                ctx.beginPath();
+                ctx.arc(pulse.x, pulse.y, pulse.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0,255,255,${pulse.alpha})`;
+                ctx.stroke();
+                
+                if(pulse.radius > pulse.maxRadius) pulses.splice(i, 1);
+            }
+        }
+
         function resize() {
             canvas.width = innerWidth;
             canvas.height = innerHeight;
@@ -81,20 +151,30 @@
 
         function updatePsiboids() {
             psiboids.forEach(psiboid => {
-                // Update position with momentum influence
-                psiboid.x += psiboid.vx + momentum.x * state.timeDilation;
-                psiboid.y += psiboid.vy + momentum.y * state.timeDilation;
+                // Follow Roark when active
+                if(roark.active) {
+                    const dx = roark.x - psiboid.x;
+                    const dy = roark.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if(dist < 200) {
+                        psiboid.vx += (dx/dist) * 0.1;
+                        psiboid.vy += (dy/dist) * 0.1;
+                    }
+                }
                 
-                // Wrap around edges
+                // Update position with momentum and time dilation
+                psiboid.x += psiboid.vx * state.timeDilation;
+                psiboid.y += psiboid.vy * state.timeDilation;
+                
+                // Wrap around edges with quantum tunneling
                 if(psiboid.x < 0) psiboid.x = canvas.width;
                 if(psiboid.x > canvas.width) psiboid.x = 0;
                 if(psiboid.y < 0) psiboid.y = canvas.height;
                 if(psiboid.y > canvas.height) psiboid.y = 0;
 
-                // Update phase
+                // Update phase and draw
                 psiboid.phase += 0.02 * psiboid.spin * state.timeDilation;
-
-                // Draw psiboid
+                
                 ctx.beginPath();
                 ctx.arc(psiboid.x, psiboid.y, 5, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(psiboid.phase) * 0.3})`;
@@ -102,10 +182,11 @@
 
                 // Draw quantum bridge to entangled pair
                 if(psiboid.entangled) {
+                    const strength = state.fieldStrength * (1 + Math.sin(psiboid.phase));
                     ctx.beginPath();
                     ctx.moveTo(psiboid.x, psiboid.y);
                     ctx.lineTo(psiboid.entangled.x, psiboid.entangled.y);
-                    ctx.strokeStyle = `rgba(0,255,255,${0.2 * state.fieldStrength})`;
+                    ctx.strokeStyle = `rgba(0,255,255,${0.2 * strength})`;
                     ctx.stroke();
                 }
             });
@@ -115,6 +196,11 @@
             time++;
             ctx.fillStyle = 'rgba(0,0,0,0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update all systems
+            updatePsiboids();
+            updatePulses();
+            roark.update();
             
             const cx = canvas.width/2;
             const cy = canvas.height/2;
@@ -178,9 +264,6 @@
             state.fieldStrength = state.fieldStrength / (nodes.length * 2);
             state.timeDilation = 1 + state.fieldStrength * 0.5;
 
-            // Update psiboids
-            updatePsiboids();
-
             // Update UI
             document.getElementById('depth').textContent = state.depth.toFixed(3);
             document.getElementById('field').textContent = state.fieldStrength.toFixed(3);
@@ -194,6 +277,18 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+            
+            // Activate Roark
+            if(!roark.active) {
+                roark.active = true;
+                roark.x = x;
+                roark.y = y;
+                createGuidancePulse(x, y);
+            }
+            
+            // Update Roark position
+            roark.x = x;
+            roark.y = y;
             
             // Update momentum based on mouse position
             momentum.x = (x - canvas.width/2) * 0.001;
