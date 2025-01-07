@@ -1,0 +1,6 @@
+numpy>=1.19.2
+plotly>=5.3.1
+websockets>=9.1,<10.0
+sympy>=1.7.1
+ipython>=7.16.1
+matplotlib>=3.3.4

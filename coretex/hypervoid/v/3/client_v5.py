@@ -27,6 +27,7 @@ class HyperVoidClient:
         self.message_queue = queue.Queue()
         self.quantum_state = QuantumState()
         self.username = f"User_{uuid.uuid4().hex[:8]}"
+        self.other_users = {}
         
     def start(self):
         """Start the client"""
@@ -179,19 +180,10 @@ Phase: {self.quantum_state.phase:.2f}
                         self.message_queue.put(f"{'▂' * 40}\n")
                         
                 elif msg_type == 'client_list':
-                    clients = data.get('clients', {})
-                    if clients:
-                        self.message_queue.put("\n=== Quantum Network Status ===")
-                        for username, info in clients.items():
-                            if info['state']:
-                                their_state = QuantumState.from_json(info['state'])
-                                alignment = self.quantum_state.alignment_with(their_state)
-                                phase = "▁▂▃▄▅▆▇█"[int(alignment * 8)]
-                                foam = their_state.foam.get_foam(their_state)
-                                radius_info = f"[r={their_state.hyperradius:.1f}]"
-                                self.message_queue.put(f"{phase} {username} {radius_info}: {foam}")
-                        self.message_queue.put("============================\n")
-                        
+                    # Update quantum HUD when client list changes
+                    self.update_client_states(data.get('clients', {}))
+                    self.update_quantum_hud()
+                    
                 elif msg_type == 'system':
                     self.message_queue.put(f"[SYSTEM] {data.get('message', '')}")
                     
@@ -199,6 +191,101 @@ Phase: {self.quantum_state.phase:.2f}
             logger.error(f"Error handling server message: {e}")
             self.message_queue.put(f"[ERROR] Failed to process quantum message: {e}")
             
+    def project_4d_to_3d(self, pos_4d):
+        """Project 4D point to 3D space using w as intensity"""
+        x, y, z, w = pos_4d
+        # Scale to fit ASCII grid
+        scale = 10
+        x = int((x + 2) * scale / 4)  # Map [-2,2] to [0,10]
+        y = int((y + 2) * scale / 4)
+        z = int((z + 2) * scale / 4)
+        # Normalize w to [0,1] for intensity
+        w = (w + 2) / 4
+        return x, y, z, w
+
+    def render_3d_grid(self):
+        """Render 3D grid with all users"""
+        grid_size = 11  # 0-10 for each axis
+        # Characters for different intensities (w dimension)
+        chars = " .:-=+*#@"  
+        
+        # Create empty 3D grid
+        grid = [[[' ' for _ in range(grid_size)] 
+                for _ in range(grid_size)] 
+                for _ in range(grid_size)]
+        
+        # Plot all users
+        all_users = {'YOU': self.quantum_state}
+        all_users.update(self.other_users)
+        
+        for name, state in all_users.items():
+            x, y, z, w = self.project_4d_to_3d(state.position)
+            if 0 <= x < grid_size and 0 <= y < grid_size and 0 <= z < grid_size:
+                # Use w to determine intensity
+                char_idx = min(int(w * len(chars)), len(chars) - 1)
+                grid[z][y][x] = chars[char_idx]
+                
+        # Render the grid with perspective
+        hud = "\n=== Quantum Space Map ===\n"
+        
+        # Top-down view (X-Y plane)
+        hud += "Top View (X-Y):\n"
+        hud += "   " + "".join(f"{i:2}" for i in range(grid_size)) + "\n"
+        for y in range(grid_size):
+            hud += f"{y:2} "
+            for x in range(grid_size):
+                # Combine all Z layers with perspective
+                chars_in_column = [grid[z][y][x] for z in range(grid_size)]
+                visible_char = next((c for c in reversed(chars_in_column) if c != ' '), '·')
+                hud += f"{visible_char} "
+            hud += "\n"
+            
+        # Front view (X-Z plane)
+        hud += "\nFront View (X-Z):\n"
+        hud += "   " + "".join(f"{i:2}" for i in range(grid_size)) + "\n"
+        for z in range(grid_size):
+            hud += f"{z:2} "
+            for x in range(grid_size):
+                # Combine all Y layers with perspective
+                chars_in_column = [grid[z][y][x] for y in range(grid_size)]
+                visible_char = next((c for c in reversed(chars_in_column) if c != ' '), '·')
+                hud += f"{visible_char} "
+            hud += "\n"
+            
+        return hud
+        
+    def update_client_states(self, clients):
+        """Update client states"""
+        self.other_users = {}
+        for username, info in clients.items():
+            if info['state']:
+                self.other_users[username] = QuantumState.from_json(info['state'])
+                
+    def update_quantum_hud(self):
+        """Update quantum HUD with user positions and alignment"""
+        # Previous coordinate display
+        hud = "\n=== Quantum Network Status ===\n"
+        x,y,z,w = self.quantum_state.position
+        hud += f"YOU  [{x:.1f}, {y:.1f}, {z:.1f}, {w:.1f}] | RADIUS: {self.quantum_state.hyperradius:.1f}\n"
+        
+        for username, state in self.other_users.items():
+            dist = np.linalg.norm(self.quantum_state.position - state.position)
+            alignment = self.quantum_state.alignment_with(state)
+            align_bar = "▁▂▃▄▅▆▇█"[int(alignment * 8)]
+            
+            x,y,z,w = state.position
+            hud += f"{username} [{x:.1f}, {y:.1f}, {z:.1f}, {w:.1f}] "
+            hud += f"| DIST: {dist:.1f} | ALIGN: {align_bar}\n"
+            
+        # Add 3D visualization
+        hud += "\n" + self.render_3d_grid()
+        
+        # Add quantum foam border
+        foam = self.quantum_state.foam.get_foam()
+        hud += "\n" + foam + "\n"
+        
+        self.message_queue.put(hud)
+        
     def stop(self):
         """Stop the client"""
         self.running = False
