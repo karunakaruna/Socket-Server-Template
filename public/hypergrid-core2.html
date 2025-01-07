@@ -366,6 +366,140 @@
             canvas.height = innerHeight;
         }
 
+        // Time-slice mechanics
+        const timeslice = {
+            active: false,
+            start: {x: 0, y: 0},
+            end: {x: 0, y: 0},
+            width: 2,
+            tunnels: [],
+            fadeTime: 100
+        };
+
+        // Enhanced mouse controls
+        canvas.addEventListener('mousedown', e => {
+            if(!roark) return;
+            
+            timeslice.active = true;
+            timeslice.start = {x: e.clientX, y: e.clientY};
+            timeslice.end = {x: e.clientX, y: e.clientY};
+            
+            // Manifest Roark at click point
+            roark.x = e.clientX;
+            roark.y = e.clientY;
+            roark.active = true;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if(!timeslice.active) return;
+            
+            timeslice.end = {x: e.clientX, y: e.clientY};
+            
+            // Create quantum tunnel effect
+            if(Math.hypot(timeslice.end.x - timeslice.start.x, 
+                         timeslice.end.y - timeslice.start.y) > 50) {
+                createQuantumTunnel();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            timeslice.active = false;
+        });
+
+        function createQuantumTunnel() {
+            const dx = timeslice.end.x - timeslice.start.x;
+            const dy = timeslice.end.y - timeslice.start.y;
+            const angle = Math.atan2(dy, dx);
+            const length = Math.hypot(dx, dy);
+            
+            timeslice.tunnels.push({
+                start: {...timeslice.start},
+                end: {...timeslice.end},
+                angle,
+                length,
+                time: timeslice.fadeTime,
+                strength: controls.powerBoost
+            });
+        }
+
+        // Update tunnel mechanics
+        function updateTunnels() {
+            timeslice.tunnels = timeslice.tunnels.filter(tunnel => {
+                tunnel.time--;
+                return tunnel.time > 0;
+            });
+
+            // Draw active timeslice
+            if(timeslice.active) {
+                const dx = timeslice.end.x - timeslice.start.x;
+                const dy = timeslice.end.y - timeslice.start.y;
+                const length = Math.hypot(dx, dy);
+                
+                if(length > 10) {
+                    ctx.beginPath();
+                    ctx.moveTo(timeslice.start.x, timeslice.start.y);
+                    ctx.lineTo(timeslice.end.x, timeslice.end.y);
+                    ctx.strokeStyle = `rgba(0,255,255,${0.5 * controls.powerBoost})`;
+                    ctx.lineWidth = timeslice.width;
+                    ctx.stroke();
+                    
+                    // Draw perpendicular time-ripples
+                    const rippleCount = Math.floor(length / 20);
+                    const perpX = -dy / length;
+                    const perpY = dx / length;
+                    const rippleLength = 10 * controls.powerBoost;
+                    
+                    for(let i = 0; i <= rippleCount; i++) {
+                        const t = i / rippleCount;
+                        const x = timeslice.start.x + dx * t;
+                        const y = timeslice.start.y + dy * t;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(x - perpX * rippleLength, y - perpY * rippleLength);
+                        ctx.lineTo(x + perpX * rippleLength, y + perpY * rippleLength);
+                        ctx.strokeStyle = `rgba(0,255,255,${0.3 * controls.powerBoost})`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw and process tunnels
+            timeslice.tunnels.forEach(tunnel => {
+                const alpha = (tunnel.time / timeslice.fadeTime) * 0.5 * tunnel.strength;
+                const width = timeslice.width * (tunnel.time / timeslice.fadeTime) * tunnel.strength;
+                
+                ctx.beginPath();
+                ctx.moveTo(tunnel.start.x, tunnel.start.y);
+                ctx.lineTo(tunnel.end.x, tunnel.end.y);
+                ctx.strokeStyle = `rgba(0,255,255,${alpha})`;
+                ctx.lineWidth = width;
+                ctx.stroke();
+
+                // Affect nearby psiboids
+                psiboids.forEach(psiboid => {
+                    const dx = psiboid.x - tunnel.start.x;
+                    const dy = psiboid.y - tunnel.start.y;
+                    const proj = dx * Math.cos(tunnel.angle) + dy * Math.sin(tunnel.angle);
+                    const perp = -dx * Math.sin(tunnel.angle) + dy * Math.cos(tunnel.angle);
+                    
+                    if(proj >= 0 && proj <= tunnel.length && Math.abs(perp) < 50) {
+                        // Add velocity along tunnel
+                        const force = (1 - Math.abs(perp) / 50) * 0.2 * tunnel.strength;
+                        psiboid.vx += Math.cos(tunnel.angle) * force;
+                        psiboid.vy += Math.sin(tunnel.angle) * force;
+                        
+                        // Add slight convergence to tunnel line
+                        psiboid.vx -= (perp * Math.sin(tunnel.angle)) * 0.01;
+                        psiboid.vy += (perp * Math.cos(tunnel.angle)) * 0.01;
+                        
+                        // Increase phase speed in tunnel
+                        psiboid.phase += 0.1 * tunnel.strength;
+                    }
+                });
+            });
+        }
+
         function update() {
             time++;
             ctx.fillStyle = 'rgba(0,0,0,0.1)';
@@ -375,6 +509,7 @@
             updatePsiboids();
             updatePulses();
             roark.update();
+            updateTunnels();
             
             const cx = canvas.width/2;
             const cy = canvas.height/2;
