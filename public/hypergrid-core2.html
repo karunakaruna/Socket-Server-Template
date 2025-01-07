@@ -86,46 +86,113 @@
             update() {
                 if(!this.active) return;
                 
-                this.phase += 0.05 * state.timeDilation;
-                this.depth = Math.min(1, this.depth + 0.01);
+                this.phase += 0.05 * state.timeDilation * controls.powerBoost;
+                this.depth = Math.min(1, this.depth + 0.01 * controls.powerBoost);
                 
-                // Update trail
-                this.trail.unshift({x: this.x, y: this.y, phase: this.phase});
+                // Enhanced trail with power boost
+                this.trail.unshift({
+                    x: this.x, 
+                    y: this.y, 
+                    phase: this.phase,
+                    power: controls.powerBoost
+                });
                 if(this.trail.length > this.maxTrail) this.trail.pop();
                 
-                // Draw quantum wake
+                // Draw enhanced quantum wake
                 this.trail.forEach((point, i) => {
-                    const alpha = (1 - i/this.maxTrail) * 0.5;
-                    const size = 20 * (1 - i/this.maxTrail);
+                    const alpha = (1 - i/this.maxTrail) * 0.5 * point.power;
+                    const size = 20 * (1 - i/this.maxTrail) * point.power;
                     
                     ctx.beginPath();
                     ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
                     ctx.fillStyle = `rgba(0,255,255,${alpha})`;
                     ctx.fill();
+
+                    // Add power rings when boosting
+                    if(point.power > 1) {
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, size * 1.5, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(0,255,255,${alpha * 0.5})`;
+                        ctx.stroke();
+                    }
                 });
                 
-                // Draw Roark
+                // Draw enhanced Roark
+                const pulseSize = 20 * (1 + Math.sin(this.phase) * 0.3) * controls.powerBoost;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, pulseSize, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(this.phase) * 0.3})`;
                 ctx.fill();
                 
-                // Emit guidance pulses
+                // Power boost visual
+                if(controls.powerBoost > 1) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, pulseSize * 1.5, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(0,255,255,0.3)`;
+                    ctx.stroke();
+                }
+                
+                // Wider field visual
+                if(controls.resonanceField > 200) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, controls.resonanceField, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(0,255,255,0.1)`;
+                    ctx.stroke();
+                }
+                
+                // Enhanced guidance pulses
                 if(Math.sin(this.phase) > 0.9) {
-                    createGuidancePulse(this.x, this.y);
+                    createGuidancePulse(this.x, this.y, controls.powerBoost);
                 }
             }
         };
 
+        // Enhanced control mechanics and power boosting
+        const controls = {
+            shift: false,
+            space: false,
+            resonanceField: 200,
+            powerBoost: 1,
+            chargeRate: 0.01
+        };
+
+        // Add key controls
+        window.addEventListener('keydown', e => {
+            if(e.key === 'Shift') {
+                controls.shift = true;
+                controls.resonanceField = 400; // Wider field
+                roark.maxTrail = 40; // Longer trail
+            }
+            if(e.key === ' ') {
+                controls.space = true;
+                controls.powerBoost = 2.5; // Power boost
+                controls.chargeRate = 0.03;
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if(e.key === 'Shift') {
+                controls.shift = false;
+                controls.resonanceField = 200;
+                roark.maxTrail = 20;
+            }
+            if(e.key === ' ') {
+                controls.space = false;
+                controls.powerBoost = 1;
+                controls.chargeRate = 0.01;
+            }
+        });
+
         // Guidance pulse system
         const pulses = [];
         
-        function createGuidancePulse(x, y) {
+        function createGuidancePulse(x, y, power = 1) {
             pulses.push({
                 x, y,
                 radius: 0,
-                alpha: 0.5,
-                maxRadius: 200
+                alpha: 0.5 * power,
+                maxRadius: 200 * power,
+                power
             });
         }
 
@@ -151,38 +218,51 @@
 
         function updatePsiboids() {
             psiboids.forEach(psiboid => {
-                // Follow Roark when active
                 if(roark.active) {
                     const dx = roark.x - psiboid.x;
                     const dy = roark.y - psiboid.y;
                     const dist = Math.hypot(dx, dy);
-                    if(dist < 200) {
-                        psiboid.vx += (dx/dist) * 0.1;
-                        psiboid.vy += (dy/dist) * 0.1;
+                    
+                    // Enhanced attraction range
+                    if(dist < controls.resonanceField) {
+                        const force = (1 - dist/controls.resonanceField) * 0.2 * controls.powerBoost;
+                        psiboid.vx += (dx/dist) * force;
+                        psiboid.vy += (dy/dist) * force;
                     }
                 }
                 
-                // Update position with momentum and time dilation
+                // Speed limiting based on power boost
+                const maxSpeed = 5 * controls.powerBoost;
+                const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                if(speed > maxSpeed) {
+                    const scale = maxSpeed / speed;
+                    psiboid.vx *= scale;
+                    psiboid.vy *= scale;
+                }
+
+                // Update with enhanced momentum
                 psiboid.x += psiboid.vx * state.timeDilation;
                 psiboid.y += psiboid.vy * state.timeDilation;
                 
-                // Wrap around edges with quantum tunneling
+                // Wrap with quantum tunneling
                 if(psiboid.x < 0) psiboid.x = canvas.width;
                 if(psiboid.x > canvas.width) psiboid.x = 0;
                 if(psiboid.y < 0) psiboid.y = canvas.height;
                 if(psiboid.y > canvas.height) psiboid.y = 0;
 
-                // Update phase and draw
-                psiboid.phase += 0.02 * psiboid.spin * state.timeDilation;
+                // Enhanced phase update
+                psiboid.phase += 0.02 * psiboid.spin * state.timeDilation * controls.powerBoost;
                 
+                // Draw enhanced psiboid
+                const size = 5 * (1 + (controls.powerBoost - 1) * 0.5);
                 ctx.beginPath();
-                ctx.arc(psiboid.x, psiboid.y, 5, 0, Math.PI * 2);
+                ctx.arc(psiboid.x, psiboid.y, size, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(psiboid.phase) * 0.3})`;
                 ctx.fill();
 
-                // Draw quantum bridge to entangled pair
+                // Enhanced quantum bridges
                 if(psiboid.entangled) {
-                    const strength = state.fieldStrength * (1 + Math.sin(psiboid.phase));
+                    const strength = state.fieldStrength * (1 + Math.sin(psiboid.phase)) * controls.powerBoost;
                     ctx.beginPath();
                     ctx.moveTo(psiboid.x, psiboid.y);
                     ctx.lineTo(psiboid.entangled.x, psiboid.entangled.y);
@@ -217,7 +297,7 @@
                 // Update matter/antimatter pairs
                 [pair.matter, pair.antimatter].forEach(node => {
                     if(!node.locked) {
-                        node.charge = Math.min(1, node.charge + 0.001 * state.timeDilation);
+                        node.charge = Math.min(1, node.charge + 0.001 * state.timeDilation * controls.chargeRate);
                         node.phase += 0.02 * state.timeDilation;
                     }
                     if(node.charge > 0.85) node.locked = true;
