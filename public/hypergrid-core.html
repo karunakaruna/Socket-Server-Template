@@ -418,281 +418,208 @@
     </div>
 
     <script>
-        // Global state and variables
-        const navigatorState = {
-            spinning: true,
-            showManifold: false,
-            phase: 0,
-            hyperCurvature: 1.0,
-            wProjection: 1.0
-        };
-        
-        let diveDepth = 0;
-        let playerEnergy = 0;
-        let dimensionalPhase = 0;
-        let mouseX, mouseY;
+        // Global variables
+        let coreCanvas, trailCanvas, coreCtx, trailCtx;
+        let mouseX = 0, mouseY = 0;
         let mousePressed = false;
-        const particles = [];
-        const psiBoids = [];
-        const keyState = new Set();
-
-        // Track dimensional information and echoes
+        let keyState = new Set();
+        let diveDepth = 0;
+        let dimensionalPhase = 0;
+        let playerEnergy = 0;
+        let psiBoids = [];
         let dimensionalEchoes = [];
         let discoveredPatterns = new Set();
+        let quantumStructures = [];
 
-        // Canvas setup
-        const coreCanvas = document.createElement('canvas');
-        coreCanvas.style.position = 'absolute';
-        coreCanvas.style.top = '0';
-        coreCanvas.style.left = '0';
-        coreCanvas.style.width = '100%';
-        coreCanvas.style.height = '100%';
-        document.body.appendChild(coreCanvas);
-        
-        const coreCtx = coreCanvas.getContext('2d');
-
-        // Initialize canvas size
-        function initCanvas() {
-            coreCanvas.width = window.innerWidth;
-            coreCanvas.height = window.innerHeight;
-            mouseX = coreCanvas.width / 2;
-            mouseY = coreCanvas.height / 2;
-            
-            // Initialize psi-boids
-            psiBoids.length = 0;
-            const NUM_BOIDS = 500; // Increased from original
-            for (let i = 0; i < NUM_BOIDS; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * 400;
-                psiBoids.push(new PsiBoid(
-                    coreCanvas.width/2 + Math.cos(angle) * radius,
-                    coreCanvas.height/2 + Math.sin(angle) * radius,
-                    (Math.random() - 0.5) * 200
-                ));
-            }
-        }
-
-        // Event listeners
-        window.addEventListener('resize', initCanvas);
-        window.addEventListener('keydown', e => keyState.add(e.key.toLowerCase()));
-        window.addEventListener('keyup', e => keyState.delete(e.key.toLowerCase()));
-        coreCanvas.addEventListener('mousemove', e => {
-            const rect = coreCanvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-        });
-        coreCanvas.addEventListener('mousedown', () => mousePressed = true);
-        coreCanvas.addEventListener('mouseup', () => mousePressed = false);
+        // Initialize visualization parameters
+        const visualParams = {
+            traceDepth: 0.5,
+            stringResonance: 0.7,
+            patternDensity: 0.6,
+            echoPersistence: 0.8
+        };
 
         // PsiBoid class definition
         class PsiBoid {
-            constructor(x, y, z) {
+            constructor(x, y, energy) {
                 this.x = x;
                 this.y = y;
-                this.z = z || 0;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.vz = (Math.random() - 0.5) * 2;
-                this.quantum = Math.random();
-                this.phase = Math.random() * Math.PI * 2;
-                this.energy = 0;
-                this.dimension = Math.random() * 4;
-                this.purpose = Math.floor(Math.random() * 4); // Different types of quantum fish
-                this.pathPhase = Math.random() * Math.PI * 2;
-                this.discoveredInfo = new Set();
-                this.searchPhase = 0;
-                this.lastEchoTime = 0;
+                this.vx = 0;
+                this.vy = 0;
+                this.energy = energy;
+                // Assign type with specific behaviors and colors
+                this.type = ['CoreDancer', 'PathFinder', 'EnergyWeaver', 'QuantumGuide'][Math.floor(Math.random() * 4)];
+                switch(this.type) {
+                    case 'CoreDancer':
+                        this.color = 'rgba(255, 0, 255, 0.8)'; // Purple
+                        this.coreAttraction = 0.5;
+                        this.separationForce = 2.0;
+                        break;
+                    case 'PathFinder':
+                        this.color = 'rgba(0, 255, 255, 0.8)'; // Cyan
+                        this.coreAttraction = 0.2;
+                        this.explorationRange = 300;
+                        break;
+                    case 'EnergyWeaver':
+                        this.color = 'rgba(255, 255, 0, 0.8)'; // Yellow
+                        this.networkRange = 100;
+                        this.energyTransferRate = 0.1;
+                        break;
+                    case 'QuantumGuide':
+                        this.color = 'rgba(0, 255, 0, 0.8)'; // Green
+                        this.playerAttraction = 0.3;
+                        this.guidanceRange = 200;
+                        break;
+                }
             }
 
             update(boids, time) {
-                // Energy decay
-                this.energy *= 0.98;
-                
-                // Quantum state evolution
-                this.quantum = (this.quantum + Math.sin(time + this.phase) * 0.1 + this.energy * 0.2) % 1;
-                
-                // Dimensional drift
-                this.dimension = (this.dimension + Math.sin(time * 0.5 + this.phase) * 0.02) % 4;
-                
-                // Calculate center of nearby boids
-                let cx = 0, cy = 0, cz = 0;
-                let count = 0;
-                const neighborRadius = 50 + this.energy * 30;
-                
-                boids.forEach(other => {
-                    if (other === this) return;
-                    
-                    const dx = other.x - this.x;
-                    const dy = other.y - this.y;
-                    const dz = other.z - this.z;
-                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-                    
-                    if (dist < neighborRadius && dist > 0) {
-                        cx += other.x;
-                        cy += other.y;
-                        cz += other.z;
-                        count++;
-                        
-                        // Energy transfer
-                        if (other.energy > this.energy) {
-                            this.energy += (other.energy - this.energy) * 0.1;
-                        }
-                        
-                        // Quantum entanglement
-                        if (Math.random() < 0.1 + this.energy * 0.2) {
-                            this.quantum = (this.quantum + other.quantum) / 2;
-                            this.dimension = (this.dimension + other.dimension) / 2;
-                        }
-                        
-                        // Separation
-                        const repel = 1 - dist/neighborRadius;
-                        this.vx -= dx * repel * 0.01;
-                        this.vy -= dy * repel * 0.01;
-                        this.vz -= dz * repel * 0.01;
-                    }
-                });
-                
-                // Core interaction
                 const centerX = coreCanvas.width/2;
                 const centerY = coreCanvas.height/2;
                 const dx = centerX - this.x;
                 const dy = centerY - this.y;
-                const distToCore = Math.sqrt(dx*dx + dy*dy);
+                const distToCenter = Math.sqrt(dx * dx + dy * dy);
                 
-                // Purpose-specific behavior
-                switch(this.purpose) {
-                    case 0: // Dimensional Pathfinders
-                        this.pathPhase += 0.02 + this.energy * 0.03;
-                        const radius = 200 + Math.sin(this.pathPhase) * 100;
-                        const targetX = centerX + Math.cos(this.pathPhase) * radius;
-                        const targetY = centerY + Math.sin(this.pathPhase) * radius;
-                        this.vx += (targetX - this.x) * 0.001;
-                        this.vy += (targetY - this.y) * 0.001;
+                // Base movement speed reduced
+                const maxSpeed = 2;
+                
+                switch(this.type) {
+                    case 'CoreDancer':
+                        // Orbital pattern around core
+                        const angle = Math.atan2(dy, dx);
+                        this.vx += Math.cos(angle) * this.coreAttraction - Math.sin(angle) * 0.5;
+                        this.vy += Math.sin(angle) * this.coreAttraction + Math.cos(angle) * 0.5;
+                        
+                        // Separation from other dancers
+                        boids.forEach(other => {
+                            if (other !== this && other.type === 'CoreDancer') {
+                                const sepDx = this.x - other.x;
+                                const sepDy = this.y - other.y;
+                                const dist = Math.sqrt(sepDx * sepDx + sepDy * sepDy);
+                                if (dist < 50) {
+                                    this.vx += (sepDx / dist) * this.separationForce;
+                                    this.vy += (sepDy / dist) * this.separationForce;
+                                }
+                            }
+                        });
                         break;
                         
-                    case 1: // Core Dancers
-                        if (distToCore > 100) {
-                            this.vx += dx * 0.0001;
-                            this.vy += dy * 0.0001;
-                        }
+                    case 'PathFinder':
+                        // Arc pattern exploration
+                        const exploreDist = Math.sin(time + this.x * 0.01) * this.explorationRange;
+                        const exploreAngle = time * 0.2 + this.y * 0.01;
+                        this.vx += (centerX + Math.cos(exploreAngle) * exploreDist - this.x) * 0.01;
+                        this.vy += (centerY + Math.sin(exploreAngle) * exploreDist - this.y) * 0.01;
                         break;
                         
-                    case 2: // Energy Weavers
-                        if (this.energy > 0.5) {
-                            this.pathPhase += 0.05;
-                            const radius = 150 + Math.sin(this.pathPhase) * 50;
-                            const targetX = centerX + Math.cos(this.pathPhase) * radius;
-                            const targetY = centerY + Math.sin(this.pathPhase) * radius;
-                            this.vx += (targetX - this.x) * 0.002;
-                            this.vy += (targetY - this.y) * 0.002;
-                        }
+                    case 'EnergyWeaver':
+                        // Network formation with energy transfer
+                        let nearbyCount = 0;
+                        boids.forEach(other => {
+                            if (other !== this) {
+                                const netDx = other.x - this.x;
+                                const netDy = other.y - this.y;
+                                const dist = Math.sqrt(netDx * netDx + netDy * netDy);
+                                if (dist < this.networkRange) {
+                                    nearbyCount++;
+                                    if (this.energy > other.energy) {
+                                        other.energy += this.energyTransferRate;
+                                        this.energy -= this.energyTransferRate;
+                                    }
+                                }
+                            }
+                        });
+                        // Move towards areas with more boids if energized
+                        if (this.energy > 0.5) this.networkRange = 150;
+                        else this.networkRange = 100;
                         break;
                         
-                    case 3: // Quantum Guides
-                        const playerDist = Math.sqrt(
-                            (mouseX - this.x) * (mouseX - this.x) + 
-                            (mouseY - this.y) * (mouseY - this.y)
-                        );
-                        if (diveDepth > 0.5 && playerDist < 200) {
-                            this.vx += (mouseX - this.x) * 0.001;
-                            this.vy += (mouseY - this.y) * 0.001;
+                    case 'QuantumGuide':
+                        // Guide behavior towards player and interesting areas
+                        const playerDx = mouseX - this.x;
+                        const playerDy = mouseY - this.y;
+                        const playerDist = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
+                        if (playerDist < this.guidanceRange) {
+                            this.vx += playerDx * this.playerAttraction * 0.01;
+                            this.vy += playerDy * this.playerAttraction * 0.01;
                         }
+                        // Also slightly attracted to high-energy areas
+                        boids.forEach(other => {
+                            if (other !== this && other.energy > 0.7) {
+                                const guideDx = other.x - this.x;
+                                const guideDy = other.y - this.y;
+                                const dist = Math.sqrt(guideDx * guideDx + guideDy * guideDy);
+                                if (dist < this.guidanceRange) {
+                                    this.vx += guideDx * 0.001;
+                                    this.vy += guideDy * 0.001;
+                                }
+                            }
+                        });
                         break;
                 }
-                
-                // Information gathering behavior
-                if (this.energy > 0.3) {
-                    this.searchPhase += 0.05 + this.energy * 0.05;
-                    
-                    // Search for dimensional patterns
-                    if (time - this.lastEchoTime > 2) {
-                        const pattern = this.detectPattern();
-                        if (pattern && !discoveredPatterns.has(pattern)) {
-                            discoveredPatterns.add(pattern);
-                            dimensionalEchoes.push(new DimensionalEcho(this.x, this.y, pattern));
-                            this.lastEchoTime = time;
-                        }
-                    }
+
+                // Apply velocity limits
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > maxSpeed) {
+                    this.vx = (this.vx / speed) * maxSpeed;
+                    this.vy = (this.vy / speed) * maxSpeed;
                 }
-                
+
                 // Update position
                 this.x += this.vx;
                 this.y += this.vy;
-                this.z += this.vz;
-                
-                // Damping
-                this.vx *= 0.99;
-                this.vy *= 0.99;
-                this.vz *= 0.99;
-                
-                // Screen boundaries
-                const margin = 50;
-                if (this.x < margin) this.vx += 0.1;
-                if (this.x > coreCanvas.width - margin) this.vx -= 0.1;
-                if (this.y < margin) this.vy += 0.1;
-                if (this.y > coreCanvas.height - margin) this.vy -= 0.1;
-                
-                // Player interaction
-                const playerDist = Math.sqrt(
-                    (mouseX - this.x) * (mouseX - this.x) + 
-                    (mouseY - this.y) * (mouseY - this.y)
-                );
-                if (mousePressed && playerDist < 100) {
-                    this.energy = Math.min(1, this.energy + 0.1);
-                }
-            }
 
-            detectPattern() {
-                const distToCore = Math.sqrt(
-                    (coreCanvas.width/2 - this.x) ** 2 + 
-                    (coreCanvas.height/2 - this.y) ** 2
-                );
-                
-                // Different patterns emerge at different distances and energy levels
-                if (distToCore < 100 && this.energy > 0.7) return 'vortex';
-                if (distToCore > 200 && this.energy > 0.5) return 'lattice';
-                if (this.quantum > 0.8) return 'wave';
-                return null;
+                // Boundary wrapping with smooth transition
+                const margin = 50;
+                if (this.x < -margin) this.x = coreCanvas.width + margin;
+                if (this.x > coreCanvas.width + margin) this.x = -margin;
+                if (this.y < -margin) this.y = coreCanvas.height + margin;
+                if (this.y > coreCanvas.height + margin) this.y = -margin;
             }
 
             draw(ctx) {
-                const size = 3 + this.energy * 5;
-                const alpha = 0.5 + this.energy * 0.5;
-                
-                // Purpose-specific colors
-                let hue;
-                switch(this.purpose) {
-                    case 0: hue = 180; break; // Dimensional Pathfinders: Cyan
-                    case 1: hue = 300; break; // Core Dancers: Purple
-                    case 2: hue = 60; break;  // Energy Weavers: Yellow
-                    case 3: hue = 120; break; // Quantum Guides: Green
-                }
-                
-                // Draw boid
-                ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${alpha})`;
+                // Ensure size is always positive
+                const size = Math.max(2, 3 + this.energy * 2);
+                ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Energy trail
-                if (this.energy > 0.2) {
-                    const trailLength = Math.floor(10 * this.energy);
-                    for (let i = 0; i < trailLength; i++) {
-                        const trailAlpha = alpha * (1 - i/trailLength) * 0.5;
-                        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${trailAlpha})`;
-                        ctx.beginPath();
-                        ctx.arc(
-                            this.x - this.vx * i * 2,
-                            this.y - this.vy * i * 2,
-                            size * (1 - i/trailLength),
-                            0, Math.PI * 2
-                        );
-                        ctx.fill();
-                    }
+                // Draw energy connections for EnergyWeavers with positive radius
+                if (this.type === 'EnergyWeaver' && this.energy > 0.5) {
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
+                    ctx.lineWidth = Math.max(0.5, this.energy);
+                    psiBoids.forEach(other => {
+                        if (other !== this && other.type === 'EnergyWeaver') {
+                            const dx = other.x - this.x;
+                            const dy = other.y - this.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < this.networkRange && dist > 0) {  // Ensure positive distance
+                                ctx.beginPath();
+                                ctx.moveTo(this.x, this.y);
+                                ctx.lineTo(other.x, other.y);
+                                ctx.stroke();
+                            }
+                        }
+                    });
                 }
+
+                // Add subtle glow effect for all entities
+                const glowSize = size * 2;
+                const glow = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, glowSize
+                );
+                glow.addColorStop(0, this.color.replace('0.8', '0.3'));
+                glow.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
+        // DimensionalEcho class definition
         class DimensionalEcho {
             constructor(x, y, pattern) {
                 this.x = x;
@@ -705,19 +632,21 @@
             }
             
             draw(ctx, time) {
-                const alpha = this.strength * 0.3;
+                const alpha = this.strength * 0.3 * visualParams.echoPersistence;
                 const size = 30 + Math.sin(time * this.frequency + this.phase) * 10;
                 
-                // Draw dimensional pattern
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(time * 0.5);
                 
-                ctx.strokeStyle = `hsla(${180 + this.dimension * 40}, 100%, 70%, ${alpha})`;
+                ctx.strokeStyle = `hsla(${180 + this.dimension * 30}, 100%, 70%, ${alpha})`;
                 ctx.lineWidth = 1;
                 
                 switch(this.pattern) {
                     case 'vortex':
+                        // Draw tetrahedron
+                        const h = size * Math.sqrt(6) / 3;
+                        ctx.beginPath();
                         for(let i = 0; i < 5; i++) {
                             const angle = (i / 5) * Math.PI * 2 + time;
                             const radius = size * (1 + Math.sin(angle + time));
@@ -725,8 +654,20 @@
                             ctx.arc(0, 0, radius, 0, Math.PI * 0.5);
                             ctx.stroke();
                         }
+                        ctx.closePath();
+                        ctx.moveTo(0, -h);
+                        for(let i = 0; i < 3; i++) {
+                            const angle = (i / 3) * Math.PI * 2;
+                            const px = Math.cos(angle) * size;
+                            const py = Math.sin(angle) * size;
+                            ctx.lineTo(px, py);
+                            ctx.moveTo(0, -h);
+                        }
+                        ctx.stroke();
                         break;
+                        
                     case 'lattice':
+                        // Draw cube
                         for(let i = -2; i <= 2; i++) {
                             for(let j = -2; j <= 2; j++) {
                                 ctx.beginPath();
@@ -735,6 +676,7 @@
                             }
                         }
                         break;
+                        
                     case 'wave':
                         ctx.beginPath();
                         for(let i = -size; i <= size; i += 5) {
@@ -751,190 +693,226 @@
             }
         }
 
-        // Increase particle count and add deep structures
-        const DEPTH_LAYERS = 5;
-        let quantumStructures = [];
+        // Event listeners
+        window.addEventListener('resize', initCanvas);
+        window.addEventListener('keydown', e => keyState.add(e.key.toLowerCase()));
+        window.addEventListener('keyup', e => keyState.delete(e.key.toLowerCase()));
         
+        function initCanvas() {
+            coreCanvas = document.getElementById('glCanvas');
+            trailCanvas = document.createElement('canvas');
+            trailCanvas.style.position = 'absolute';
+            trailCanvas.style.top = '0';
+            trailCanvas.style.left = '0';
+            trailCanvas.style.width = '100%';
+            trailCanvas.style.height = '100%';
+            trailCanvas.style.zIndex = '999';
+            document.body.appendChild(trailCanvas);
+            coreCtx = coreCanvas.getContext('2d');
+            trailCtx = trailCanvas.getContext('2d');
+
+            coreCanvas.width = window.innerWidth;
+            coreCanvas.height = window.innerHeight;
+            trailCanvas.width = window.innerWidth;
+            trailCanvas.height = window.innerHeight;
+
+            // Add canvas event listeners
+            coreCanvas.addEventListener('mousemove', e => {
+                const rect = coreCanvas.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+            });
+            coreCanvas.addEventListener('mousedown', () => mousePressed = true);
+            coreCanvas.addEventListener('mouseup', () => mousePressed = false);
+
+            // Initialize psi-boids
+            psiBoids = [];
+            for (let i = 0; i < 500; i++) {
+                psiBoids.push(new PsiBoid(
+                    Math.random() * coreCanvas.width,
+                    Math.random() * coreCanvas.height,
+                    (Math.random() - 0.5) * 200
+                ));
+            }
+
+            // Initialize quantum structures
+            initQuantumStructures();
+
+            // Add visualization controls
+            const controls = document.createElement('div');
+            controls.style.position = 'fixed';
+            controls.style.right = '20px';
+            controls.style.top = '20px';
+            controls.style.background = 'rgba(0, 20, 20, 0.8)';
+            controls.style.padding = '15px';
+            controls.style.borderRadius = '10px';
+            controls.style.color = '#0ff';
+            controls.style.fontFamily = 'monospace';
+            controls.style.zIndex = '2000';
+            controls.innerHTML = `
+                <div style="margin-bottom: 10px">Quantum Vision Controls</div>
+                <div style="margin-bottom: 8px">
+                    <label>Trace Depth</label><br>
+                    <input type="range" id="traceDepth" min="0" max="100" value="${visualParams.traceDepth * 100}">
+                </div>
+                <div style="margin-bottom: 8px">
+                    <label>String Resonance</label><br>
+                    <input type="range" id="stringResonance" min="0" max="100" value="${visualParams.stringResonance * 100}">
+                </div>
+                <div style="margin-bottom: 8px">
+                    <label>Pattern Density</label><br>
+                    <input type="range" id="patternDensity" min="0" max="100" value="${visualParams.patternDensity * 100}">
+                </div>
+                <div>
+                    <label>Echo Persistence</label><br>
+                    <input type="range" id="echoPersistence" min="0" max="100" value="${visualParams.echoPersistence * 100}">
+                </div>
+            `;
+            document.body.appendChild(controls);
+
+            // Update parameters from sliders
+            ['traceDepth', 'stringResonance', 'patternDensity', 'echoPersistence'].forEach(param => {
+                const slider = document.getElementById(param);
+                slider.addEventListener('input', (e) => {
+                    visualParams[param] = e.target.value / 100;
+                });
+            });
+        }
+
         // Initialize quantum structures at different depths
         function initQuantumStructures() {
-            for (let layer = 0; layer < DEPTH_LAYERS; layer++) {
-                const depth = layer + 1;
-                const structures = [];
-                
-                // Add geometric structures for this layer
-                const numStructures = 3 + Math.floor(Math.random() * 5);
-                for (let i = 0; i < numStructures; i++) {
-                    structures.push({
+            quantumStructures = [];
+            const DEPTH_LAYERS = 5;
+            const STRUCTURES_PER_LAYER = 3;
+            
+            for (let depth = 0; depth < DEPTH_LAYERS; depth++) {
+                const layer = [];
+                for (let i = 0; i < STRUCTURES_PER_LAYER; i++) {
+                    const centerX = coreCanvas.width/2;
+                    const centerY = coreCanvas.height/2;
+                    const angle = (i / STRUCTURES_PER_LAYER) * Math.PI * 2;
+                    const radius = 150 + depth * 100;
+                    
+                    layer.push({
                         type: ['tetrahedron', 'cube', 'octahedron', 'dodecahedron'][Math.floor(Math.random() * 4)],
-                        x: coreCanvas.width/2 + (Math.random() - 0.5) * 300,
-                        y: coreCanvas.height/2 + (Math.random() - 0.5) * 300,
+                        x: centerX + Math.cos(angle) * radius,
+                        y: centerY + Math.sin(angle) * radius,
+                        size: 30 + Math.random() * 20,
                         rotation: Math.random() * Math.PI * 2,
-                        size: 50 + Math.random() * 100,
-                        depth: depth,
                         phase: Math.random() * Math.PI * 2,
-                        frequency: 0.5 + Math.random()
+                        frequency: 1 + Math.random() * 2,
+                        dimension: Math.random() * 4
                     });
                 }
-                quantumStructures.push(structures);
+                quantumStructures.push(layer);
             }
         }
 
-        // Draw a platonic solid
+        // Draw platonic solids
         function drawPlatonicSolid(ctx, type, x, y, size, rotation, alpha) {
-            ctx.strokeStyle = `hsla(180, 100%, 70%, ${alpha})`;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            
+            ctx.strokeStyle = `hsla(${180 + alpha * 30}, 100%, 70%, ${alpha})`;
             ctx.lineWidth = 2;
             
             switch(type) {
                 case 'tetrahedron':
-                    // Draw tetrahedron projection
+                    // Draw tetrahedron
+                    const h = size * Math.sqrt(6) / 3;
                     ctx.beginPath();
-                    for (let i = 0; i < 4; i++) {
-                        const angle1 = rotation + i * Math.PI * 2/3;
-                        const angle2 = rotation + ((i+1) % 3) * Math.PI * 2/3;
-                        ctx.moveTo(x + Math.cos(angle1) * size, y + Math.sin(angle1) * size);
-                        ctx.lineTo(x + Math.cos(angle2) * size, y + Math.sin(angle2) * size);
-                        // Connect to apex
-                        ctx.moveTo(x + Math.cos(angle1) * size, y + Math.sin(angle1) * size);
-                        ctx.lineTo(x, y - size);
+                    for(let i = 0; i < 3; i++) {
+                        const angle = (i / 3) * Math.PI * 2;
+                        const px = Math.cos(angle) * size;
+                        const py = Math.sin(angle) * size;
+                        if(i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
                     }
+                    ctx.closePath();
+                    ctx.moveTo(0, -h);
+                    for(let i = 0; i < 3; i++) {
+                        const angle = (i / 3) * Math.PI * 2;
+                        const px = Math.cos(angle) * size;
+                        const py = Math.sin(angle) * size;
+                        ctx.lineTo(px, py);
+                        ctx.moveTo(0, -h);
+                    }
+                    ctx.stroke();
                     break;
                     
                 case 'cube':
-                    // Draw cube projection
-                    const corners = [];
-                    for (let i = 0; i < 4; i++) {
-                        const angle = rotation + i * Math.PI/2;
-                        corners.push({
-                            x: x + Math.cos(angle) * size,
-                            y: y + Math.sin(angle) * size
-                        });
-                    }
+                    // Draw cube
+                    ctx.strokeRect(-size/2, -size/2, size, size);
                     ctx.beginPath();
-                    // Draw front face
-                    for (let i = 0; i < 4; i++) {
-                        ctx.moveTo(corners[i].x, corners[i].y);
-                        ctx.lineTo(corners[(i+1)%4].x, corners[(i+1)%4].y);
-                    }
-                    // Draw depth lines
-                    for (let i = 0; i < 4; i++) {
-                        ctx.moveTo(corners[i].x, corners[i].y);
-                        ctx.lineTo(corners[i].x - size/2, corners[i].y - size/2);
-                    }
+                    ctx.moveTo(-size/4, -size/4);
+                    ctx.lineTo(size/4, -size/4);
+                    ctx.lineTo(size/4, size/4);
+                    ctx.lineTo(-size/4, size/4);
+                    ctx.closePath();
+                    ctx.stroke();
                     break;
                     
-                default:
-                    // Simpler geometric form for other types
+                case 'octahedron':
+                    // Draw octahedron
                     ctx.beginPath();
-                    const points = type === 'octahedron' ? 8 : 12;
-                    for (let i = 0; i < points; i++) {
-                        const angle = rotation + i * Math.PI * 2/points;
-                        const radius = size * (1 + Math.sin(angle * 3) * 0.2);
-                        ctx.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+                    ctx.moveTo(0, -size);
+                    ctx.lineTo(size, 0);
+                    ctx.lineTo(0, size);
+                    ctx.lineTo(-size, 0);
+                    ctx.closePath();
+                    ctx.moveTo(0, -size);
+                    ctx.lineTo(-size, 0);
+                    ctx.moveTo(0, size);
+                    ctx.lineTo(size, 0);
+                    ctx.stroke();
+                    break;
+                    
+                case 'dodecahedron':
+                    // Draw simplified dodecahedron
+                    const r = size * 0.8;
+                    ctx.beginPath();
+                    for(let i = 0; i < 5; i++) {
+                        const angle = (i / 5) * Math.PI * 2;
+                        const px = Math.cos(angle) * r;
+                        const py = Math.sin(angle) * r;
+                        if(i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
                     }
                     ctx.closePath();
-            }
-            ctx.stroke();
-        }
-
-        // Diving mechanics
-        function updateDiving(time) {
-            // Clear previous frame
-            coreCtx.clearRect(0, 0, coreCanvas.width, coreCanvas.height);
-            
-            // WASD/Arrow keys to swim
-            const moveSpeed = 0.1 * (1 + playerEnergy);
-            if (keyState.has('w') || keyState.has('arrowup')) mouseY -= moveSpeed * 5;
-            if (keyState.has('s') || keyState.has('arrowdown')) mouseY += moveSpeed * 5;
-            if (keyState.has('a') || keyState.has('arrowleft')) mouseX -= moveSpeed * 5;
-            if (keyState.has('d') || keyState.has('arrowright')) mouseX += moveSpeed * 5;
-            
-            // Space to dive deeper
-            if (keyState.has(' ')) {
-                diveDepth += 0.02 * (1 + playerEnergy);
-                dimensionalPhase += 0.01;
-                
-                // Dimensional shifting effect
-                const shiftCount = Math.floor(10 * diveDepth);
-                for (let i = 0; i < shiftCount; i++) {
-                    const angle = (i / shiftCount) * Math.PI * 2;
-                    const radius = 100 * (1 + diveDepth);
-                    const x = mouseX + Math.cos(angle) * radius;
-                    const y = mouseY + Math.sin(angle) * radius;
+                    ctx.stroke();
                     
-                    trailCtx.beginPath();
-                    trailCtx.moveTo(mouseX, mouseY);
-                    trailCtx.lineTo(x, y);
-                    const gradient = trailCtx.createLinearGradient(mouseX, mouseY, x, y);
-                    gradient.addColorStop(0, `hsla(${180 + diveDepth * 60}, 100%, 50%, 0.5)`);
-                    gradient.addColorStop(1, 'transparent');
-                    trailCtx.strokeStyle = gradient;
-                    trailCtx.lineWidth = 1;
-                    trailCtx.stroke();
-                }
-                
-                // Reveal neighboring dimensions
-                if (diveDepth > 0.5) {
-                    const echoCount = Math.floor(diveDepth * 10);
-                    for (let i = 0; i < echoCount; i++) {
-                        const angle = time + (i / echoCount) * Math.PI * 2;
-                        const x = mouseX + Math.cos(angle) * 100;
-                        const y = mouseY + Math.sin(angle) * 100;
-                        
-                        trailCtx.beginPath();
-                        trailCtx.arc(x, y, 5, 0, Math.PI * 2);
-                        trailCtx.fillStyle = `hsla(${180 + i * 30}, 100%, 50%, 0.3)`;
-                        trailCtx.fill();
+                    const innerR = r * 0.6;
+                    ctx.beginPath();
+                    for(let i = 0; i < 5; i++) {
+                        const angle = (i / 5) * Math.PI * 2 + Math.PI / 5;
+                        const px = Math.cos(angle) * innerR;
+                        const py = Math.sin(angle) * innerR;
+                        if(i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
                     }
-                }
-            } else {
-                diveDepth *= 0.99; // Slowly return unless actively diving
+                    ctx.closePath();
+                    ctx.stroke();
+                    break;
             }
             
-            // Update player energy
-            if (mousePressed) {
-                playerEnergy = Math.min(1, playerEnergy + 0.01);
-            } else {
-                playerEnergy *= 0.99;
-            }
-
-            // Apply diving effects
-            const scale = 1 + diveDepth;
-            coreCtx.save();
-            coreCtx.translate(coreCanvas.width/2, coreCanvas.height/2);
-            coreCtx.scale(scale, scale);
-            coreCtx.translate(-coreCanvas.width/2, -coreCanvas.height/2);
-
-            // Add dimensional ripples when diving
-            if (diveDepth > 0.1) {
-                const rippleCount = Math.floor(10 * diveDepth);
-                for (let i = 0; i < rippleCount; i++) {
-                    const ripplePhase = (time + i/rippleCount) * Math.PI * 2;
-                    const rippleSize = (200 + Math.sin(ripplePhase) * 100) * (1 + diveDepth);
-                    const alpha = 0.1 * (1 - i/rippleCount) * Math.sin(ripplePhase);
-                    
-                    coreCtx.strokeStyle = `hsla(${180 + diveDepth * 40}, 100%, 50%, ${alpha})`;
-                    coreCtx.lineWidth = 2;
-                    coreCtx.beginPath();
-                    coreCtx.arc(
-                        coreCanvas.width/2, 
-                        coreCanvas.height/2, 
-                        rippleSize, 
-                        0, Math.PI * 2
-                    );
-                    coreCtx.stroke();
-                }
-            }
-            coreCtx.restore();
+            ctx.restore();
         }
 
+        // Main animation loop
         function drawOortCloud(timestamp) {
             const time = timestamp * 0.001;
             
-            // Clear both canvases with fade effect
+            // Clear core canvas
+            coreCtx.clearRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Clear trail canvas with fade
             trailCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
-            coreCtx.clearRect(0, 0, coreCanvas.width, coreCanvas.height);
 
+            // Update diving state
+            updateDiving(time);
+            
             // Update and draw psi-boids
             psiBoids.forEach(boid => {
                 boid.update(psiBoids, time);
@@ -955,27 +933,6 @@
             coreCtx.arc(coreCanvas.width/2, coreCanvas.height/2, 200, 0, Math.PI * 2);
             coreCtx.fill();
 
-            // Draw dimensional ripples when diving
-            if (diveDepth > 0.1) {
-                const rippleCount = Math.floor(20 * diveDepth);
-                for (let i = 0; i < rippleCount; i++) {
-                    const ripplePhase = (time + i/rippleCount) * Math.PI * 2;
-                    const rippleSize = (100 + Math.sin(ripplePhase) * 30) * (1 + diveDepth);
-                    const alpha = 0.2 * (1 - i/rippleCount) * Math.sin(ripplePhase);
-                    
-                    coreCtx.strokeStyle = `hsla(${180 + i * 20}, 100%, 50%, ${alpha})`;
-                    coreCtx.lineWidth = 2;
-                    coreCtx.beginPath();
-                    coreCtx.arc(
-                        coreCanvas.width/2, 
-                        coreCanvas.height/2, 
-                        rippleSize, 
-                        0, Math.PI * 2
-                    );
-                    coreCtx.stroke();
-                }
-            }
-
             // Draw dimensional echoes with enhanced visibility
             dimensionalEchoes = dimensionalEchoes.filter(echo => echo.strength > 0.1);
             dimensionalEchoes.forEach(echo => {
@@ -983,48 +940,29 @@
                 
                 // Add connecting lines to nearby echoes for dimensional mapping
                 dimensionalEchoes.forEach(other => {
+                    if (echo === other) return;
                     const dx = echo.x - other.x;
                     const dy = echo.y - other.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 200 && echo !== other) {
+                    if (dist < 200) {
                         trailCtx.beginPath();
                         trailCtx.moveTo(echo.x, echo.y);
                         trailCtx.lineTo(other.x, other.y);
-                        trailCtx.strokeStyle = `hsla(${180 + echo.dimension * 30}, 100%, 70%, ${echo.strength * 0.2})`;
+                        trailCtx.strokeStyle = `hsla(${180 + echo.dimension * 30}, 100%, 70%, ${echo.strength * 0.2 * visualParams.echoPersistence})`;
                         trailCtx.lineWidth = 1;
                         trailCtx.stroke();
                     }
                 });
             });
 
-            // Draw information HUD
-            if (diveDepth > 0.3) {
-                const patternCount = discoveredPatterns.size;
-                trailCtx.font = '20px monospace';
-                trailCtx.fillStyle = `hsla(180, 100%, 70%, ${0.7 + diveDepth * 0.3})`;
-                trailCtx.fillText(`Dimensional Patterns: ${patternCount}`, 20, 40);
-                
-                if (patternCount > 0) {
-                    trailCtx.font = '16px monospace';
-                    let y = 70;
-                    discoveredPatterns.forEach(pattern => {
-                        trailCtx.fillText(`∙ ${pattern} pattern detected`, 25, y);
-                        y += 25;
-                    });
-                }
-            }
-
-            // Update diving state
-            updateDiving(time);
-            
             // Draw quantum structures based on dive depth
             quantumStructures.forEach((layer, layerIndex) => {
                 const layerDepth = layerIndex + 1;
-                if (diveDepth > layerDepth * 0.2) { // Only show structures when deep enough
-                    const layerAlpha = Math.min(1, (diveDepth - layerDepth * 0.2) * 2);
+                if (diveDepth > layerDepth * 0.2) {
+                    const layerAlpha = Math.min(1, (diveDepth - layerDepth * 0.2) * 2) * visualParams.traceDepth;
                     
                     layer.forEach(structure => {
-                        const wobble = Math.sin(time * structure.frequency + structure.phase) * 10;
+                        const wobble = Math.sin(time * structure.frequency + structure.phase) * 10 * visualParams.stringResonance;
                         drawPlatonicSolid(
                             trailCtx,
                             structure.type,
@@ -1037,42 +975,14 @@
                     });
                 }
             });
-            
+
             requestAnimationFrame(drawOortCloud);
         }
 
-        // Prevent text selection while interacting
-        document.body.style.userSelect = 'none';
-        coreCanvas.style.zIndex = '1000'; // Ensure canvas is on top
+        // Increase particle count and add deep structures
+        const DEPTH_LAYERS = 5;
         
-        // Add motion trails
-        const trailCanvas = document.createElement('canvas');
-        trailCanvas.style.position = 'absolute';
-        trailCanvas.style.top = '0';
-        trailCanvas.style.left = '0';
-        trailCanvas.style.width = '100%';
-        trailCanvas.style.height = '100%';
-        trailCanvas.style.zIndex = '999';
-        document.body.appendChild(trailCanvas);
-        const trailCtx = trailCanvas.getContext('2d');
-
-        function resizeCanvases() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            coreCanvas.width = width;
-            coreCanvas.height = height;
-            trailCanvas.width = width;
-            trailCanvas.height = height;
-            mouseX = width / 2;
-            mouseY = height / 2;
-        }
-        window.addEventListener('resize', resizeCanvases);
-        resizeCanvases();
-
-        // Enhanced movement perception
-        let playerTrail = [];
-        const maxTrailLength = 20;
-        
+        // Diving mechanics
         function updateDiving(time) {
             // Clear previous frame with fade
             trailCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
@@ -1091,27 +1001,6 @@
             mouseX += dx;
             mouseY += dy;
             
-            // Add to trail
-            if (dx !== 0 || dy !== 0) {
-                playerTrail.push({x: mouseX, y: mouseY, energy: playerEnergy});
-                if (playerTrail.length > maxTrailLength) playerTrail.shift();
-            }
-            
-            // Draw movement trail
-            if (playerTrail.length > 1) {
-                trailCtx.beginPath();
-                trailCtx.moveTo(playerTrail[0].x, playerTrail[0].y);
-                
-                for (let i = 1; i < playerTrail.length; i++) {
-                    const point = playerTrail[i];
-                    trailCtx.lineTo(point.x, point.y);
-                }
-                
-                trailCtx.strokeStyle = `hsla(180, 100%, 50%, ${0.3 + playerEnergy * 0.5})`;
-                trailCtx.lineWidth = 2 + playerEnergy * 3;
-                trailCtx.stroke();
-            }
-            
             // Space to dive deeper with enhanced feedback
             if (keyState.has(' ')) {
                 diveDepth += 0.02 * (1 + playerEnergy);
@@ -1124,31 +1013,29 @@
                     const rippleSize = (100 + Math.sin(ripplePhase) * 30) * (1 + diveDepth);
                     const alpha = 0.2 * (1 - i/rippleCount) * Math.sin(ripplePhase);
                     
-                    trailCtx.strokeStyle = `hsla(${180 + diveDepth * 60}, 100%, 50%, ${alpha})`;
+                    trailCtx.strokeStyle = `hsla(${180 + i * 20}, 100%, 50%, ${alpha * visualParams.traceDepth})`;
                     trailCtx.lineWidth = 2;
                     trailCtx.beginPath();
                     trailCtx.arc(mouseX, mouseY, rippleSize, 0, Math.PI * 2);
                     trailCtx.stroke();
                 }
+
+                // Add quantum strings when diving deep
+                if (diveDepth > 0.3) {
+                    drawQuantumStrings(trailCtx, time);
+                }
             } else {
                 diveDepth *= 0.99;
             }
-            
+
             // Update player energy with visual feedback
             if (mousePressed) {
                 playerEnergy = Math.min(1, playerEnergy + 0.01);
-                
-                // Energy gathering effect
-                trailCtx.beginPath();
-                trailCtx.arc(mouseX, mouseY, 20 + playerEnergy * 20, 0, Math.PI * 2);
-                trailCtx.strokeStyle = `hsla(60, 100%, 50%, ${0.3 + playerEnergy * 0.5})`;
-                trailCtx.lineWidth = 2;
-                trailCtx.stroke();
             } else {
                 playerEnergy *= 0.99;
             }
 
-            // Apply diving effects
+            // Apply diving effects to core view
             const scale = 1 + diveDepth;
             coreCtx.save();
             coreCtx.translate(coreCanvas.width/2, coreCanvas.height/2);
@@ -1156,6 +1043,73 @@
             coreCtx.translate(-coreCanvas.width/2, -coreCanvas.height/2);
         }
 
+        function drawQuantumStrings(ctx, time) {
+            const stringCount = Math.floor(20 * visualParams.patternDensity);
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < stringCount; i++) {
+                const phase = time + i * Math.PI * 2 / stringCount;
+                const resonance = visualParams.stringResonance * 50;
+                
+                ctx.beginPath();
+                for (let t = 0; t < Math.PI * 4; t += 0.1) {
+                    const radius = 100 + Math.sin(t * 3 + phase) * resonance;
+                    const x = coreCanvas.width/2 + Math.cos(t) * radius;
+                    const y = coreCanvas.height/2 + Math.sin(t) * radius;
+                    
+                    if (t === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.strokeStyle = `hsla(${180 + i * 360/stringCount}, 100%, 50%, ${0.3 * visualParams.traceDepth})`;
+                ctx.stroke();
+            }
+        }
+
+        // Enhance updateDiving with new parameters
+        function updateDiving(time) {
+            // ... existing diving code ...
+
+            // Add quantum strings when diving deep
+            if (diveDepth > 0.3) {
+                drawQuantumStrings(trailCtx, time);
+            }
+
+            // Adjust echo persistence
+            dimensionalEchoes = dimensionalEchoes.filter(echo => 
+                echo.strength > 0.1 * (1 - visualParams.echoPersistence)
+            );
+
+            // Enhance structure visibility with trace depth
+            quantumStructures.forEach((layer, layerIndex) => {
+                const layerDepth = layerIndex + 1;
+                if (diveDepth > layerDepth * 0.2 * (1 - visualParams.traceDepth)) {
+                    const layerAlpha = Math.min(1, (diveDepth - layerDepth * 0.2) * 2);
+                    
+                    layer.forEach(structure => {
+                        const wobble = Math.sin(time * structure.frequency + structure.phase) 
+                            * 10 * visualParams.stringResonance;
+                        drawPlatonicSolid(
+                            trailCtx,
+                            structure.type,
+                            structure.x + wobble,
+                            structure.y + wobble,
+                            structure.size * (1 + Math.sin(time + structure.phase) * 0.1),
+                            structure.rotation + time * 0.1,
+                            layerAlpha * 0.5 * visualParams.traceDepth
+                        );
+                    });
+                }
+            });
+        }
+
+        // Start the animation
+        initCanvas();
+        requestAnimationFrame(drawOortCloud);
+    </script>
+    <script>
         // Add instructions overlay
         const instructions = document.createElement('div');
         instructions.style.position = 'fixed';
@@ -1172,12 +1126,106 @@
         `;
         document.body.appendChild(instructions);
 
-        // Initialize quantum structures
-        initQuantumStructures();
-        
-        // Start everything
-        initCanvas();
-        requestAnimationFrame(drawOortCloud);
+        // Add visualization controls
+        const controls = document.createElement('div');
+        controls.style.position = 'fixed';
+        controls.style.right = '20px';
+        controls.style.top = '20px';
+        controls.style.background = 'rgba(0, 20, 20, 0.8)';
+        controls.style.padding = '15px';
+        controls.style.borderRadius = '10px';
+        controls.style.color = '#0ff';
+        controls.style.fontFamily = 'monospace';
+        controls.innerHTML = `
+            <div style="margin-bottom: 10px">Quantum Vision Controls</div>
+            <div style="margin-bottom: 8px">
+                <label>Trace Depth</label><br>
+                <input type="range" id="traceDepth" min="0" max="100" value="50">
+            </div>
+            <div style="margin-bottom: 8px">
+                <label>String Resonance</label><br>
+                <input type="range" id="stringResonance" min="0" max="100" value="70">
+            </div>
+            <div style="margin-bottom: 8px">
+                <label>Pattern Density</label><br>
+                <input type="range" id="patternDensity" min="0" max="100" value="60">
+            </div>
+            <div>
+                <label>Echo Persistence</label><br>
+                <input type="range" id="echoPersistence" min="0" max="100" value="80">
+            </div>
+        `;
+        document.body.appendChild(controls);
+
+        // Update parameters from sliders
+        ['traceDepth', 'stringResonance', 'patternDensity', 'echoPersistence'].forEach(param => {
+            const slider = document.getElementById(param);
+            slider.addEventListener('input', (e) => {
+                visualParams[param] = e.target.value / 100;
+            });
+        });
+
+        function drawQuantumStrings(ctx, time) {
+            const stringCount = Math.floor(20 * visualParams.patternDensity);
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < stringCount; i++) {
+                const phase = time + i * Math.PI * 2 / stringCount;
+                const resonance = visualParams.stringResonance * 50;
+                
+                ctx.beginPath();
+                for (let t = 0; t < Math.PI * 4; t += 0.1) {
+                    const radius = 100 + Math.sin(t * 3 + phase) * resonance;
+                    const x = coreCanvas.width/2 + Math.cos(t) * radius;
+                    const y = coreCanvas.height/2 + Math.sin(t) * radius;
+                    
+                    if (t === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.strokeStyle = `hsla(${180 + i * 360/stringCount}, 100%, 50%, ${0.3 * visualParams.traceDepth})`;
+                ctx.stroke();
+            }
+        }
+
+        // Enhance updateDiving with new parameters
+        function updateDiving(time) {
+            // ... existing diving code ...
+
+            // Add quantum strings when diving deep
+            if (diveDepth > 0.3) {
+                drawQuantumStrings(trailCtx, time);
+            }
+
+            // Adjust echo persistence
+            dimensionalEchoes = dimensionalEchoes.filter(echo => 
+                echo.strength > 0.1 * (1 - visualParams.echoPersistence)
+            );
+
+            // Enhance structure visibility with trace depth
+            quantumStructures.forEach((layer, layerIndex) => {
+                const layerDepth = layerIndex + 1;
+                if (diveDepth > layerDepth * 0.2 * (1 - visualParams.traceDepth)) {
+                    const layerAlpha = Math.min(1, (diveDepth - layerDepth * 0.2) * 2);
+                    
+                    layer.forEach(structure => {
+                        const wobble = Math.sin(time * structure.frequency + structure.phase) 
+                            * 10 * visualParams.stringResonance;
+                        drawPlatonicSolid(
+                            trailCtx,
+                            structure.type,
+                            structure.x + wobble,
+                            structure.y + wobble,
+                            structure.size * (1 + Math.sin(time + structure.phase) * 0.1),
+                            structure.rotation + time * 0.1,
+                            layerAlpha * 0.5 * visualParams.traceDepth
+                        );
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>
