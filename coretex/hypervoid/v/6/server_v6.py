@@ -3,116 +3,147 @@ import websockets
 import json
 import numpy as np
 from quantum_crypto import QuantumState
-import webbrowser
-import os
-import sys
 
 class HyperVoidServer:
     def __init__(self):
         self.clients = {}  # username -> websocket
-        self.states = {}   # username -> quantum state
-        self.next_id = 1
+        self.quantum_state = QuantumState()
         
-    async def register(self, websocket):
+    async def register(self, websocket, username):
         """Register a new client"""
-        username = f"User_{self.next_id}"
-        self.next_id += 1
         self.clients[username] = websocket
-        self.states[username] = QuantumState()
-        return username
+        print(f"Client {username} connected. Total clients: {len(self.clients)}")
         
-    async def unregister(self, username):
+        # Send welcome message
+        await websocket.send(json.dumps({
+            "type": "welcome",
+            "username": username
+        }))
+        
+        # Broadcast user list update
+        await self.broadcast_users()
+        
+    async def unregister(self, websocket):
         """Unregister a client"""
-        if username in self.clients:
-            del self.clients[username]
-            del self.states[username]
+        # Find and remove client
+        username = None
+        for name, ws in list(self.clients.items()):
+            if ws == websocket:
+                username = name
+                del self.clients[name]
+                break
+                
+        if username:
+            print(f"Client {username} disconnected. Total clients: {len(self.clients)}")
+            await self.broadcast_users()
             
     async def broadcast_users(self):
-        """Send user list to all clients"""
-        if not self.clients:
-            return
+        """Broadcast user list to all clients"""
+        if self.clients:
+            message = json.dumps({
+                "type": "users",
+                "users": list(self.clients.keys())
+            })
+            await asyncio.gather(
+                *[client.send(message) for client in self.clients.values()]
+            )
             
-        message = json.dumps({
-            "type": "users",
-            "users": list(self.clients.keys())
-        })
-        await asyncio.gather(
-            *[ws.send(message) for ws in self.clients.values()]
-        )
-        
+    async def broadcast_state(self, state):
+        """Broadcast state update to all clients"""
+        if self.clients:
+            message = json.dumps({
+                "type": "state_update",
+                "state": state
+            })
+            await asyncio.gather(
+                *[client.send(message) for client in self.clients.values()]
+            )
+            
     async def handle_client(self, websocket, path):
-        """Handle a client connection"""
-        username = await self.register(websocket)
-        print(f"{username} connected")
-        
+        """Handle client connection"""
         try:
-            await websocket.send(json.dumps({
-                "type": "welcome",
-                "username": username
-            }))
+            # Generate unique username
+            username = f"User_{len(self.clients) + 1}"
+            await self.register(websocket, username)
             
-            await self.broadcast_users()
-            
-            async for message in websocket:
-                try:
-                    data = json.loads(message)
-                    
-                    if data["type"] == "chat":
-                        # Broadcast chat message
-                        response = json.dumps({
-                            "type": "chat",
-                            "sender": username,
-                            "message": data["message"]
-                        })
-                        await asyncio.gather(
-                            *[ws.send(response) for ws in self.clients.values()]
-                        )
+            try:
+                async for message in websocket:
+                    try:
+                        data = json.loads(message)
                         
-                    elif data["type"] == "whisper":
-                        # Send private message
-                        target = data["target"]
-                        if target in self.clients:
-                            response = json.dumps({
-                                "type": "whisper",
+                        if data['type'] == 'chat':
+                            # Broadcast chat message
+                            broadcast_msg = json.dumps({
+                                "type": "chat",
                                 "sender": username,
-                                "message": data["message"]
+                                "message": data['message']
                             })
-                            await self.clients[target].send(response)
+                            await asyncio.gather(
+                                *[client.send(broadcast_msg) 
+                                  for client in self.clients.values()]
+                            )
                             
-                    elif data["type"] == "state_update":
-                        # Update quantum state
-                        self.states[username].set_state(data["state"])
-                        response = json.dumps({
-                            "type": "state_update",
-                            "username": username,
-                            "state": self.states[username].get_state().tolist()
-                        })
-                        await asyncio.gather(
-                            *[ws.send(response) for ws in self.clients.values()]
-                        )
+                        elif data['type'] == 'whisper':
+                            # Send private message
+                            target = data['target']
+                            if target in self.clients:
+                                await self.clients[target].send(json.dumps({
+                                    "type": "whisper",
+                                    "sender": username,
+                                    "message": data['message']
+                                }))
+                                
+                        elif data['type'] == 'state_update':
+                            # Update quantum state
+                            self.quantum_state.set_state(data['state'])
+                            # Broadcast new state
+                            await self.broadcast_state(data['state'])
+                            
+                        elif data['type'] == 'users_request':
+                            # Send user list
+                            await websocket.send(json.dumps({
+                                "type": "users",
+                                "users": list(self.clients.keys())
+                            }))
+                            
+                        elif data['type'] == 'state_request':
+                            # Send current state
+                            await websocket.send(json.dumps({
+                                "type": "state_update",
+                                "state": self.quantum_state.get_state().tolist()
+                            }))
+                            
+                    except json.JSONDecodeError:
+                        pass
                         
-                except json.JSONDecodeError:
-                    pass
-                    
-        except websockets.exceptions.ConnectionClosed:
-            pass
-        finally:
-            await self.unregister(username)
-            await self.broadcast_users()
-            print(f"{username} disconnected")
-            
-async def start_server():
-    server = HyperVoidServer()
-    async with websockets.serve(server.handle_client, "localhost", 8767):
-        print("HyperVoid server running on ws://localhost:8767")
-        await asyncio.Future()  # run forever
-        
+            finally:
+                await self.unregister(websocket)
+                
+        except Exception as e:
+            print(f"Error handling client: {e}")
+
 def main():
+    server = HyperVoidServer()
+    
+    loop = asyncio.get_event_loop()
+    start_server = websockets.serve(
+        server.handle_client,
+        'localhost',
+        8769,
+        ping_interval=None,  # Disable ping/pong for better performance
+        max_size=2**23,  # Increase max message size
+        max_queue=2**10,  # Increase message queue size
+    )
+    
+    print("HyperVoid server running on ws://localhost:8769")
+    
     try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(start_server())
+        loop.run_until_complete(start_server)
+        loop.run_forever()
     except KeyboardInterrupt:
-        print("Server shutting down...")
+        print("\nShutting down...")
+    finally:
+        loop.close()
         
 if __name__ == "__main__":
     main()

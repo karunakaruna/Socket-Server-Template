@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HyperVoid Quantum Visualizer</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #canvas {
+            border: 2px solid #0f0;
+            margin: 20px;
+        }
+        
+        #status {
+            color: #0f0;
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #0f0;
+            width: 600px;
+            text-align: center;
+        }
+        
+        .matrix {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #0f0;
+            background-color: #001100;
+        }
+        
+        .cell {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border: 1px solid #030;
+        }
+    </style>
+</head>
+<body>
+    <h1>HyperVoid Quantum Visualizer</h1>
+    <div id="status">Initializing quantum state...</div>
+    <canvas id="canvas" width="600" height="400"></canvas>
+    <div id="matrix" class="matrix"></div>
+    
+    <script>
+        const ws = new WebSocket('ws://localhost:8769');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        const matrix = document.getElementById('matrix');
+        
+        let foam = Array(64).fill(0);
+        let particles = [];
+        
+        // Initialize matrix display
+        for (let i = 0; i < 64; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            matrix.appendChild(cell);
+        }
+        
+        function updateMatrix(foam) {
+            const cells = matrix.getElementsByClassName('cell');
+            for (let i = 0; i < 64; i++) {
+                const intensity = Math.floor(foam[i] * 255);
+                cells[i].style.backgroundColor = `rgb(0,${intensity},0)`;
+                cells[i].textContent = foam[i].toFixed(2);
+            }
+        }
+        
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.life = Math.random() * 100 + 50;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                
+                if (this.life < 0 || 
+                    this.x < 0 || this.x > canvas.width ||
+                    this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                const intensity = Math.min(255, this.life * 2);
+                ctx.fillStyle = `rgb(0,${intensity},0)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Initialize particles
+        for (let i = 0; i < 100; i++) {
+            particles.push(new Particle());
+        }
+        
+        function animate() {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        ws.onopen = () => {
+            status.textContent = 'Connected to quantum realm';
+            animate();
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'state_update') {
+                foam = data.foam.flat();
+                updateMatrix(foam);
+                
+                // Update particle velocities based on quantum state
+                particles.forEach((p, i) => {
+                    const idx = i % 64;
+                    p.vx += (foam[idx] - 0.5) * 0.1;
+                    p.vy += (foam[(idx + 32) % 64] - 0.5) * 0.1;
+                });
+            }
+        };
+        
+        ws.onclose = () => {
+            status.textContent = 'Disconnected from quantum realm';
+        };
+        
+        ws.onerror = (error) => {
+            status.textContent = 'Error in quantum communication';
+            console.error('WebSocket error:', error);
+        };
+    </script>
+</body>
+</html>
