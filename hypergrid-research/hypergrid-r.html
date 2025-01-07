@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid-R: Quantum Fluid Traversal</title>
+    <style>
+        /* Core Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+        }
+
+        #quantum-space {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Quantum Navigator */
+        .quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 50%;
+            background: radial-gradient(
+                circle at center,
+                rgba(0, 255, 255, 0.15) 0%,
+                rgba(255, 0, 255, 0.15) 50%,
+                rgba(0, 0, 40, 0.3) 100%
+            );
+            box-shadow: 
+                0 0 50px rgba(0, 255, 255, 0.2),
+                inset 0 0 30px rgba(255, 0, 255, 0.1);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        /* Fluid Interface */
+        .fluid-membrane {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(
+                45deg,
+                rgba(0, 255, 255, 0.1),
+                rgba(255, 0, 255, 0.1)
+            );
+            animation: membrane-pulse 4s infinite ease-in-out;
+            filter: url('#turbulence');
+        }
+
+        /* Quantum Field */
+        .quantum-field {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(0, 255, 255, 0.05) 50%,
+                transparent 100%
+            );
+            animation: quantum-fluctuation 3s infinite linear;
+        }
+
+        /* Organic Paths */
+        .organic-paths {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.5;
+            mix-blend-mode: screen;
+        }
+
+        /* Animations */
+        @keyframes membrane-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+
+        @keyframes quantum-fluctuation {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.05); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* HUD Elements */
+        .quantum-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(0, 255, 255, 0.8);
+            font-size: 14px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .dimension-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 0, 255, 0.8);
+            font-size: 14px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+        }
+
+        /* SVG Filters */
+        .svg-filters {
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+
+        /* Guardian and boundary effects */
+        .quantum-guardian {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(
+                circle at center,
+                rgba(0, 255, 255, 0.2) 0%,
+                rgba(255, 0, 255, 0.2) 50%,
+                transparent 70%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 2000;
+        }
+
+        @keyframes guardian-emerge {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .boundary-crossing {
+            animation: boundary-pulse 1s ease-in-out;
+        }
+
+        @keyframes boundary-pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.3);
+                box-shadow: 0 0 100px rgba(0, 255, 255, 0.5);
+            }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Roark Styles */
+        .roark-shield {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(
+                circle at center,
+                rgba(64, 224, 208, 0.3) 0%,
+                rgba(128, 0, 128, 0.3) 50%,
+                transparent 70%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 2000;
+        }
+
+        .roark-presence {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.8) 0%,
+                rgba(64, 224, 208, 0.5) 50%,
+                transparent 100%
+            );
+            border-radius: 50%;
+            animation: roark-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes roark-shield-emerge {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes roark-pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Add SVG Filters -->
+    <svg class="svg-filters">
+        <defs>
+            <filter id="turbulence">
+                <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="10"/>
+            </filter>
+        </defs>
+    </svg>
+
+    <canvas id="quantum-space"></canvas>
+    
+    <div class="quantum-navigator">
+        <div class="fluid-membrane"></div>
+        <div class="quantum-field"></div>
+        <div class="organic-paths"></div>
+    </div>
+
+    <div class="quantum-hud">
+        <div>Quantum State: <span id="q-state">Coherent</span></div>
+        <div>Fluid Depth: <span id="f-depth">0.00λ</span></div>
+        <div>Dimensional Phase: <span id="d-phase">1.00π</span></div>
+    </div>
+
+    <div class="dimension-status">
+        <div>Current Dimension: <span id="curr-dim">Prime</span></div>
+        <div>Boundary Status: <span id="bound-status">Stable</span></div>
+        <div>Resonance: <span id="resonance">0.95</span></div>
+    </div>
+
+    <script>
+        // Class definitions first
+        class QuantumFluidSystem {
+            constructor() {
+                this.position = { x: 0, y: 0, z: 0, w: 0 };
+                this.velocity = { x: 0, y: 0, z: 0, w: 0 };
+                this.quantumState = 1.0;
+                this.fluidPressure = 0.0;
+                this.dimensionalPhase = 0.0;
+                this.turbulence = 0.0;
+                this.resonanceField = new Float32Array(16);
+                this.membraneState = 1.0;
+                this.guardian = null;
+            }
+
+            // Enhanced Quantum Tunneling with Fluid Dynamics
+            tunnel(targetDim) {
+                try {
+                    const pressure = this.calculatePressure();
+                    const resonance = this.getResonanceField();
+                    const success = this.quantumTraversal(targetDim, pressure, resonance);
+                    
+                    if (success) {
+                        this.turbulence += 0.5;
+                        this.membraneState *= 0.8;
+                        this.updateVisuals();
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('Quantum tunneling error:', error);
+                    return false;
+                }
+            }
+
+            quantumTraversal(targetDim, pressure, resonance) {
+                try {
+                    // Calculate quantum probability
+                    const probability = Math.min(
+                        1.0,
+                        (this.quantumState * resonance) / (1 + Math.abs(pressure))
+                    );
+
+                    // Check if traversal is possible
+                    if (Math.random() < probability) {
+                        this.dimensionalPhase = targetDim;
+                        this.quantumState *= 0.8; // Reduce quantum state after traversal
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('Traversal calculation error:', error);
+                    return false;
+                }
+            }
+
+            getResonanceField() {
+                try {
+                    const baseResonance = Math.cos(this.dimensionalPhase * Math.PI);
+                    const fluidFactor = 1.0 / (1.0 + Math.abs(this.fluidPressure));
+                    return baseResonance * fluidFactor;
+                } catch (error) {
+                    console.error('Resonance calculation error:', error);
+                    return 0;
+                }
+            }
+
+            calculatePressure() {
+                try {
+                    return this.fluidPressure * Math.sin(this.dimensionalPhase * Math.PI);
+                } catch (error) {
+                    console.error('Pressure calculation error:', error);
+                    return 0;
+                }
+            }
+
+            // Organic Pathfinding
+            findOrganicPath(start, end) {
+                const field = this.getQuantumField();
+                const flow = this.getFluidFlow();
+                return this.calculateOrganicTrajectory(start, end, field, flow);
+            }
+
+            // Dimensional Boundary Management
+            traverseBoundary() {
+                try {
+                    const membrane = document.querySelector('.quantum-navigator');
+                    if (!membrane) return false;
+
+                    // Awaken Roark
+                    this.guardian.awaken();
+                    
+                    // Create boundary effect
+                    const success = this.guardian.guard({
+                        position: this.position,
+                        energy: this.quantumState
+                    });
+
+                    if (success) {
+                        // Quantum shift with Roark's influence
+                        this.quantumState *= 1.5;
+                        this.turbulence += 1.0;
+                        this.dimensionalPhase += Math.PI / 2;
+                        
+                        // Update membrane
+                        membrane.classList.add('boundary-crossing');
+                        setTimeout(() => {
+                            membrane.classList.remove('boundary-crossing');
+                        }, 2000);
+                    }
+
+                    return success;
+                } catch (error) {
+                    console.error('Boundary traversal error:', error);
+                    return false;
+                }
+            }
+
+            // Utility Methods
+            calculateEntanglement() {
+                return Math.sin(this.dimensionalPhase) * this.quantumState;
+            }
+
+            // Movement and Physics
+            animate(deltaTime) {
+                // Update quantum state
+                this.quantumState = Math.max(0.1, this.quantumState + Math.sin(performance.now() * 0.001) * 0.001);
+                
+                // Update fluid dynamics
+                this.fluidPressure += (Math.sin(performance.now() * 0.0005) * 0.1 - this.fluidPressure) * 0.1;
+                
+                // Organic movement
+                const time = performance.now() * 0.001;
+                this.position.x += Math.sin(time * 0.5) * 0.01;
+                this.position.y += Math.cos(time * 0.7) * 0.01;
+                
+                // Add some turbulence
+                this.turbulence += Math.sin(time) * 0.01;
+                this.turbulence = Math.max(0, Math.min(1, this.turbulence));
+                
+                // Update visuals
+                this.updateVisuals();
+            }
+
+            handleMouseInteraction(x, y) {
+                const dx = x - this.position.x;
+                const dy = y - this.position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Update fluid pressure based on mouse distance
+                this.fluidPressure += (1 - Math.min(1, distance)) * 0.1;
+                
+                // Add turbulence near mouse
+                if (distance < 0.5) {
+                    this.turbulence += (0.5 - distance) * 0.2;
+                }
+                
+                // Affect quantum state
+                this.quantumState *= 1 + (Math.sin(performance.now() * 0.001) * 0.1);
+                
+                // Update dimensional phase based on circular motion
+                const angle = Math.atan2(dy, dx);
+                this.dimensionalPhase += angle * 0.01;
+                
+                this.updateVisuals();
+            }
+
+            update() {
+                this.updateQuantumState();
+                this.updateFluidDynamics();
+                this.updateDimensionalPhase();
+            }
+
+            updateQuantumState() {
+                this.quantumState += Math.sin(Date.now() * 0.001) * 0.01;
+                this.quantumState = Math.max(0, Math.min(1, this.quantumState));
+            }
+
+            updateFluidDynamics() {
+                this.fluidPressure += (Math.random() - 0.5) * 0.02;
+                this.velocity.x *= 0.98;
+                this.velocity.y *= 0.98;
+                this.velocity.z *= 0.98;
+            }
+
+            updateDimensionalPhase() {
+                this.dimensionalPhase += 0.01;
+                if (this.dimensionalPhase > Math.PI * 2) {
+                    this.dimensionalPhase -= Math.PI * 2;
+                }
+            }
+
+            updateVisuals() {
+                try {
+                    const navigator = document.querySelector('.quantum-navigator');
+                    const membrane = document.querySelector('.fluid-membrane');
+                    
+                    if (!navigator || !membrane) {
+                        console.warn('Visual elements not found');
+                        return;
+                    }
+                    
+                    // Update turbulence
+                    const filter = document.querySelector('#turbulence feTurbulence');
+                    if (filter) {
+                        const frequency = 0.01 + this.turbulence * 0.01;
+                        filter.setAttribute('baseFrequency', `${frequency} ${frequency}`);
+                    }
+                    
+                    // Update membrane visuals with safe transforms
+                    const scale = 1 + Math.min(0.2, this.turbulence * 0.1);
+                    navigator.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                    membrane.style.opacity = Math.max(0.2, Math.min(1, this.membraneState));
+                    
+                    // Gradually return to normal state
+                    this.turbulence = Math.max(0, this.turbulence * 0.95);
+                    this.membraneState += (1 - this.membraneState) * 0.1;
+                } catch (error) {
+                    console.error('Visual update error:', error);
+                    // Reset to safe values
+                    this.turbulence = 0;
+                    this.membraneState = 1;
+                }
+            }
+        }
+
+        // Roark - The Quantum Guardian
+        class Roark {
+            constructor() {
+                this.state = 'dormant';
+                this.energy = 1.0;
+                this.position = { x: 0, y: 0 };
+                this.phase = 0;
+                this.resonance = new Float32Array(16);
+            }
+
+            awaken() {
+                this.state = 'awakening';
+                this.energy = 1.5;
+                this.phase = Math.PI / 2;
+                this.updateResonance();
+            }
+
+            guard(boundary) {
+                if (this.state === 'dormant') return false;
+                
+                this.position = boundary.position;
+                this.energy *= 1.2;
+                this.phase += Math.PI / 4;
+                
+                // Create quantum shield
+                return this.createShield();
+            }
+
+            createShield() {
+                try {
+                    const shield = document.createElement('div');
+                    shield.className = 'roark-shield';
+                    document.body.appendChild(shield);
+
+                    // Animate shield emergence
+                    shield.style.animation = 'roark-shield-emerge 3s ease-out';
+                    
+                    // Add Roark's presence
+                    const presence = document.createElement('div');
+                    presence.className = 'roark-presence';
+                    shield.appendChild(presence);
+
+                    // Cleanup
+                    setTimeout(() => {
+                        shield.remove();
+                        this.state = 'dormant';
+                        this.energy = 1.0;
+                    }, 3000);
+
+                    return true;
+                } catch (error) {
+                    console.error('Shield creation error:', error);
+                    return false;
+                }
+            }
+
+            updateResonance() {
+                for (let i = 0; i < 16; i++) {
+                    this.resonance[i] = Math.cos(this.phase + i * Math.PI / 8);
+                }
+            }
+        }
+
+        // Initialize WebGL context with error handling
+        const canvas = document.getElementById('quantum-space');
+        let gl = null;
+        
+        try {
+            gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) {
+                throw new Error('WebGL not available');
+            }
+        } catch (error) {
+            console.error('WebGL initialization error:', error);
+            // Fallback to 2D canvas if WebGL fails
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                console.log('Falling back to 2D canvas rendering');
+                // Implement 2D fallback rendering
+            }
+        }
+
+        // Initialize systems only if WebGL is available
+        let qfs = null;
+        let lastTime = 0;
+        
+        if (gl) {
+            qfs = new QuantumFluidSystem();
+            qfs.guardian = new Roark();
+        }
+
+        // Main animation loop
+        function animate(timestamp) {
+            if (!qfs) return;
+
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // Update quantum fluid system
+            qfs.animate(deltaTime);
+            
+            // Render scene
+            render();
+            
+            // Update HUD
+            updateHUD();
+            
+            // Continue animation
+            requestAnimationFrame(animate);
+        }
+
+        function updateHUD() {
+            if (!qfs) return;
+
+            document.getElementById('q-state').textContent = 
+                qfs.quantumState.toFixed(3);
+            document.getElementById('f-depth').textContent = 
+                qfs.fluidPressure.toFixed(2) + 'λ';
+            document.getElementById('d-phase').textContent = 
+                (qfs.dimensionalPhase / Math.PI).toFixed(2) + 'π';
+        }
+
+        // Enhanced error handling for shader compilation
+        function compileShader(gl, source, type) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                const info = gl.getShaderInfoLog(shader);
+                gl.deleteShader(shader);
+                throw new Error('Shader compile error: ' + info);
+            }
+            return shader;
+        }
+
+        // Enhanced render function with error handling
+        function render() {
+            if (!gl) return;
+
+            try {
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                // Create and compile shaders with error checking
+                const vertexShader = compileShader(gl, `
+                    attribute vec4 aVertexPosition;
+                    varying vec2 vUv;
+                    void main() {
+                        gl_Position = aVertexPosition;
+                        vUv = aVertexPosition.xy * 0.5 + 0.5;
+                    }
+                `, gl.VERTEX_SHADER);
+
+                const fragmentShader = compileShader(gl, `
+                    precision mediump float;
+                    varying vec2 vUv;
+                    uniform float uTime;
+                    uniform float uQuantumState;
+                    uniform float uFluidPressure;
+                    uniform float uDimensionalPhase;
+
+                    // Enhanced noise function
+                    vec3 hash33(vec3 p3) {
+                        p3 = fract(p3 * vec3(.1031, .1030, .0973));
+                        p3 += dot(p3, p3.yxz + 33.33);
+                        return fract((p3.xxy + p3.yxx) * p3.zyx);
+                    }
+
+                    // Enhanced quantum foam and laminar flow shader
+                    vec3 quantumFoam(vec2 uv, float t) {
+                        vec3 foam = vec3(0.0);
+                        
+                        // Multi-layered foam effect
+                        for(float i = 1.0; i < 5.0; i++) {
+                            vec3 p = vec3(uv * (4.0 * i), t * i * 0.2);
+                            vec3 noise = hash33(p);
+                            
+                            // Create foam bubbles
+                            float bubble = length(fract(noise.xy + noise.z) - 0.5);
+                            bubble = smoothstep(0.1 / i, 0.0, bubble);
+                            
+                            foam += vec3(bubble) / i;
+                        }
+                        return foam;
+                    }
+
+                    // Laminar flow patterns
+                    vec2 laminarFlow(vec2 uv, float t) {
+                        float flow = 0.0;
+                        vec2 displacement = vec2(0.0);
+                        
+                        // Create layered flow patterns
+                        for(float i = 1.0; i < 4.0; i++) {
+                            float scale = pow(2.0, i);
+                            vec2 p = uv * scale + vec2(t * 0.1 * (i + 1.0), 0.0);
+                            
+                            // Generate flow lines
+                            vec3 h = hash33(vec3(p, i));
+                            flow += (h.x - 0.5) / scale;
+                            
+                            // Add displacement
+                            displacement += vec2(
+                                sin(p.y * 2.0 + t + h.y),
+                                cos(p.x * 2.0 + t + h.z)
+                            ) / scale;
+                        }
+                        
+                        return displacement * 0.1;
+                    }
+
+                    // Quantum field pattern
+                    vec3 quantumField(vec2 uv) {
+                        float t = uTime * 0.001;
+                        
+                        // Apply laminar flow displacement
+                        vec2 flowUV = uv + laminarFlow(uv, t);
+                        
+                        // Generate quantum foam
+                        vec3 foam = quantumFoam(flowUV, t);
+                        
+                        // Add quantum fluctuations with foam
+                        float quantum = sin(dot(foam, vec3(1.0)) * 10.0 + t) * uQuantumState;
+                        
+                        // Create fluid dynamics with laminar flow
+                        vec2 flow = laminarFlow(flowUV * 2.0, t * 0.5);
+                        float fluid = sin(dot(flow, flow) * 10.0) * uFluidPressure;
+                        
+                        // Create dimensional rifts with foam influence
+                        float rift = sin(length(flowUV - 0.5) * 20.0 + uDimensionalPhase + foam.x * 5.0);
+                        
+                        // Combine effects with enhanced colors
+                        vec3 color = vec3(0.0);
+                        color += vec3(0.0, 1.0, 0.8) * quantum * 0.5;     // Cyan quantum effects
+                        color += vec3(0.2, 0.8, 0.6) * foam * 0.3;        // Turquoise foam
+                        color += vec3(0.0, 0.7, 0.5) * fluid * 0.3;       // Sea green fluid
+                        color += vec3(0.0, 0.5, 1.0) * rift * 0.2;        // Blue rifts
+                        
+                        // Add depth-based coloring
+                        float depth = length(flowUV - 0.5);
+                        color *= 1.0 + foam * (1.0 - depth) * 0.5;
+                        
+                        // Enhanced glow with foam influence
+                        float glow = exp(-depth * (2.0 - foam.x));
+                        color *= glow;
+                        
+                        // Create guardian effect
+                        float guardianEffect = 0.0;
+                        if (uQuantumState > 1.0) {
+                            float guardianDist = length(flowUV - 0.5);
+                            guardianEffect = smoothstep(0.4, 0.0, guardianDist) * 
+                                sin(guardianDist * 40.0 - t * 5.0) * uQuantumState * 0.2;
+                        }
+                        
+                        color += vec3(1.0, 0.5, 1.0) * guardianEffect;    // Guardian effect
+                        
+                        return color;
+                    }
+
+                    void main() {
+                        vec2 uv = vUv;
+                        vec3 color = quantumField(uv);
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `, gl.FRAGMENT_SHADER);
+
+                // Create shader program
+                const shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vertexShader);
+                gl.attachShader(shaderProgram, fragmentShader);
+                gl.linkProgram(shaderProgram);
+
+                if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                    throw new Error('Shader program link error: ' + 
+                        gl.getProgramInfoLog(shaderProgram));
+                }
+
+                // Create vertex buffer
+                const positions = new Float32Array([
+                    -1.0, -1.0,
+                     1.0, -1.0,
+                    -1.0,  1.0,
+                     1.0,  1.0,
+                ]);
+
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+                // Set up attributes and uniforms
+                const positionLocation = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
+                const timeLocation = gl.getUniformLocation(shaderProgram, 'uTime');
+                const quantumLocation = gl.getUniformLocation(shaderProgram, 'uQuantumState');
+                const fluidLocation = gl.getUniformLocation(shaderProgram, 'uFluidPressure');
+                const phaseLocation = gl.getUniformLocation(shaderProgram, 'uDimensionalPhase');
+
+                // Use shader program
+                gl.useProgram(shaderProgram);
+
+                // Set uniforms
+                gl.uniform1f(timeLocation, performance.now());
+                if (qfs) {
+                    gl.uniform1f(quantumLocation, qfs.quantumState);
+                    gl.uniform1f(fluidLocation, qfs.fluidPressure);
+                    gl.uniform1f(phaseLocation, qfs.dimensionalPhase);
+                }
+
+                // Set up vertex attributes
+                gl.enableVertexAttribArray(positionLocation);
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+                // Draw
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            } catch (error) {
+                console.error('Render error:', error);
+                // Implement fallback rendering if needed
+            }
+        }
+
+        // Start animation only if initialization successful
+        if (gl && qfs) {
+            requestAnimationFrame(animate);
+        }
+
+        // Event Listeners
+        document.addEventListener('mousemove', (e) => {
+            if (!qfs) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width * 2 - 1;
+            const y = (e.clientY - rect.top) / rect.height * -2 + 1;
+            
+            qfs.handleMouseInteraction(x, y);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!qfs) return;
+
+            switch(e.key) {
+                case 'q':
+                    qfs.tunnel(qfs.dimensionalPhase + 1);
+                    break;
+                case 'e':
+                    qfs.traverseBoundary();
+                    break;
+                case 'r':
+                    qfs.quantumState = 1.0;
+                    break;
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (!gl) return;
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        });
+
+        // Initial resize
+        window.dispatchEvent(new Event('resize'));
+    </script>
+</body>
+</html>

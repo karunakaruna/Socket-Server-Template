@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid Deep Diving</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            border-radius: 50%;
+            cursor: crosshair;
+            background: radial-gradient(circle at 50% 50%,
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            box-shadow: 
+                0 0 40px rgba(0, 100, 255, 0.2),
+                inset 0 0 20px rgba(0, 255, 255, 0.2);
+            z-index: 1000;
+            touch-action: none;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+        }
+
+        #quantum-navigator:hover {
+            box-shadow: 
+                0 0 60px rgba(0, 100, 255, 0.4),
+                inset 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .depth-marker {
+            position: fixed;
+            left: 20px;
+            color: rgba(0, 255, 255, 0.8);
+            font-size: 14px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        #depth-gauge {
+            top: 20px;
+        }
+
+        #quantum-pressure {
+            top: 45px;
+        }
+
+        #psi-density {
+            top: 70px;
+        }
+
+        .psiboid-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(0, 255, 255, 0.8);
+            font-size: 18px;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 1001;
+            pointer-events: none;
+        }
+
+        @keyframes quantum-pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0.4; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        .quantum-depth-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%,
+                transparent,
+                rgba(0, 20, 40, 0.2),
+                rgba(0, 40, 80, 0.4)
+            );
+            z-index: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        .resonance-field {
+            position: fixed;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(0, 255, 255, 0.5),
+                transparent
+            );
+            opacity: 0.3;
+            z-index: 501;
+            pointer-events: none;
+            animation: wave 2s infinite ease-in-out;
+        }
+
+        @keyframes wave {
+            0% { transform: translateY(-50%) scaleY(1); }
+            50% { transform: translateY(-50%) scaleY(2); }
+            100% { transform: translateY(-50%) scaleY(1); }
+        }
+
+        .structure-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 20, 0.8);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+            color: rgba(0, 255, 255, 0.9);
+            text-align: center;
+            z-index: 2000;
+            transition: all 0.5s ease-in-out;
+            backdrop-filter: blur(5px);
+        }
+
+        .quantum-distortion {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1500;
+            pointer-events: none;
+            animation: distortion-pulse 3s ease-out;
+            transition: background 1s ease-in-out;
+        }
+
+        @keyframes alert-fade {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            10% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            20% { transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        @keyframes distortion-pulse {
+            0% { opacity: 0; transform: scale(0.8); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="quantum-navigator"></div>
+    <div id="depth-gauge" class="depth-marker">Quantum Depth: 0 μq</div>
+    <div id="quantum-pressure" class="depth-marker">Pressure: 1.00 atm</div>
+    <div id="psi-density" class="depth-marker">Ψ-Density: 1.00 ψ/m³</div>
+    <div class="psiboid-alert">Psiboid Swarm Detected!</div>
+    <div class="quantum-depth-effect"></div>
+
+    <script>
+        class PsiBoid {
+            constructor(x, y, z) {
+                this.position = { x, y, z };
+                this.velocity = {
+                    x: Math.random() * 2 - 1,
+                    y: Math.random() * 2 - 1,
+                    z: Math.random() * 2 - 1
+                };
+                this.acceleration = { x: 0, y: 0, z: 0 };
+                this.maxSpeed = 3;
+                this.maxForce = 0.05;
+                this.perceptionRadius = 50;
+                this.separationWeight = 1.5;
+                this.alignmentWeight = 1.0;
+                this.cohesionWeight = 1.0;
+                this.quantumState = Math.random();
+                this.phaseAngle = Math.random() * Math.PI * 2;
+                this.energyLevel = 1.0;
+            }
+
+            update(boids, time) {
+                // Update quantum state
+                this.quantumState = 0.5 + Math.sin(time * 0.001 + this.phaseAngle) * 0.5;
+                this.energyLevel = 1.0 + Math.sin(time * 0.0005) * 0.2;
+
+                // Apply flocking behavior
+                const separation = this.separate(boids);
+                const alignment = this.align(boids);
+                const cohesion = this.cohere(boids);
+
+                // Apply quantum effects
+                const quantumForce = this.quantumFluctuation(time);
+
+                // Weight and apply forces
+                this.applyForce(separation, this.separationWeight);
+                this.applyForce(alignment, this.alignmentWeight);
+                this.applyForce(cohesion, this.cohesionWeight);
+                this.applyForce(quantumForce, 0.5);
+
+                // Update position
+                this.velocity.x += this.acceleration.x;
+                this.velocity.y += this.acceleration.y;
+                this.velocity.z += this.acceleration.z;
+
+                // Limit speed
+                const speed = Math.sqrt(
+                    this.velocity.x * this.velocity.x +
+                    this.velocity.y * this.velocity.y +
+                    this.velocity.z * this.velocity.z
+                );
+
+                if (speed > this.maxSpeed) {
+                    this.velocity.x = (this.velocity.x / speed) * this.maxSpeed;
+                    this.velocity.y = (this.velocity.y / speed) * this.maxSpeed;
+                    this.velocity.z = (this.velocity.z / speed) * this.maxSpeed;
+                }
+
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+                this.position.z += this.velocity.z;
+
+                // Reset acceleration
+                this.acceleration = { x: 0, y: 0, z: 0 };
+
+                // Wrap around edges
+                this.position.x = (this.position.x + window.innerWidth) % window.innerWidth;
+                this.position.y = (this.position.y + window.innerHeight) % window.innerHeight;
+                this.position.z = (this.position.z + 1000) % 1000;
+            }
+
+            quantumFluctuation(time) {
+                return {
+                    x: Math.sin(time * 0.001 + this.phaseAngle) * 0.1,
+                    y: Math.cos(time * 0.001 + this.phaseAngle) * 0.1,
+                    z: Math.sin(time * 0.0015 + this.phaseAngle) * 0.1
+                };
+            }
+
+            separate(boids) {
+                const steering = { x: 0, y: 0, z: 0 };
+                let total = 0;
+
+                for (const other of boids) {
+                    if (other === this) continue;
+
+                    const d = this.distance(other);
+                    if (d < this.perceptionRadius) {
+                        const diff = {
+                            x: this.position.x - other.position.x,
+                            y: this.position.y - other.position.y,
+                            z: this.position.z - other.position.z
+                        };
+                        steering.x += diff.x / d;
+                        steering.y += diff.y / d;
+                        steering.z += diff.z / d;
+                        total++;
+                    }
+                }
+
+                if (total > 0) {
+                    steering.x /= total;
+                    steering.y /= total;
+                    steering.z /= total;
+                    const steeringLength = Math.sqrt(
+                        steering.x * steering.x +
+                        steering.y * steering.y +
+                        steering.z * steering.z
+                    );
+                    if (steeringLength > 0) {
+                        steering.x = (steering.x / steeringLength) * this.maxSpeed;
+                        steering.y = (steering.y / steeringLength) * this.maxSpeed;
+                        steering.z = (steering.z / steeringLength) * this.maxSpeed;
+                        steering.x -= this.velocity.x;
+                        steering.y -= this.velocity.y;
+                        steering.z -= this.velocity.z;
+                    }
+                }
+
+                return steering;
+            }
+
+            align(boids) {
+                const steering = { x: 0, y: 0, z: 0 };
+                let total = 0;
+
+                for (const other of boids) {
+                    if (other === this) continue;
+
+                    const d = this.distance(other);
+                    if (d < this.perceptionRadius) {
+                        steering.x += other.velocity.x;
+                        steering.y += other.velocity.y;
+                        steering.z += other.velocity.z;
+                        total++;
+                    }
+                }
+
+                if (total > 0) {
+                    steering.x /= total;
+                    steering.y /= total;
+                    steering.z /= total;
+                    const steeringLength = Math.sqrt(
+                        steering.x * steering.x +
+                        steering.y * steering.y +
+                        steering.z * steering.z
+                    );
+                    if (steeringLength > 0) {
+                        steering.x = (steering.x / steeringLength) * this.maxSpeed;
+                        steering.y = (steering.y / steeringLength) * this.maxSpeed;
+                        steering.z = (steering.z / steeringLength) * this.maxSpeed;
+                        steering.x -= this.velocity.x;
+                        steering.y -= this.velocity.y;
+                        steering.z -= this.velocity.z;
+                    }
+                }
+
+                return steering;
+            }
+
+            cohere(boids) {
+                const steering = { x: 0, y: 0, z: 0 };
+                let total = 0;
+
+                for (const other of boids) {
+                    if (other === this) continue;
+
+                    const d = this.distance(other);
+                    if (d < this.perceptionRadius) {
+                        steering.x += other.position.x;
+                        steering.y += other.position.y;
+                        steering.z += other.position.z;
+                        total++;
+                    }
+                }
+
+                if (total > 0) {
+                    steering.x /= total;
+                    steering.y /= total;
+                    steering.z /= total;
+                    steering.x -= this.position.x;
+                    steering.y -= this.position.y;
+                    steering.z -= this.position.z;
+                    const steeringLength = Math.sqrt(
+                        steering.x * steering.x +
+                        steering.y * steering.y +
+                        steering.z * steering.z
+                    );
+                    if (steeringLength > 0) {
+                        steering.x = (steering.x / steeringLength) * this.maxSpeed;
+                        steering.y = (steering.y / steeringLength) * this.maxSpeed;
+                        steering.z = (steering.z / steeringLength) * this.maxSpeed;
+                        steering.x -= this.velocity.x;
+                        steering.y -= this.velocity.y;
+                        steering.z -= this.velocity.z;
+                    }
+                }
+
+                return steering;
+            }
+
+            distance(other) {
+                const dx = this.position.x - other.position.x;
+                const dy = this.position.y - other.position.y;
+                const dz = this.position.z - other.position.z;
+                return Math.sqrt(dx * dx + dy * dy + dz * dz);
+            }
+
+            applyForce(force, weight = 1.0) {
+                this.acceleration.x += force.x * weight;
+                this.acceleration.y += force.y * weight;
+                this.acceleration.z += force.z * weight;
+            }
+
+            draw(ctx, camera) {
+                // Project 3D position to 2D
+                const scale = 500 / (500 + this.position.z - camera.z);
+                const x = (this.position.x - camera.x) * scale + window.innerWidth / 2;
+                const y = (this.position.y - camera.y) * scale + window.innerHeight / 2;
+
+                // Draw psiboid
+                const size = 5 * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                
+                // Color based on quantum state and energy
+                const hue = 180 + this.quantumState * 60;
+                const saturation = 80 + this.energyLevel * 20;
+                const lightness = 50 + this.energyLevel * 10;
+                ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                ctx.fill();
+
+                // Draw quantum aura
+                ctx.beginPath();
+                ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${0.3 * scale})`;
+                ctx.lineWidth = 2 * scale;
+                ctx.stroke();
+            }
+        }
+
+        // Initialize WebGL
+        const canvas = document.getElementById('glCanvas');
+        const ctx = canvas.getContext('2d'); // Change to 2D context for psiboid drawing
+        
+        if (!ctx) {
+            console.error('Canvas 2D not supported');
+            document.body.innerHTML = 'Canvas 2D is not supported by your browser';
+        }
+
+        // Enhanced quantum structures with architectural elements
+        const quantumStructures = [
+            { 
+                depth: -1000,
+                name: "Planck Barrier",
+                color: "#00ffff",
+                pattern: "hexGrid",
+                scale: 50,
+                rotation: 0.1,
+                elements: ["barrier", "crystalline"]
+            },
+            { 
+                depth: -2000,
+                name: "Quantum Foam Chambers",
+                color: "#00ff80",
+                pattern: "bubbles",
+                scale: 20,
+                rotation: 0.2,
+                elements: ["chambers", "tunnels"]
+            },
+            { 
+                depth: -5000,
+                name: "Subatomic Architecture",
+                color: "#0080ff",
+                pattern: "streams",
+                scale: 100,
+                rotation: 0.05,
+                elements: ["pillars", "archways"]
+            },
+            { 
+                depth: -10000,
+                name: "String Theory Lattice",
+                color: "#8000ff",
+                pattern: "strings",
+                scale: 30,
+                rotation: 0.15,
+                elements: ["lattice", "nodes"]
+            },
+            { 
+                depth: -20000,
+                name: "M-Brane Cathedral",
+                color: "#ff00ff",
+                pattern: "membranes",
+                scale: 200,
+                rotation: 0.025,
+                elements: ["spires", "vaults"]
+            },
+            { 
+                depth: -50000,
+                name: "Calabi-Yau Megastructure",
+                color: "#ff8000",
+                pattern: "manifold",
+                scale: 150,
+                rotation: 0.08,
+                elements: ["towers", "bridges"]
+            },
+            { 
+                depth: -100000,
+                name: "Quantum Singularity Temple",
+                color: "#ffffff",
+                pattern: "vortex",
+                scale: 300,
+                rotation: 0.3,
+                elements: ["temple", "core"]
+            }
+        ];
+
+        function drawQuantumPattern(ctx, pattern, color, scale, rotation, time) {
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            
+            ctx.save();
+            ctx.translate(width/2, height/2);
+            ctx.rotate(time * rotation);
+
+            switch(pattern) {
+                case "hexGrid":
+                    drawHexGrid(ctx, color, scale);
+                    break;
+                case "bubbles":
+                    drawQuantumFoam(ctx, color, scale, time);
+                    break;
+                case "streams":
+                    drawCurrents(ctx, color, scale, time);
+                    break;
+                case "strings":
+                    drawStringTheory(ctx, color, scale, time);
+                    break;
+                case "membranes":
+                    drawMBranes(ctx, color, scale, time);
+                    break;
+                case "manifold":
+                    drawCalabiYau(ctx, color, scale, time);
+                    break;
+                case "vortex":
+                    drawSingularity(ctx, color, scale, time);
+                    break;
+            }
+            
+            ctx.restore();
+        }
+
+        function drawStructuralElements(ctx, elements, color, scale, time) {
+            elements.forEach(element => {
+                switch(element) {
+                    case "barrier":
+                        drawBarrier(ctx, color, scale, time);
+                        break;
+                    case "crystalline":
+                        drawCrystalline(ctx, color, scale, time);
+                        break;
+                    case "chambers":
+                        drawChambers(ctx, color, scale, time);
+                        break;
+                    case "tunnels":
+                        drawTunnels(ctx, color, scale, time);
+                        break;
+                    case "pillars":
+                        drawPillars(ctx, color, scale, time);
+                        break;
+                    case "archways":
+                        drawArchways(ctx, color, scale, time);
+                        break;
+                    case "lattice":
+                        drawLattice(ctx, color, scale, time);
+                        break;
+                    case "nodes":
+                        drawNodes(ctx, color, scale, time);
+                        break;
+                    case "spires":
+                        drawSpires(ctx, color, scale, time);
+                        break;
+                    case "vaults":
+                        drawVaults(ctx, color, scale, time);
+                        break;
+                    case "towers":
+                        drawTowers(ctx, color, scale, time);
+                        break;
+                    case "bridges":
+                        drawBridges(ctx, color, scale, time);
+                        break;
+                    case "temple":
+                        drawTemple(ctx, color, scale, time);
+                        break;
+                    case "core":
+                        drawCore(ctx, color, scale, time);
+                        break;
+                }
+            });
+        }
+
+        function drawBarrier(ctx, color, scale, time) {
+            const segments = 12;
+            ctx.beginPath();
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const radius = scale * (1 + Math.sin(time * 0.001 + angle) * 0.2);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        function drawChambers(ctx, color, scale, time) {
+            for (let i = 0; i < 3; i++) {
+                const angle = time * 0.001 + i * Math.PI * 2 / 3;
+                const x = Math.cos(angle) * scale;
+                const y = Math.sin(angle) * scale;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, scale * 0.3, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Connect chambers with tunnels
+                if (i > 0) {
+                    const prevX = Math.cos(angle - Math.PI * 2 / 3) * scale;
+                    const prevY = Math.sin(angle - Math.PI * 2 / 3) * scale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(prevX, prevY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawPillars(ctx, color, scale, time) {
+            for (let i = 0; i < 6; i++) {
+                const angle = i * Math.PI / 3;
+                const x = Math.cos(angle) * scale;
+                const y = Math.sin(angle) * scale;
+                
+                ctx.beginPath();
+                ctx.moveTo(x - 10, y - scale * 0.5);
+                ctx.lineTo(x - 10, y + scale * 0.5);
+                ctx.lineTo(x + 10, y + scale * 0.5);
+                ctx.lineTo(x + 10, y - scale * 0.5);
+                ctx.closePath();
+                
+                ctx.fillStyle = color + "44";
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function drawTemple(ctx, color, scale, time) {
+            // Base
+            ctx.beginPath();
+            ctx.moveTo(-scale, scale * 0.5);
+            ctx.lineTo(scale, scale * 0.5);
+            ctx.lineTo(scale * 0.7, -scale * 0.5);
+            ctx.lineTo(-scale * 0.7, -scale * 0.5);
+            ctx.closePath();
+            ctx.fillStyle = color + "33";
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.fill();
+            ctx.stroke();
+
+            // Spires
+            for (let i = -2; i <= 2; i++) {
+                const x = i * scale * 0.3;
+                const height = scale * (0.8 + Math.sin(time * 0.001 + i) * 0.2);
+                
+                ctx.beginPath();
+                ctx.moveTo(x - 20, -scale * 0.5);
+                ctx.lineTo(x, -height);
+                ctx.lineTo(x + 20, -scale * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function drawHexGrid(ctx, color, scale) {
+            const size = scale;
+            const h = size * Math.sqrt(3);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            
+            for(let row = -10; row < 10; row++) {
+                for(let col = -10; col < 10; col++) {
+                    const x = col * size * 1.5;
+                    const y = row * h + (col % 2) * h/2;
+                    drawHexagon(ctx, x, y, size);
+                }
+            }
+        }
+
+        function drawQuantumFoam(ctx, color, scale, time) {
+            for(let i = 0; i < 50; i++) {
+                const angle = i * Math.PI * 2 / 50;
+                const radius = scale * (3 + Math.sin(time * 0.001 + i));
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, scale/4, 0, Math.PI * 2);
+                ctx.fillStyle = color + Math.floor(Math.random() * 99).toString(16);
+                ctx.fill();
+            }
+        }
+
+        function drawCurrents(ctx, color, scale, time) {
+            for(let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-ctx.canvas.width/2, 0);
+                
+                for(let x = -ctx.canvas.width/2; x < ctx.canvas.width/2; x += 10) {
+                    const y = Math.sin(x * 0.01 + time * 0.001 + i) * scale;
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.strokeStyle = color + "88";
+                ctx.lineWidth = scale/10;
+                ctx.stroke();
+            }
+        }
+
+        function drawStringTheory(ctx, color, scale, time) {
+            for(let i = 0; i < 10; i++) {
+                const t = time * 0.001 + i;
+                ctx.beginPath();
+                ctx.moveTo(
+                    Math.cos(t) * scale,
+                    Math.sin(t) * scale
+                );
+                
+                for(let j = 0; j < 50; j++) {
+                    const angle = j * Math.PI * 2 / 50;
+                    const x = Math.cos(t + angle) * scale;
+                    const y = Math.sin(t + angle * 2) * scale;
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.strokeStyle = color + "aa";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        function drawMBranes(ctx, color, scale, time) {
+            const points = [];
+            for(let i = 0; i < 5; i++) {
+                points.push({
+                    x: Math.cos(time * 0.001 + i) * scale,
+                    y: Math.sin(time * 0.001 + i * 2) * scale
+                });
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for(let i = 1; i < points.length; i++) {
+                const xc = (points[i].x + points[i-1].x) / 2;
+                const yc = (points[i].y + points[i-1].y) / 2;
+                ctx.quadraticCurveTo(points[i-1].x, points[i-1].y, xc, yc);
+            }
+            ctx.closePath();
+            
+            ctx.fillStyle = color + "44";
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function drawCalabiYau(ctx, color, scale, time) {
+            const points = 6;
+            const innerRadius = scale * 0.5;
+            const outerRadius = scale;
+            
+            ctx.beginPath();
+            for(let i = 0; i <= points * 2; i++) {
+                const angle = i * Math.PI / points + time * 0.001;
+                const radius = i % 2 ? innerRadius : outerRadius;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                if(i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            
+            const gradient = ctx.createRadialGradient(0, 0, innerRadius, 0, 0, outerRadius);
+            gradient.addColorStop(0, color + "00");
+            gradient.addColorStop(0.5, color + "88");
+            gradient.addColorStop(1, color + "00");
+            
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function drawSingularity(ctx, color, scale, time) {
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, scale);
+            gradient.addColorStop(0, color);
+            gradient.addColorStop(0.1, color + "88");
+            gradient.addColorStop(0.5, color + "44");
+            gradient.addColorStop(1, color + "00");
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add swirling effect
+            for(let i = 0; i < 8; i++) {
+                const angle = time * 0.001 + i * Math.PI / 4;
+                const x1 = Math.cos(angle) * scale * 0.2;
+                const y1 = Math.sin(angle) * scale * 0.2;
+                const x2 = Math.cos(angle) * scale;
+                const y2 = Math.sin(angle) * scale;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = color + "44";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        function drawHexagon(ctx, x, y, size) {
+            ctx.beginPath();
+            for(let i = 0; i < 6; i++) {
+                const angle = i * Math.PI / 3;
+                const px = x + size * Math.cos(angle);
+                const py = y + size * Math.sin(angle);
+                if(i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // Camera and scene setup
+        const camera = {
+            x: 0,
+            y: 0,
+            z: 0,
+            speed: 5, // Increased speed
+            maxDepth: -150000 // Much deeper maximum depth
+        };
+
+        // Create more psiboids
+        const psiboids = [];
+        for (let i = 0; i < 200; i++) { // Doubled psiboid count
+            psiboids.push(new PsiBoid(
+                Math.random() * window.innerWidth,
+                Math.random() * window.innerHeight,
+                Math.random() * 2000 - 1000
+            ));
+        }
+
+        // Enhanced quantum diving mechanics
+        let depth = 0;
+        let pressure = 1.0;
+        let psiDensity = 1.0;
+        let diving = false;
+        let currentStructure = null;
+        
+        function updateDiving(time) {
+            if (diving) {
+                const oldDepth = depth;
+                depth -= camera.speed * (1 + Math.abs(depth) / 10000); // Exponential speed increase
+                camera.z -= camera.speed * (1 + Math.abs(depth) / 10000);
+                
+                // Update quantum metrics with more extreme values
+                pressure = 1.0 + Math.abs(depth) / 500;
+                psiDensity = 1.0 + Math.sin(depth * 0.001) * 0.5 + Math.abs(depth) / 1000;
+                
+                // Check for quantum structures
+                for (const structure of quantumStructures) {
+                    if (oldDepth > structure.depth && depth <= structure.depth) {
+                        // Crossing into new structure
+                        currentStructure = structure;
+                        showStructureAlert(structure);
+                        createQuantumDistortion(structure);
+                    }
+                }
+                
+                // Update UI with enhanced formatting
+                document.getElementById('depth-gauge').textContent = 
+                    `Quantum Depth: ${Math.abs(Math.round(depth)).toLocaleString()} μq`;
+                document.getElementById('quantum-pressure').textContent = 
+                    `Pressure: ${pressure.toFixed(2)} atm`;
+                document.getElementById('psi-density').textContent = 
+                    `Ψ-Density: ${psiDensity.toFixed(2)} ψ/m³`;
+                
+                // Enhanced visual effects
+                const depthEffect = document.querySelector('.quantum-depth-effect');
+                depthEffect.style.opacity = Math.min(Math.abs(depth) / 2000, 0.9);
+                
+                if (currentStructure) {
+                    depthEffect.style.background = `radial-gradient(circle at 50% 50%,
+                        transparent,
+                        ${currentStructure.color}22,
+                        ${currentStructure.color}44
+                    )`;
+                }
+                
+                // Psiboid interaction
+                let nearbyPsiboids = 0;
+                for (const boid of psiboids) {
+                    if (Math.abs(boid.position.z - camera.z) < 200) {
+                        nearbyPsiboids++;
+                        boid.energyLevel = 2.0; // Energize nearby psiboids
+                    }
+                }
+                
+                if (nearbyPsiboids > 5) {
+                    const alert = document.querySelector('.psiboid-alert');
+                    alert.style.opacity = '1';
+                    alert.textContent = `Psiboid Swarm Detected! (${nearbyPsiboids} nearby)`;
+                    setTimeout(() => alert.style.opacity = '0', 2000);
+                }
+            }
+        }
+
+        function showStructureAlert(structure) {
+            const alert = document.createElement('div');
+            alert.className = 'structure-alert';
+            alert.innerHTML = `
+                <h2>${structure.name}</h2>
+                <p>Depth: ${Math.abs(structure.depth).toLocaleString()} μq</p>
+            `;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 4000);
+        }
+
+        function createQuantumDistortion(structure) {
+            const distortion = document.createElement('div');
+            distortion.className = 'quantum-distortion';
+            distortion.style.background = `radial-gradient(circle at 50% 50%,
+                transparent,
+                ${structure.color}88,
+                transparent
+            )`;
+            document.body.appendChild(distortion);
+            
+            setTimeout(() => distortion.remove(), 3000);
+        }
+
+        // Track transition state
+        let transitionProgress = 0;
+        let previousStructure = null;
+        let transitionDuration = 1000; // ms
+
+        function getStructureAtDepth(depth) {
+            let current = null;
+            let next = null;
+            
+            for (let i = 0; i < quantumStructures.length; i++) {
+                if (depth <= quantumStructures[i].depth) {
+                    current = quantumStructures[i];
+                    next = quantumStructures[i + 1];
+                    break;
+                }
+            }
+            
+            return { current, next };
+        }
+
+        function interpolateColor(color1, color2, progress) {
+            const r1 = parseInt(color1.substr(1,2), 16);
+            const g1 = parseInt(color1.substr(3,2), 16);
+            const b1 = parseInt(color1.substr(5,2), 16);
+            
+            const r2 = parseInt(color2.substr(1,2), 16);
+            const g2 = parseInt(color2.substr(3,2), 16);
+            const b2 = parseInt(color2.substr(5,2), 16);
+            
+            const r = Math.round(r1 + (r2 - r1) * progress);
+            const g = Math.round(g1 + (g2 - g1) * progress);
+            const b = Math.round(b1 + (b2 - b1) * progress);
+            
+            return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+        }
+
+        function blendPatterns(ctx, pattern1, pattern2, color1, color2, scale1, scale2, rotation1, rotation2, time, progress) {
+            // Draw first pattern with fading opacity
+            ctx.globalAlpha = 1 - progress;
+            drawQuantumPattern(ctx, pattern1, color1, scale1, rotation1, time);
+            
+            // Draw second pattern fading in
+            ctx.globalAlpha = progress;
+            drawQuantumPattern(ctx, pattern2, color2, scale2, rotation2, time);
+            
+            ctx.globalAlpha = 1;
+        }
+
+        // Enhanced animation loop with smooth transitions
+        function animate(time) {
+            ctx.fillStyle = `rgba(0, 0, ${10 + Math.min(Math.abs(depth) / 1000, 40)}, 1.0)`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const { current, next } = getStructureAtDepth(depth);
+            
+            if (current) {
+                if (current !== currentStructure) {
+                    previousStructure = currentStructure;
+                    currentStructure = current;
+                    transitionProgress = 0;
+                }
+                
+                ctx.save();
+                ctx.translate(canvas.width/2, canvas.height/2);
+                
+                if (previousStructure && transitionProgress < 1) {
+                    transitionProgress = Math.min(transitionProgress + (16 / transitionDuration), 1);
+                    
+                    // Blend patterns and structures
+                    ctx.globalAlpha = 1 - transitionProgress;
+                    drawQuantumPattern(ctx, previousStructure.pattern, previousStructure.color, 
+                        previousStructure.scale, previousStructure.rotation, time);
+                    drawStructuralElements(ctx, previousStructure.elements, 
+                        previousStructure.color, previousStructure.scale, time);
+                    
+                    ctx.globalAlpha = transitionProgress;
+                    drawQuantumPattern(ctx, current.pattern, current.color, 
+                        current.scale, current.rotation, time);
+                    drawStructuralElements(ctx, current.elements, 
+                        current.color, current.scale, time);
+                } else {
+                    drawQuantumPattern(ctx, current.pattern, current.color, 
+                        current.scale, current.rotation, time);
+                    drawStructuralElements(ctx, current.elements, 
+                        current.color, current.scale, time);
+                }
+                
+                if (next) {
+                    const distanceToNext = next.depth - depth;
+                    if (distanceToNext < 500) {
+                        const progress = 1 - (distanceToNext / 500);
+                        ctx.globalAlpha = progress;
+                        drawQuantumPattern(ctx, next.pattern, next.color, 
+                            next.scale, next.rotation, time);
+                        drawStructuralElements(ctx, next.elements, 
+                            next.color, next.scale, time);
+                    }
+                }
+                
+                ctx.restore();
+            }
+
+            // Update and draw psiboids
+            for (const boid of psiboids) {
+                boid.update(psiboids, time);
+                boid.draw(ctx, camera);
+            }
+
+            updateDiving(time);
+            requestAnimationFrame(animate);
+        }
+
+        // Enhance structure alerts with smooth transitions
+        function showStructureAlert(structure) {
+            const alert = document.createElement('div');
+            alert.className = 'structure-alert';
+            alert.innerHTML = `
+                <h2>${structure.name}</h2>
+                <p>Depth: ${Math.abs(structure.depth).toLocaleString()} μq</p>
+            `;
+            
+            // Add transition styles
+            alert.style.transition = 'all 0.5s ease-in-out';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translate(-50%, -60%) scale(0.8)';
+            
+            document.body.appendChild(alert);
+            
+            // Trigger entrance animation
+            setTimeout(() => {
+                alert.style.opacity = '1';
+                alert.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 50);
+            
+            // Trigger exit animation
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translate(-50%, -40%) scale(0.8)';
+                setTimeout(() => alert.remove(), 500);
+            }, 3500);
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Space') {
+                diving = !diving;
+                if (diving) {
+                    document.getElementById('quantum-navigator').style.boxShadow = 
+                        '0 0 60px rgba(0, 100, 255, 0.6), inset 0 0 30px rgba(0, 255, 255, 0.4)';
+                } else {
+                    document.getElementById('quantum-navigator').style.boxShadow = 
+                        '0 0 40px rgba(0, 100, 255, 0.2), inset 0 0 20px rgba(0, 255, 255, 0.2)';
+                }
+            }
+        });
+
+        // Start animation
+        animate(0);
+
+        // Add resonance fields
+        for (let i = 0; i < 5; i++) {
+            const field = document.createElement('div');
+            field.className = 'resonance-field';
+            field.style.top = `${20 + i * 20}%`;
+            field.style.animationDelay = `${i * 0.2}s`;
+            document.body.appendChild(field);
+        }
+    </script>
+</body>
+</html>

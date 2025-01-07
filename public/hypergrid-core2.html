@@ -3,53 +3,58 @@
 <head>
     <title>Hypergrid Core II</title>
     <style>
-        body {
+        body, html {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            background: black;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            background: #000;
         }
         canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            cursor: crosshair;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
         }
-        #ui {
+        #stats {
             position: fixed;
             top: 10px;
-            right: 10px;
+            left: 10px;
             color: #0ff;
             font-family: monospace;
             font-size: 12px;
-            text-align: right;
             pointer-events: none;
+            z-index: 1000;
             text-shadow: 0 0 2px #0ff;
         }
         #fullscreen {
             position: fixed;
             bottom: 10px;
             right: 10px;
-            background: rgba(0,255,255,0.2);
+            background: transparent;
             border: 1px solid #0ff;
             color: #0ff;
             font-family: monospace;
             padding: 5px 10px;
             cursor: pointer;
-            transition: all 0.2s;
+            z-index: 1000;
+            text-shadow: 0 0 2px #0ff;
+            box-shadow: 0 0 5px #0ff;
         }
         #fullscreen:hover {
-            background: rgba(0,255,255,0.3);
+            background: rgba(0,255,255,0.2);
         }
     </style>
 </head>
 <body>
-    <div id="ui">
+    <div id="stats">
         <div>Orbital Depth: <span id="depth">0.000</span></div>
         <div>Field Strength: <span id="field">0.000</span></div>
         <div>Time Dilation: <span id="time">0.000</span></div>
+        <div>Dimension: <span id="orbital">XY</span></div>
     </div>
     <button id="fullscreen">[ FULLSCREEN ]</button>
     <canvas id="core"></canvas>
@@ -72,65 +77,19 @@
         const roark = {
             x: 0,
             y: 0,
-            active: false,
             phase: 0,
-            depth: 0,
-            trail: [],
-            maxTrail: 20,
-            update: function() {
-                if(!this.active || !ctx) return;
-                
-                this.phase += 0.05 * (state.timeDilation || 1) * (controls.powerBoost || 1);
-                this.depth = Math.min(1, this.depth + 0.01 * (controls.powerBoost || 1));
-                
-                // Safety check for trail
-                if(!Array.isArray(this.trail)) this.trail = [];
-                
-                // Enhanced trail with quantum bridge mechanics
-                const trailPoint = {
-                    x: this.x,
-                    y: this.y,
-                    phase: this.phase,
-                    power: controls.powerBoost || 1,
-                    depth: this.depth,
-                    time: time
-                };
-                
-                this.trail.unshift(trailPoint);
-                if(this.trail.length > this.maxTrail) this.trail.pop();
-                
-                // Draw enhanced quantum wake with safety checks
-                if(this.trail.length > 1) {
-                    this.trail.forEach((point, i) => {
-                        if(!point) return;
-                        
-                        const t = i / (this.maxTrail || 1);
-                        const alpha = Math.max(0, Math.min(1, (1 - t) * 0.5 * (point.power || 1)));
-                        const size = Math.max(1, 20 * (1 - t) * (point.power || 1));
-                        
-                        // Quantum bridge effect with safety checks
-                        const bridgeStrength = Math.sin(point.phase + t * Math.PI);
-                        const bridgeSize = Math.max(1, size * (1 + bridgeStrength * 0.5));
-                        const bridgeAlpha = Math.max(0, Math.min(1, alpha * (0.5 + bridgeStrength * 0.5)));
-                        
-                        // Draw main wake point
-                        ctx.beginPath();
-                        ctx.arc(point.x, point.y, bridgeSize, 0, Math.PI * 2);
-                        ctx.fillStyle = `rgba(0,255,255,${bridgeAlpha})`;
-                        ctx.fill();
-                    });
-                }
-                
-                // Draw enhanced Roark with wormhole effect
-                const pulseSize = Math.max(1, 20 * (1 + Math.sin(this.phase) * 0.3) * (controls.powerBoost || 1));
-                const wormholeSize = Math.max(1, pulseSize * (1 + this.depth));
-                
-                // Draw core
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, pulseSize, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(this.phase) * 0.3})`;
-                ctx.fill();
-            }
+            radius: 30,
+            wake: [],
+            active: false,
+            dimension: 0
+        };
+
+        const navigation = {
+            dimension: 0,
+            rotation: 0,
+            planes: ['xy', 'yz', 'xz'],
+            quaternion: {w: 1, x: 0, y: 0, z: 0},
+            roarkPresent: false
         };
 
         // Initialize controls with power modes
@@ -148,6 +107,14 @@
         const psiboids = [];
         const pulses = [];
         const nodes = [];
+
+        // Superstring mechanics
+        const superstrings = {
+            active: false,
+            strings: [],
+            maxStrings: 12,
+            resonance: 0
+        };
 
         // Enhanced psiboid behavior
         function updatePsiboids() {
@@ -394,6 +361,7 @@
             
             nodes.forEach(pair => {
                 [pair.matter, pair.antimatter].forEach(node => {
+                    if(!node || node.locked) return;
                     const nx = canvas.width/2 + Math.cos(node.angle) * (200 + node.charge * 30);
                     const ny = canvas.height/2 + Math.sin(node.angle) * (200 + node.charge * 30);
                     const dist = Math.hypot(x - nx, y - ny);
@@ -569,6 +537,136 @@
             psiboids[i+1].entangled = psiboids[i];
         }
 
+        // Superstring mechanics
+        function initSuperstrings() {
+            for(let i = 0; i < superstrings.maxStrings; i++) {
+                superstrings.strings.push({
+                    points: [],
+                    phase: Math.random() * Math.PI * 2,
+                    frequency: 0.5 + Math.random() * 0.5,
+                    amplitude: 20 + Math.random() * 20,
+                    lifetime: 0
+                });
+            }
+        }
+
+        function updateSuperstrings() {
+            if(!superstrings.active) return;
+
+            superstrings.resonance += 0.02;
+            
+            superstrings.strings.forEach(string => {
+                string.lifetime += 0.01;
+                string.phase += string.frequency * 0.1;
+
+                // Generate vibrating string points
+                string.points = [];
+                const steps = 50;
+                for(let i = 0; i < steps; i++) {
+                    const t = i / (steps - 1);
+                    const x = t * canvas.width;
+                    const baseY = canvas.height / 2;
+                    
+                    // Superposition of multiple harmonics
+                    let y = 0;
+                    for(let n = 1; n <= 3; n++) {
+                        y += Math.sin(string.phase * n + t * Math.PI * 2 * n) 
+                             * string.amplitude / n 
+                             * Math.sin(string.lifetime);
+                    }
+                    
+                    // Add quantum fluctuations
+                    y += (Math.random() - 0.5) * 2 * controls.powerBoost;
+                    
+                    string.points.push({x, y: baseY + y});
+                }
+            });
+        }
+
+        function drawSuperstrings() {
+            if(!superstrings.active) return;
+
+            ctx.save();
+            superstrings.strings.forEach(string => {
+                if(string.points.length < 2) return;
+
+                // Draw vibrating string
+                ctx.beginPath();
+                ctx.moveTo(string.points[0].x, string.points[0].y);
+                
+                for(let i = 1; i < string.points.length; i++) {
+                    const p0 = string.points[i-1];
+                    const p1 = string.points[i];
+                    ctx.lineTo(p1.x, p1.y);
+                }
+
+                const alpha = 0.3 + Math.sin(string.phase) * 0.2;
+                ctx.strokeStyle = `rgba(0,255,255,${alpha})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Draw quantum nodes
+                string.points.forEach((point, i) => {
+                    if(i % 5 === 0) {
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(0,255,255,${alpha * 1.5})`;
+                        ctx.fill();
+                    }
+                });
+            });
+            ctx.restore();
+        }
+
+        // Enhanced dimensional indicators
+        function drawDimensionalIndicators() {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const radius = 40;
+
+            // Draw dimensional plane indicators
+            ['XY', 'YZ', 'XZ'].forEach((plane, i) => {
+                const angle = (i * Math.PI * 2) / 3;
+                const x = cx + Math.cos(angle) * radius;
+                const y = cy + Math.sin(angle) * radius;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = i === navigation.dimension ? 
+                    'rgba(0,255,255,0.8)' : 'rgba(0,255,255,0.2)';
+                ctx.fill();
+
+                // Connection lines
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = `rgba(0,255,255,${i === navigation.dimension ? 0.6 : 0.1})`;
+                ctx.lineWidth = i === navigation.dimension ? 2 : 1;
+                ctx.stroke();
+
+                // Dimensional labels
+                ctx.fillStyle = i === navigation.dimension ? 
+                    'rgba(0,255,255,1)' : 'rgba(0,255,255,0.3)';
+                ctx.fillText(plane, x - 8, y - 8);
+            });
+
+            // Draw breaking free indicator
+            if(controls.powerBoost > 2 && roark.active) {
+                const breakRadius = radius * (1 + Math.sin(time * 0.005) * 0.2);
+                ctx.beginPath();
+                ctx.arc(cx, cy, breakRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0,255,255,${0.3 + Math.sin(time * 0.01) * 0.2})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Breaking free message
+                if(controls.powerBoost > 3) {
+                    ctx.fillStyle = 'rgba(0,255,255,0.8)';
+                    ctx.fillText('DIMENSIONAL BREACH IMMINENT', cx - 80, cy + radius + 20);
+                }
+            }
+        }
+
         // Enhanced key controls
         window.addEventListener('keydown', e => {
             if(e.key === 'Shift' && !controls.shift) {
@@ -606,6 +704,31 @@
             if(e.key === 'f') {
                 document.getElementById('fullscreen').click();
             }
+            
+            if(e.key === 'q') { // Rotate dimension left
+                navigation.dimension = (navigation.dimension - 1 + 3) % 3;
+                roark.dimension = navigation.dimension;
+                updateQuaternion();
+            }
+            if(e.key === 'e') { // Rotate dimension right
+                navigation.dimension = (navigation.dimension + 1) % 3;
+                roark.dimension = navigation.dimension;
+                updateQuaternion();
+            }
+            if(e.key === 'r') { // Summon/dismiss Roark
+                roark.active = !roark.active;
+                if(roark.active) {
+                    roark.x = canvas.width / 2;
+                    roark.y = canvas.height / 2;
+                    roark.wake = [];
+                }
+            }
+            if(e.key === 't') { // Toggle superstrings
+                superstrings.active = !superstrings.active;
+                if(superstrings.active && superstrings.strings.length === 0) {
+                    initSuperstrings();
+                }
+            }
         });
 
         window.addEventListener('keyup', e => {
@@ -624,6 +747,722 @@
             }
         });
 
+        function updateQuaternion() {
+            const angle = (navigation.dimension * Math.PI * 2) / 3;
+            navigation.quaternion = {
+                w: Math.cos(angle/2),
+                x: Math.sin(angle/2),
+                y: 0,
+                z: 0
+            };
+        }
+
+        function drawCompass() {
+            const cx = canvas.width - 80;
+            const cy = canvas.height - 80;
+            const radius = 30;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(navigation.dimension * Math.PI * 2 / 3);
+
+            // Draw compass ring
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw dimension markers
+            ['XY', 'YZ', 'XZ'].forEach((label, i) => {
+                const angle = (i * Math.PI * 2) / 3;
+                const x = Math.cos(angle) * (radius + 10);
+                const y = Math.sin(angle) * (radius + 10);
+                ctx.fillStyle = i === navigation.dimension ? 
+                    'rgba(0,255,255,1)' : 'rgba(0,255,255,0.3)';
+                ctx.fillText(label, x - 10, y + 5);
+            });
+
+            ctx.restore();
+        }
+
+        // Hyperspace guidance system
+        const guidance = {
+            active: false,
+            phase: 0,
+            steps: [
+                'SUMMON_ROARK',
+                'ALIGN_DIMENSION',
+                'POWER_UP',
+                'BREACH'
+            ],
+            currentStep: 0,
+            messages: {
+                SUMMON_ROARK: 'Press R to summon Roark',
+                ALIGN_DIMENSION: 'Use Q/E to align with the resonating dimension',
+                POWER_UP: 'Hold SHIFT + SPACE to build quantum power',
+                BREACH: 'Release to breach dimensional barrier'
+            }
+        };
+
+        function updateGuidance() {
+            guidance.phase += 0.05;
+            
+            // Update current step based on state
+            if(!roark.active) {
+                guidance.currentStep = 0;
+            } else if(controls.powerBoost <= 1) {
+                guidance.currentStep = 1;
+            } else if(controls.powerBoost < 3) {
+                guidance.currentStep = 2;
+            } else {
+                guidance.currentStep = 3;
+            }
+
+            // Draw guidance interface
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            // Draw guidance ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, 100, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(0,255,255,${0.3 + Math.sin(guidance.phase) * 0.2})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw step indicators
+            guidance.steps.forEach((step, i) => {
+                const angle = (i / guidance.steps.length) * Math.PI * 2 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * 100;
+                const y = cy + Math.sin(angle) * 100;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, i === guidance.currentStep ? 8 : 5, 0, Math.PI * 2);
+                ctx.fillStyle = i === guidance.currentStep ? 
+                    `rgba(0,255,255,${0.8 + Math.sin(guidance.phase) * 0.2})` :
+                    i < guidance.currentStep ? 
+                        'rgba(0,255,255,0.6)' : 'rgba(0,255,255,0.2)';
+                ctx.fill();
+
+                // Connect dots
+                if(i > 0) {
+                    const prevAngle = ((i - 1) / guidance.steps.length) * Math.PI * 2 - Math.PI / 2;
+                    const px = cx + Math.cos(prevAngle) * 100;
+                    const py = cy + Math.sin(prevAngle) * 100;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = i <= guidance.currentStep ? 
+                        'rgba(0,255,255,0.4)' : 'rgba(0,255,255,0.1)';
+                    ctx.stroke();
+                }
+            });
+
+            // Draw current message
+            const currentMessage = guidance.messages[guidance.steps[guidance.currentStep]];
+            ctx.fillStyle = `rgba(0,255,255,${0.8 + Math.sin(guidance.phase) * 0.2})`;
+            ctx.textAlign = 'center';
+            ctx.font = '16px monospace';
+            ctx.fillText(currentMessage, cx, cy + 130);
+
+            // Draw power indicator when charging
+            if(controls.powerBoost > 1) {
+                const powerAngle = (controls.powerBoost / 4) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 120, -Math.PI/2, -Math.PI/2 + powerAngle);
+                ctx.strokeStyle = `rgba(0,255,255,${0.6 + Math.sin(guidance.phase) * 0.2})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
+
+            // Draw resonance waves when near breach
+            if(controls.powerBoost > 2.5) {
+                const waves = 3;
+                for(let i = 0; i < waves; i++) {
+                    const radius = 150 + Math.sin(guidance.phase + i/waves * Math.PI * 2) * 20;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(0,255,255,${(0.3 - i/waves * 0.2) + Math.sin(guidance.phase) * 0.1})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Update Roark's guidance behavior
+        function updateRoark() {
+            if(!roark.active) return;
+
+            roark.phase += 0.05;
+            roark.radius = 30 + Math.sin(roark.phase) * 5;
+
+            // Enhanced wake effect
+            const wakePoint = {
+                x: roark.x + (Math.random() - 0.5) * 5 * controls.powerBoost,
+                y: roark.y + (Math.random() - 0.5) * 5 * controls.powerBoost,
+                phase: roark.phase,
+                power: controls.powerBoost
+            };
+            
+            roark.wake.unshift(wakePoint);
+            if(roark.wake.length > 30) roark.wake.pop();
+
+            // Draw enhanced Roark
+            ctx.beginPath();
+            ctx.arc(roark.x, roark.y, roark.radius, 0, Math.PI * 2);
+            const glowIntensity = 0.3 + Math.sin(roark.phase) * 0.2;
+            const powerGlow = controls.powerBoost > 1 ? 
+                Math.min(0.8, controls.powerBoost * 0.2) : 0;
+            
+            ctx.fillStyle = `rgba(0,255,255,${glowIntensity + powerGlow})`;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,255,255,0.8)';
+            ctx.lineWidth = 2 * (controls.powerBoost || 1);
+            ctx.stroke();
+
+            // Draw enhanced wake
+            roark.wake.forEach((point, i) => {
+                const alpha = (1 - i/roark.wake.length) * (point.power || 1);
+                const radius = roark.radius * (1 - i/roark.wake.length);
+                
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0,255,255,${alpha * 0.3})`;
+                ctx.stroke();
+            });
+
+            // Draw dimensional resonance
+            if(controls.powerBoost > 1) {
+                const resonanceRadius = roark.radius * (1 + controls.powerBoost * 0.5);
+                const waves = Math.floor(controls.powerBoost * 2);
+                
+                for(let i = 0; i < waves; i++) {
+                    const waveRadius = resonanceRadius + Math.sin(roark.phase + i/waves * Math.PI) * 20;
+                    ctx.beginPath();
+                    ctx.arc(roark.x, roark.y, waveRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(0,255,255,${0.2 - i/waves * 0.1})`;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Portal mechanics
+        const portal = {
+            active: false,
+            phase: 0,
+            energy: 0,
+            strings: [],
+            vortex: {
+                radius: 0,
+                spin: 0,
+                particles: []
+            }
+        };
+
+        function updatePortal() {
+            if(!roark.active) return;
+
+            portal.phase += 0.05;
+            
+            // Track spiral formation
+            let spiralEnergy = 0;
+            let centerCount = 0;
+            const CENTER_THRESHOLD = 150; // Distance from center to count
+            
+            psiboids.forEach(psiboid => {
+                if(!psiboid) return;
+                
+                // Calculate distance and angle from center
+                const dx = psiboid.x - roark.x;
+                const dy = psiboid.y - roark.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+                
+                // Check if in spiral formation
+                if(dist < CENTER_THRESHOLD) {
+                    centerCount++;
+                    
+                    // Calculate spiral contribution
+                    const idealRadius = (psiboid.phase * 50) % CENTER_THRESHOLD;
+                    const radiusDiff = Math.abs(dist - idealRadius);
+                    if(radiusDiff < 20) {
+                        spiralEnergy += 1 - (radiusDiff / 20);
+                    }
+                    
+                    // Transform psiboid appearance
+                    psiboid.scale = 1 + Math.sin(portal.phase + psiboid.phase) * 0.2;
+                    psiboid.glow = 0.5 + Math.sin(portal.phase * 2 + psiboid.phase) * 0.3;
+                }
+            });
+
+            // Portal activation conditions
+            const SPIRAL_THRESHOLD = 5; // Minimum psiboids needed
+            if(centerCount >= SPIRAL_THRESHOLD && spiralEnergy > centerCount * 0.7) {
+                portal.energy = Math.min(1, portal.energy + 0.02);
+                
+                if(portal.energy >= 1 && !portal.active) {
+                    portal.active = true;
+                    portal.vortex.radius = 0;
+                    portal.vortex.spin = 0;
+                    initBreachEffect();
+                }
+            } else {
+                portal.energy = Math.max(0, portal.energy - 0.01);
+            }
+
+            // Draw enhanced portal effects
+            if(portal.energy > 0) {
+                const cx = roark.x;
+                const cy = roark.y;
+                
+                // Draw spiral guide
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(portal.phase);
+                
+                for(let i = 0; i < 4; i++) {
+                    const angle = (i * Math.PI / 2) + portal.phase;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    for(let r = 0; r < CENTER_THRESHOLD; r += 5) {
+                        const a = angle + (r / 50);
+                        const x = Math.cos(a) * r;
+                        const y = Math.sin(a) * r;
+                        ctx.lineTo(x, y);
+                    }
+                    ctx.strokeStyle = `rgba(0,255,255,${0.2 + portal.energy * 0.3})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+                ctx.restore();
+                
+                // Energy build-up effect
+                const radius = 100 + Math.sin(portal.phase) * 10;
+                const segments = 32;
+                ctx.beginPath();
+                for(let i = 0; i <= segments; i++) {
+                    const a = (i / segments) * Math.PI * 2;
+                    const r = radius + Math.sin(a * 8 + portal.phase) * (10 * portal.energy);
+                    const x = cx + Math.cos(a) * r;
+                    const y = cy + Math.sin(a) * r;
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = `rgba(0,255,255,${0.4 + portal.energy * 0.6})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            if(portal.active) {
+                updateBreachEffect();
+            }
+        }
+
+        function initBreachEffect() {
+            portal.breach = {
+                particles: [],
+                rings: [],
+                flash: 1
+            };
+            
+            // Create initial particles
+            for(let i = 0; i < 100; i++) {
+                portal.breach.particles.push({
+                    angle: Math.random() * Math.PI * 2,
+                    speed: 1 + Math.random() * 2,
+                    radius: Math.random() * 100,
+                    size: 2 + Math.random() * 4
+                });
+            }
+            
+            // Create expanding rings
+            for(let i = 0; i < 5; i++) {
+                portal.breach.rings.push({
+                    radius: 0,
+                    speed: 2 + Math.random() * 2,
+                    alpha: 1
+                });
+            }
+        }
+
+        function updateBreachEffect() {
+            const cx = roark.x;
+            const cy = roark.y;
+            
+            // Update and draw particles
+            portal.breach.particles.forEach(particle => {
+                particle.radius += particle.speed;
+                particle.angle += 0.1;
+                
+                const x = cx + Math.cos(particle.angle) * particle.radius;
+                const y = cy + Math.sin(particle.angle) * particle.radius;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0,255,255,${1 - (particle.radius / 300)})`;
+                ctx.fill();
+            });
+            
+            // Update and draw rings
+            portal.breach.rings.forEach(ring => {
+                ring.radius += ring.speed;
+                ring.alpha = Math.max(0, 1 - (ring.radius / 300));
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, ring.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0,255,255,${ring.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+            
+            // Flash effect
+            if(portal.breach.flash > 0) {
+                ctx.fillStyle = `rgba(0,255,255,${portal.breach.flash})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                portal.breach.flash *= 0.95;
+            }
+            
+            // Clean up distant particles and rings
+            portal.breach.particles = portal.breach.particles.filter(p => p.radius < 300);
+            portal.breach.rings = portal.breach.rings.filter(r => r.alpha > 0);
+        }
+
+        // Local Quantum Simulation
+        const localSim = {
+            active: true,
+            qubits: [],
+            entanglements: [],
+            phase: 0,
+            
+            initialize() {
+                this.qubits = psiboids.map((p, i) => ({
+                    id: i,
+                    state: Math.random() * Math.PI * 2,
+                    entangled: null,
+                    coherence: 1.0
+                }));
+            },
+            
+            update() {
+                this.phase += 0.05;
+                
+                // Update qubit states
+                this.qubits.forEach(qubit => {
+                    if (!psiboids[qubit.id]) return;
+                    
+                    // Apply quantum walk
+                    qubit.state += Math.sin(this.phase + qubit.id) * 0.1;
+                    
+                    // Apply decoherence
+                    qubit.coherence = Math.max(0.2, qubit.coherence * 0.999);
+                    
+                    // Update psiboid properties based on quantum state
+                    psiboids[qubit.id].phase = qubit.state;
+                    psiboids[qubit.id].coherence = qubit.coherence;
+                });
+                
+                // Check for new entanglements
+                for (let i = 0; i < this.qubits.length; i++) {
+                    for (let j = i + 1; j < this.qubits.length; j++) {
+                        if (!psiboids[i] || !psiboids[j]) continue;
+                        
+                        const p1 = psiboids[i];
+                        const p2 = psiboids[j];
+                        
+                        // Check proximity for entanglement
+                        const dx = p1.x - p2.x;
+                        const dy = p1.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < 50 && Math.random() < 0.01) {
+                            this.entangle(i, j);
+                        }
+                    }
+                }
+                
+                // Update entanglements
+                this.entanglements = this.entanglements.filter(pair => {
+                    const [i, j] = pair;
+                    if (!psiboids[i] || !psiboids[j]) return false;
+                    
+                    const p1 = psiboids[i];
+                    const p2 = psiboids[j];
+                    
+                    // Draw entanglement effect
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    
+                    const wave = Math.sin(this.phase * 2 + (p1.phase + p2.phase) / 2);
+                    const alpha = 0.3 + wave * 0.2;
+                    
+                    ctx.strokeStyle = `rgba(0,255,255,${alpha})`;
+                    ctx.lineWidth = 1 + wave;
+                    ctx.stroke();
+                    
+                    // Draw quantum interference patterns
+                    const mid = {
+                        x: (p1.x + p2.x) / 2,
+                        y: (p1.y + p2.y) / 2
+                    };
+                    
+                    const radius = dist / 4;
+                    const segments = 12;
+                    
+                    ctx.beginPath();
+                    for (let i = 0; i <= segments; i++) {
+                        const a = (i / segments) * Math.PI * 2;
+                        const r = radius * (1 + Math.sin(this.phase * 3 + a) * 0.3);
+                        const x = mid.x + Math.cos(a) * r;
+                        const y = mid.y + Math.sin(a) * r;
+                        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.strokeStyle = `rgba(0,255,255,${0.2 + wave * 0.1})`;
+                    ctx.stroke();
+                    
+                    // Break entanglement if too far apart
+                    const stillEntangled = dist < 100;
+                    if (!stillEntangled) {
+                        this.qubits[i].entangled = null;
+                        this.qubits[j].entangled = null;
+                    }
+                    return stillEntangled;
+                });
+            },
+            
+            entangle(i, j) {
+                if (this.qubits[i].entangled || this.qubits[j].entangled) return;
+                
+                this.qubits[i].entangled = j;
+                this.qubits[j].entangled = i;
+                
+                // Average the phases
+                const avgPhase = (this.qubits[i].state + this.qubits[j].state) / 2;
+                this.qubits[i].state = avgPhase;
+                this.qubits[j].state = avgPhase;
+                
+                this.entanglements.push([i, j]);
+                
+                // Visual effect for entanglement
+                const p1 = psiboids[i];
+                const p2 = psiboids[j];
+                
+                // Flash effect
+                ctx.beginPath();
+                ctx.arc((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, 30, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,255,255,0.3)';
+                ctx.fill();
+            }
+        };
+
+        // Initialize local simulation
+        localSim.initialize();
+
+        // Update simulation in render loop
+        function render() {
+            // Existing render code...
+            if (localSim.active) {
+                localSim.update();
+            }
+            // Rest of render code...
+        }
+
+        // Simulated Quantum Network Configuration
+        const quantumNetwork = {
+            host: window.location.hostname === 'localhost' ? 'localhost' : '192.168.1.100', // Your simulator IP
+            port: 3000,
+            protocol: 'ws',
+            retryInterval: 5000,
+            maxRetries: 3,
+            simulation: {
+                enabled: true,
+                qubits: 8,
+                decoherence: 0.01,
+                entanglement: []
+            },
+            status: {
+                connected: false,
+                attempting: false,
+                retries: 0,
+                simulationActive: false
+            }
+        };
+
+        // Initialize WebSocket connection with simulation support
+        let ws;
+        function initConnection() {
+            if (quantumNetwork.status.attempting) return;
+            
+            quantumNetwork.status.attempting = true;
+            const wsUrl = `${quantumNetwork.protocol}://${quantumNetwork.host}:${quantumNetwork.port}/qsim`;
+            
+            console.log(`Attempting connection to quantum simulator: ${wsUrl}`);
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    console.log('Connected to quantum simulator');
+                    quantumNetwork.status.connected = true;
+                    quantumNetwork.status.attempting = false;
+                    quantumNetwork.status.retries = 0;
+                    
+                    // Initialize quantum simulation
+                    ws.send(JSON.stringify({
+                        type: 'INIT_SIMULATION',
+                        config: {
+                            qubits: quantumNetwork.simulation.qubits,
+                            decoherence: quantumNetwork.simulation.decoherence
+                        }
+                    }));
+                    
+                    // Send initial state
+                    syncQuantumState();
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        switch(data.type) {
+                            case 'SIM_READY':
+                                quantumNetwork.status.simulationActive = true;
+                                console.log('Quantum simulation active');
+                                break;
+                            case 'QUANTUM_STATE':
+                                updateQuantumState(data.state);
+                                break;
+                            case 'ENTANGLEMENT':
+                                handleEntanglement(data.pairs);
+                                break;
+                        }
+                    } catch(e) {
+                        console.log('Invalid simulator data received');
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.log('Simulator connection error:', error);
+                    quantumNetwork.status.connected = false;
+                    quantumNetwork.status.attempting = false;
+                    quantumNetwork.status.simulationActive = false;
+                    
+                    if (quantumNetwork.status.retries < quantumNetwork.maxRetries) {
+                        quantumNetwork.status.retries++;
+                        console.log(`Retrying in ${quantumNetwork.retryInterval}ms (Attempt ${quantumNetwork.status.retries}/${quantumNetwork.maxRetries})`);
+                        setTimeout(initConnection, quantumNetwork.retryInterval);
+                    } else {
+                        console.log('Running in local mode');
+                        ws = null;
+                    }
+                };
+
+                ws.onclose = () => {
+                    quantumNetwork.status.connected = false;
+                    quantumNetwork.status.attempting = false;
+                    quantumNetwork.status.simulationActive = false;
+                    ws = null;
+                };
+
+            } catch(e) {
+                console.log('Failed to connect to simulator:', e);
+                quantumNetwork.status.attempting = false;
+                ws = null;
+            }
+        }
+
+        function syncQuantumState() {
+            if (!ws || !quantumNetwork.status.connected) return;
+            
+            // Map psiboids to quantum states
+            const states = psiboids.map(psiboid => ({
+                position: [psiboid.x, psiboid.y],
+                phase: psiboid.phase,
+                energy: psiboid.energy || 0
+            }));
+            
+            ws.send(JSON.stringify({
+                type: 'SYNC_STATE',
+                data: {
+                    states,
+                    dimension: navigation.dimension,
+                    portalEnergy: portal.energy,
+                    timestamp: Date.now()
+                }
+            }));
+        }
+
+        function updateQuantumState(state) {
+            if (!state || !state.entanglementPairs) return;
+            
+            quantumNetwork.simulation.entanglement = state.entanglementPairs;
+            
+            // Update visual effects based on entanglement
+            state.entanglementPairs.forEach(pair => {
+                if (psiboids[pair[0]] && psiboids[pair[1]]) {
+                    const p1 = psiboids[pair[0]];
+                    const p2 = psiboids[pair[1]];
+                    
+                    // Draw entanglement line
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = `rgba(0,255,255,${0.3 + Math.sin(Date.now() / 1000) * 0.2})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Enhanced network status display
+        function drawNetworkStatus() {
+            const padding = 10;
+            const fontSize = 12;
+            ctx.font = `${fontSize}px monospace`;
+            
+            // Connection status
+            ctx.fillStyle = quantumNetwork.status.connected ? 
+                (quantumNetwork.status.simulationActive ? 'rgba(0,255,255,0.8)' : 'rgba(255,255,0,0.8)') : 
+                'rgba(255,0,0,0.5)';
+            
+            ctx.textAlign = 'left';
+            ctx.fillText(
+                `Quantum Sim: ${quantumNetwork.status.simulationActive ? 'ACTIVE' : 
+                    (quantumNetwork.status.connected ? 'CONNECTING' : 'OFFLINE')}`,
+                padding,
+                canvas.height - padding
+            );
+            
+            if (quantumNetwork.status.attempting) {
+                ctx.fillText(
+                    `Connecting to simulator... (${quantumNetwork.status.retries}/${quantumNetwork.maxRetries})`,
+                    padding,
+                    canvas.height - padding - fontSize - 5
+                );
+            }
+            
+            // Show active entanglements
+            if (quantumNetwork.simulation.entanglement.length > 0) {
+                ctx.fillStyle = 'rgba(0,255,255,0.6)';
+                ctx.fillText(
+                    `Active Entanglements: ${quantumNetwork.simulation.entanglement.length}`,
+                    padding,
+                    canvas.height - padding - fontSize * 2 - 10
+                );
+            }
+        }
+
+        // Update render loop to include simulation status
+        function render() {
+            // Existing render code...
+            drawNetworkStatus();
+            // Rest of render code...
+        }
+
+        // Initialize connection
+        initConnection();
+
         // Safe update function
         function update() {
             if(!ctx || !canvas) return;
@@ -634,8 +1473,11 @@
             // Update all systems
             updatePsiboids();
             updatePulses();
-            if(roark) roark.update();
+            updateRoark();
             if(typeof updateTunnels === 'function') updateTunnels();
+            updateSuperstrings();
+            updateGuidance();
+            updatePortal();
             
             const cx = canvas.width/2;
             const cy = canvas.height/2;
@@ -704,6 +1546,38 @@
             document.getElementById('field').textContent = state.fieldStrength.toFixed(3);
             document.getElementById('time').textContent = state.timeDilation.toFixed(3);
 
+            drawCompass();
+            drawSuperstrings();
+            drawDimensionalIndicators();
+
+            // Transform psiboids based on current dimension
+            psiboids.forEach(psiboid => {
+                if(!psiboid) return;
+                
+                // Apply dimensional rotation
+                const angle = (navigation.dimension * Math.PI * 2) / 3;
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                
+                // Rotate velocities
+                const vx = psiboid.vx * cos - psiboid.vy * sin;
+                const vy = psiboid.vx * sin + psiboid.vy * cos;
+                psiboid.vx = vx;
+                psiboid.vy = vy;
+                
+                // Adjust behavior based on dimension
+                if(roark.active) {
+                    const dx = roark.x - psiboid.x;
+                    const dy = roark.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if(dist > 0) {
+                        const force = 0.1 / (1 + dist * 0.01);
+                        psiboid.vx += (dx / dist) * force;
+                        psiboid.vy += (dy / dist) * force;
+                    }
+                }
+            });
+
             requestAnimationFrame(update);
         }
 
@@ -750,45 +1624,45 @@
             observerMode = true;
         }
         
-        function resize() {
-            const scale = window.devicePixelRatio || 1;
+        function resizeCanvas() {
+            const pixelRatio = window.devicePixelRatio || 1;
             const width = window.innerWidth;
             const height = window.innerHeight;
             
-            // Set canvas size accounting for pixel ratio
-            canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
-            canvas.width = width * scale;
-            canvas.height = height * scale;
+            canvas.width = width * pixelRatio;
+            canvas.height = height * pixelRatio;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
             
-            // Scale context to match device
-            ctx.scale(scale, scale);
+            ctx.scale(pixelRatio, pixelRatio);
             
-            // Reinitialize psiboids for new screen size
-            initPsiboids();
+            // Update existing entities positions
+            if(roark.active) {
+                roark.x = width / 2;
+                roark.y = height / 2;
+            }
             
-            // Update node positions with proper scaling
-            const cx = width / 2;
-            const cy = height / 2;
-            const orbitRadius = Math.min(width, height) * 0.3;
+            // Adjust psiboids to new dimensions
+            psiboids.forEach(psiboid => {
+                if(!psiboid) return;
+                if(psiboid.x > width) psiboid.x = width * (psiboid.x / canvas.width);
+                if(psiboid.y > height) psiboid.y = height * (psiboid.y / canvas.height);
+            });
             
-            nodes.forEach((pair, i) => {
-                const angle = (i / nodes.length) * Math.PI * 2;
-                [pair.matter, pair.antimatter].forEach(node => {
-                    node.x = cx + Math.cos(node.angle) * orbitRadius * (1 + node.charge * 0.2);
-                    node.y = cy + Math.sin(node.angle) * orbitRadius * (1 + node.charge * 0.2);
+            // Adjust nodes to new dimensions
+            nodes.forEach(pair => {
+                ['matter', 'antimatter'].forEach(type => {
+                    if(pair[type]) {
+                        if(pair[type].x > width) pair[type].x = width * (pair[type].x / canvas.width);
+                        if(pair[type].y > height) pair[type].y = height * (pair[type].y / canvas.height);
+                    }
                 });
             });
         }
 
-        window.onresize = resize;
-        canvas.onmousemove = handleInteraction;
-        canvas.onmouseup = handleMouseUp;
-
-        // Add fullscreen handler
-        const fullscreenBtn = document.getElementById('fullscreen');
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
+        // Improved fullscreen handling
+        document.getElementById('fullscreen').addEventListener('click', () => {
+            if(!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
                     console.log(`Error attempting to enable fullscreen: ${err.message}`);
                 });
@@ -797,10 +1671,17 @@
             }
         });
 
-        // Update canvas size on fullscreen change
-        document.addEventListener('fullscreenchange', () => {
-            resize();
+        // Enhanced event listeners
+        window.addEventListener('resize', () => {
+            resizeCanvas();
         });
+
+        document.addEventListener('fullscreenchange', () => {
+            resizeCanvas();
+        });
+
+        // Initialize with proper size
+        resizeCanvas();
 
         update();
     </script>

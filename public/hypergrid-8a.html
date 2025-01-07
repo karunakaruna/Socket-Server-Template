@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid 8A - Quantum Traveller</title>
+    <style>
+        /* Base styles from hypergrid-8.html */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff;
+            z-index: 1000;
+        }
+
+        #travel-paths {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            z-index: 1000;
+            display: flex;
+            gap: 20px;
+        }
+
+        .path-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .path-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .core-dancer { background: cyan; }
+        .pathfinder { background: orange; }
+        .energy-weaver { background: #0f0; }
+        .quantum-guide { background: magenta; }
+
+        #control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .value-display {
+            float: right;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            background: rgba(0, 255, 255, 0.1);
+            height: 5px;
+            border-radius: 2px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="hyperCanvas"></canvas>
+    
+    <div id="quantum-hud">
+        <div>Travel Distance: <span id="distance">0.000</span></div>
+        <div>Path Stability: <span id="stability">0.000</span></div>
+        <div>Quantum Flux: <span id="flux">1.000</span></div>
+        <div>Active Paths: <span id="paths">0</span></div>
+    </div>
+
+    <div id="travel-paths">
+        <div class="path-indicator">
+            <div class="path-dot core-dancer"></div>
+            <span>Core Path</span>
+        </div>
+        <div class="path-indicator">
+            <div class="path-dot pathfinder"></div>
+            <span>Scout Path</span>
+        </div>
+        <div class="path-indicator">
+            <div class="path-dot energy-weaver"></div>
+            <span>Network Path</span>
+        </div>
+        <div class="path-indicator">
+            <div class="path-dot quantum-guide"></div>
+            <span>Guide Path</span>
+        </div>
+    </div>
+
+    <div id="control-panel">
+        <h3>Travel Controls</h3>
+        <div class="slider-container">
+            <label>Core Dancer Speed <span class="value-display" id="core-speed-value">1.0</span></label>
+            <input type="range" id="core-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+        </div>
+        <div class="slider-container">
+            <label>Pathfinder Range <span class="value-display" id="path-range-value">300</span></label>
+            <input type="range" id="path-range" min="50" max="500" step="10" value="300">
+        </div>
+        <div class="slider-container">
+            <label>Network Density <span class="value-display" id="network-density-value">100</span></label>
+            <input type="range" id="network-density" min="10" max="200" step="5" value="100">
+        </div>
+        <div class="slider-container">
+            <label>Guide Influence <span class="value-display" id="guide-influence-value">1.5</span></label>
+            <input type="range" id="guide-influence" min="0.1" max="2.0" step="0.1" value="1.5">
+        </div>
+        <div class="slider-container">
+            <label>Particle Size <span class="value-display" id="particle-size-value">1.0</span></label>
+            <input type="range" id="particle-size" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <script>
+        // Latent space flow field
+        class LatentField {
+            constructor() {
+                this.time = 0;
+                this.noiseScale = 0.1;
+                this.fieldScale = 0.2;
+                this.timeScale = 0.5;
+            }
+
+            update(deltaTime) {
+                this.time += deltaTime * this.timeScale;
+            }
+
+            // Get flow vector at position
+            getFlow(x, y, z) {
+                const nx = Math.sin(x * this.noiseScale + this.time) * Math.cos(y * this.noiseScale + this.time * 0.7);
+                const ny = Math.cos(y * this.noiseScale + this.time * 1.3) * Math.sin(z * this.noiseScale + this.time);
+                const nz = Math.sin(z * this.noiseScale + this.time * 0.9) * Math.cos(x * this.noiseScale + this.time * 1.1);
+                
+                return {
+                    x: nx * this.fieldScale,
+                    y: ny * this.fieldScale,
+                    z: nz * this.fieldScale
+                };
+            }
+        }
+
+        class CoreDancer {
+            constructor() {
+                this.position = {
+                    x: (Math.random() - 0.5) * 4,
+                    y: (Math.random() - 0.5) * 4,
+                    z: (Math.random() - 0.5) * 4
+                };
+                this.phase = Math.random() * Math.PI * 2;
+                this.energy = 1.0;
+            }
+
+            update(deltaTime, config, field) {
+                this.phase += deltaTime * config.coreSpeed * 2;
+                
+                // Quantum spiral motion
+                const spiral = {
+                    x: Math.cos(this.phase) * (1 + Math.sin(this.phase * 0.5)),
+                    y: Math.sin(this.phase) * (1 + Math.cos(this.phase * 0.5)),
+                    z: Math.cos(this.phase * 0.7) * Math.sin(this.phase * 0.3)
+                };
+
+                // Get flow field influence
+                const flow = field.getFlow(this.position.x, this.position.y, this.position.z);
+                
+                // Combine movements
+                this.position.x += (spiral.x * 0.03 + flow.x) * config.coreSpeed * deltaTime * 60;
+                this.position.y += (spiral.y * 0.03 + flow.y) * config.coreSpeed * deltaTime * 60;
+                this.position.z += (spiral.z * 0.03 + flow.z) * config.coreSpeed * deltaTime * 60;
+            }
+        }
+
+        class PathFinder {
+            constructor() {
+                this.position = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6,
+                    z: (Math.random() - 0.5) * 6
+                };
+                this.pathHistory = [];
+                this.maxPathLength = 150;
+                this.energy = Math.random();
+            }
+
+            update(deltaTime, config, field) {
+                // Get flow field influence
+                const flow = field.getFlow(this.position.x, this.position.y, this.position.z);
+                
+                // Add quantum uncertainty
+                const uncertainty = {
+                    x: (Math.random() - 0.5) * 0.1,
+                    y: (Math.random() - 0.5) * 0.1,
+                    z: (Math.random() - 0.5) * 0.1
+                };
+
+                // Update position with flow and uncertainty
+                this.position.x += (flow.x + uncertainty.x) * config.coreSpeed * deltaTime * 60;
+                this.position.y += (flow.y + uncertainty.y) * config.coreSpeed * deltaTime * 60;
+                this.position.z += (flow.z + uncertainty.z) * config.coreSpeed * deltaTime * 60;
+
+                // Energy oscillation
+                this.energy = 0.5 + Math.sin(performance.now() * 0.001) * 0.5;
+
+                this.recordPath();
+            }
+
+            recordPath() {
+                this.pathHistory.push({...this.position});
+                if (this.pathHistory.length > this.maxPathLength) {
+                    this.pathHistory.shift();
+                }
+            }
+        }
+
+        class EnergyWeaver {
+            constructor() {
+                this.position = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6,
+                    z: (Math.random() - 0.5) * 6
+                };
+                this.connections = [];
+                this.energy = 1.0;
+                this.connectionRange = 2.0;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update(deltaTime, config, field, weavers) {
+                // Get flow field influence
+                const flow = field.getFlow(this.position.x, this.position.y, this.position.z);
+                
+                // Add harmonic motion
+                this.phase += deltaTime * config.coreSpeed;
+                const harmonic = {
+                    x: Math.sin(this.phase * 0.7) * 0.02,
+                    y: Math.cos(this.phase * 0.9) * 0.02,
+                    z: Math.sin(this.phase * 1.1) * 0.02
+                };
+
+                // Update position
+                this.position.x += (flow.x + harmonic.x) * config.coreSpeed * deltaTime * 60;
+                this.position.y += (flow.y + harmonic.y) * config.coreSpeed * deltaTime * 60;
+                this.position.z += (flow.z + harmonic.z) * config.coreSpeed * deltaTime * 60;
+
+                this.updateConnections(weavers, config);
+            }
+
+            updateConnections(weavers, config) {
+                this.connections = weavers.filter(w => {
+                    if (w === this) return false;
+                    const dist = Math.hypot(
+                        w.position.x - this.position.x,
+                        w.position.y - this.position.y,
+                        w.position.z - this.position.z
+                    );
+                    return dist < this.connectionRange * (config.networkDensity / 100);
+                }).slice(0, 8);
+            }
+        }
+
+        class QuantumGuide {
+            constructor() {
+                this.position = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6,
+                    z: (Math.random() - 0.5) * 6
+                };
+                this.path = [];
+                this.maxPathLength = 300;
+                this.phase = Math.random() * Math.PI * 2;
+                this.influence = 1.0;
+            }
+
+            update(deltaTime, config, field) {
+                this.phase += deltaTime * config.coreSpeed * 0.5;
+                
+                // Get flow field influence
+                const flow = field.getFlow(this.position.x, this.position.y, this.position.z);
+                
+                // Quantum wave function
+                const wave = {
+                    x: Math.sin(this.phase) * Math.cos(this.phase * 0.7),
+                    y: Math.cos(this.phase) * Math.sin(this.phase * 0.9),
+                    z: Math.sin(this.phase * 1.1) * Math.cos(this.phase * 0.5)
+                };
+
+                // Update position with flow and wave function
+                this.position.x += (flow.x * 0.5 + wave.x * 0.02) * config.coreSpeed * deltaTime * 60;
+                this.position.y += (flow.y * 0.5 + wave.y * 0.02) * config.coreSpeed * deltaTime * 60;
+                this.position.z += (flow.z * 0.5 + wave.z * 0.02) * config.coreSpeed * deltaTime * 60;
+
+                // Record path with probability
+                if (Math.random() < 0.7) {
+                    this.recordPath();
+                }
+            }
+
+            recordPath() {
+                this.path.push({...this.position});
+                if (this.path.length > this.maxPathLength) {
+                    this.path.shift();
+                }
+            }
+        }
+
+        // Initialize WebGL context and program
+        const canvas = document.getElementById('hyperCanvas');
+        const gl = canvas.getContext('webgl', { alpha: false });
+        if (!gl) {
+            console.error('WebGL not available');
+            throw new Error('WebGL not available');
+        }
+
+        // Set initial GL state
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.DEPTH_TEST);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+        // Create buffers first
+        const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
+        const sizeBuffer = gl.createBuffer();
+
+        // Vertex shader with simplified uniforms
+        const vsSource = `
+            attribute vec4 a_position;
+            attribute vec4 a_color;
+            attribute float a_size;
+            uniform mat4 u_matrix;
+            varying vec4 v_color;
+            void main() {
+                gl_Position = u_matrix * a_position;
+                gl_PointSize = a_size;
+                v_color = a_color;
+            }
+        `;
+
+        const fsSource = `
+            precision mediump float;
+            varying vec4 v_color;
+            void main() {
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                float dist = length(coord);
+                if(dist > 0.5) discard;
+                float alpha = smoothstep(0.5, 0.2, dist);
+                gl_FragColor = vec4(v_color.rgb, v_color.a * alpha);
+            }
+        `;
+
+        // Create and validate shader program
+        function createShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, vsSource);
+            gl.compileShader(vertexShader);
+
+            if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                console.error('Vertex shader compile error:', gl.getShaderInfoLog(vertexShader));
+                gl.deleteShader(vertexShader);
+                throw new Error('Vertex shader compilation failed');
+            }
+
+            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, fsSource);
+            gl.compileShader(fragmentShader);
+
+            if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                console.error('Fragment shader compile error:', gl.getShaderInfoLog(fragmentShader));
+                gl.deleteShader(vertexShader);
+                gl.deleteShader(fragmentShader);
+                throw new Error('Fragment shader compilation failed');
+            }
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('Shader program link error:', gl.getProgramInfoLog(shaderProgram));
+                gl.deleteProgram(shaderProgram);
+                gl.deleteShader(vertexShader);
+                gl.deleteShader(fragmentShader);
+                throw new Error('Shader program linking failed');
+            }
+
+            // Clean up individual shaders
+            gl.detachShader(shaderProgram, vertexShader);
+            gl.detachShader(shaderProgram, fragmentShader);
+            gl.deleteShader(vertexShader);
+            gl.deleteShader(fragmentShader);
+
+            return shaderProgram;
+        }
+
+        // Create shader program with proper error handling
+        let shaderProgram;
+        try {
+            shaderProgram = createShaderProgram(gl, vsSource, fsSource);
+        } catch (error) {
+            console.error('Failed to create shader program:', error);
+            throw error;
+        }
+
+        // Get all attributes and uniforms
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                position: gl.getAttribLocation(shaderProgram, 'a_position'),
+                color: gl.getAttribLocation(shaderProgram, 'a_color'),
+                size: gl.getAttribLocation(shaderProgram, 'a_size')
+            },
+            uniformLocations: {
+                matrix: gl.getUniformLocation(shaderProgram, 'u_matrix')
+            }
+        };
+
+        // Validate attribute and uniform locations
+        Object.entries(programInfo.attribLocations).forEach(([name, location]) => {
+            if (location === -1) {
+                throw new Error(`Unable to get attribute location: ${name}`);
+            }
+        });
+
+        if (!programInfo.uniformLocations.matrix) {
+            throw new Error('Unable to get uniform location: u_matrix');
+        }
+
+        // Matrix multiplication helper
+        function multiplyMatrices(a, b) {
+            const result = new Float32Array(16);
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    let sum = 0;
+                    for (let k = 0; k < 4; k++) {
+                        sum += a[i * 4 + k] * b[k * 4 + j];
+                    }
+                    result[i * 4 + j] = sum;
+                }
+            }
+            return result;
+        }
+
+        // Camera system
+        const camera = {
+            position: { x: 0, y: 0, z: -10 },
+            velocity: { x: 0, y: 0, z: 0.1 }, // Forward motion
+            target: { x: 0, y: 0, z: 0 },
+            up: { x: 0, y: 1, z: 0 },
+            fov: Math.PI / 3,
+            speed: 2.0,
+            rotationSpeed: 0.2
+        };
+
+        // Get view matrix for camera
+        function getViewMatrix() {
+            // Update camera position based on velocity
+            camera.position.x += camera.velocity.x * camera.speed;
+            camera.position.y += camera.velocity.y * camera.speed;
+            camera.position.z += camera.velocity.z * camera.speed;
+
+            // Update target (looking ahead of movement)
+            camera.target.x = camera.position.x + camera.velocity.x * 5;
+            camera.target.y = camera.position.y + camera.velocity.y * 5;
+            camera.target.z = camera.position.z + camera.velocity.z * 5;
+
+            // Get flow at camera position
+            const flow = latentField.getFlow(camera.position.x, camera.position.y, camera.position.z);
+            
+            // Smoothly adjust camera velocity based on flow field
+            camera.velocity.x += (flow.x * 0.1 - camera.velocity.x * 0.05);
+            camera.velocity.y += (flow.y * 0.1 - camera.velocity.y * 0.05);
+            camera.velocity.z += (flow.z * 0.1 - camera.velocity.z * 0.05);
+
+            // Normalize velocity to maintain consistent speed
+            const speed = Math.sqrt(
+                camera.velocity.x * camera.velocity.x + 
+                camera.velocity.y * camera.velocity.y + 
+                camera.velocity.z * camera.velocity.z
+            );
+            if (speed > 0) {
+                camera.velocity.x /= speed;
+                camera.velocity.y /= speed;
+                camera.velocity.z /= speed;
+            }
+
+            // Create view matrix
+            const zAxis = normalize(subtractVectors(camera.position, camera.target));
+            const xAxis = normalize(cross(camera.up, zAxis));
+            const yAxis = normalize(cross(zAxis, xAxis));
+
+            return [
+                xAxis[0], yAxis[0], zAxis[0], 0,
+                xAxis[1], yAxis[1], zAxis[1], 0,
+                xAxis[2], yAxis[2], zAxis[2], 0,
+                -dot(xAxis, camera.position),
+                -dot(yAxis, camera.position),
+                -dot(zAxis, camera.position),
+                1
+            ];
+        }
+
+        // Update projection matrix for perspective
+        function getProjectionMatrix() {
+            const aspect = canvas.width / canvas.height;
+            const zNear = 0.1;
+            const zFar = 100.0;
+            const f = 1.0 / Math.tan(camera.fov / 2);
+
+            return [
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (zFar + zNear) / (zNear - zFar), -1,
+                0, 0, (2 * zFar * zNear) / (zNear - zFar), 0
+            ];
+        }
+
+        // Vector operations
+        function normalize(v) {
+            const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+            if (length > 0.00001) {
+                return [v[0] / length, v[1] / length, v[2] / length];
+            }
+            return [0, 0, 0];
+        }
+
+        function cross(a, b) {
+            return [
+                a.y * b.z - a.z * b.y,
+                a.z * b.x - a.x * b.z,
+                a.x * b.y - a.y * b.x
+            ];
+        }
+
+        function dot(v1, v2) {
+            return v1[0] * v2.x + v1[1] * v2.y + v1[2] * v2.z;
+        }
+
+        function subtractVectors(a, b) {
+            return [
+                a.x - b.x,
+                a.y - b.y,
+                a.z - b.z
+            ];
+        }
+
+        // Modified render function
+        function render() {
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // Use shader program
+            gl.useProgram(programInfo.program);
+
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+
+            function addParticle(particle, color, size) {
+                positions.push(
+                    particle.position.x,
+                    particle.position.y,
+                    particle.position.z,
+                    1.0
+                );
+                colors.push(...color);
+                sizes.push(size * config.particleSize);
+            }
+
+            particles.coreDancers.forEach(p => {
+                addParticle(p, [0.0, 1.0, 1.0, 1.0], 20.0);
+                addParticle(p, [0.0, 1.0, 1.0, 0.4], 40.0);
+            });
+
+            particles.pathFinders.forEach(p => {
+                addParticle(p, [1.0, 0.5, 0.0, 1.0], 15.0);
+                for (let i = 0; i < p.pathHistory.length; i += 2) {
+                    const pos = p.pathHistory[i];
+                    const alpha = (i / p.pathHistory.length * 0.8) + 0.2;
+                    positions.push(pos.x, pos.y, pos.z, 1.0);
+                    colors.push(1.0, 0.5, 0.0, alpha);
+                    sizes.push(8.0 * config.particleSize);
+                }
+            });
+
+            particles.energyWeavers.forEach(p => {
+                addParticle(p, [0.0, 1.0, 0.0, 1.0], 12.0);
+                p.connections.forEach(conn => {
+                    positions.push(p.position.x, p.position.y, p.position.z, 1.0);
+                    positions.push(conn.position.x, conn.position.y, conn.position.z, 1.0);
+                    colors.push(0.0, 1.0, 0.0, 0.7, 0.0, 1.0, 0.0, 0.4);
+                    sizes.push(4.0 * config.particleSize, 4.0 * config.particleSize);
+                });
+            });
+
+            particles.quantumGuides.forEach(p => {
+                addParticle(p, [1.0, 0.0, 1.0, 1.0], 18.0);
+                for (let i = 0; i < p.path.length; i += 3) {
+                    const pos = p.path[i];
+                    const alpha = (i / p.path.length * 0.8) + 0.2;
+                    positions.push(pos.x, pos.y, pos.z, 1.0);
+                    colors.push(1.0, 0.0, 1.0, alpha);
+                    sizes.push(10.0 * config.particleSize);
+                }
+            });
+
+            // Bind position buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+            gl.vertexAttribPointer(programInfo.attribLocations.position, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+            // Bind color buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.DYNAMIC_DRAW);
+            gl.vertexAttribPointer(programInfo.attribLocations.color, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.color);
+
+            // Bind size buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.DYNAMIC_DRAW);
+            gl.vertexAttribPointer(programInfo.attribLocations.size, 1, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.size);
+
+            // Combine view and projection matrices
+            const viewMatrix = getViewMatrix();
+            const projectionMatrix = getProjectionMatrix();
+            const combinedMatrix = multiplyMatrices(projectionMatrix, viewMatrix);
+
+            // Set the combined matrix uniform
+            gl.uniformMatrix4fv(programInfo.uniformLocations.matrix, false, combinedMatrix);
+
+            // Draw the particles
+            gl.drawArrays(gl.POINTS, 0, positions.length / 4);
+        }
+
+        // Initialize latent field
+        const latentField = new LatentField();
+
+        const config = {
+            coreSpeed: 1.0,
+            pathRange: 400,
+            networkDensity: 150,
+            guideInfluence: 1.5,
+            particleSize: 1.2,
+            rotationSpeed: 0.2
+        };
+
+        const particles = {
+            coreDancers: Array(50).fill(0).map(() => new CoreDancer()),
+            pathFinders: Array(100).fill(0).map(() => new PathFinder()),
+            energyWeavers: Array(200).fill(0).map(() => new EnergyWeaver()),
+            quantumGuides: Array(20).fill(0).map(() => new QuantumGuide())
+        };
+
+        let lastFrameTime = performance.now();
+        const targetFrameRate = 60;
+        const frameInterval = 1000 / targetFrameRate;
+        let accumulatedTime = 0;
+
+        function update() {
+            const currentTime = performance.now();
+            const deltaTime = Math.min((currentTime - lastFrameTime) / 1000, 0.1);
+            lastFrameTime = currentTime;
+
+            // Update latent field
+            latentField.update(deltaTime);
+
+            // Fixed timestep updates
+            while (accumulatedTime >= frameInterval) {
+                const dt = frameInterval / 1000;
+                particles.coreDancers.forEach(p => p.update(dt, config, latentField));
+                particles.pathFinders.forEach(p => p.update(dt, config, latentField));
+                particles.energyWeavers.forEach(p => p.update(dt, config, latentField, particles.energyWeavers));
+                particles.quantumGuides.forEach(p => p.update(dt, config, latentField));
+                accumulatedTime -= frameInterval;
+            }
+
+            render();
+            requestAnimationFrame(update);
+        }
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        update();
+    </script>
+</body>
+</html>

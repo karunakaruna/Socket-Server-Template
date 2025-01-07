@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid 8 - Quantum Navigator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff;
+            z-index: 1000;
+        }
+
+        #navigator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 50%;
+            background: radial-gradient(circle at center,
+                rgba(0, 0, 0, 0.5) 0%,
+                rgba(0, 100, 255, 0.2) 50%,
+                rgba(0, 255, 255, 0.1) 100%
+            );
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            z-index: 1000;
+        }
+
+        .resonance-indicator {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #0ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        #escape-meter {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #escape-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #f0f);
+            transition: width 0.3s ease;
+        }
+
+        #control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #0ff;
+        }
+
+        .slider-container input[type="range"] {
+            width: 100%;
+            background: rgba(0, 255, 255, 0.1);
+            height: 5px;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #0ff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            background: #fff;
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        .value-display {
+            float: right;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="hyperCanvas"></canvas>
+    <div id="quantum-hud">
+        <div>Dimensional Depth: <span id="depth">0.000</span></div>
+        <div>Quantum Resonance: <span id="resonance">0.000</span></div>
+        <div>Time Dilation: <span id="time">1.000</span></div>
+        <div>Escape Velocity: <span id="velocity">0.000</span></div>
+        <div>Active Echoes: <span id="echoes">0</span></div>
+    </div>
+    <div id="navigator"></div>
+    <div id="escape-meter"><div id="escape-fill"></div></div>
+
+    <div id="control-panel">
+        <h3 style="margin-top: 0; color: #0ff;">Quantum Controls</h3>
+        <div class="slider-container">
+            <label>Circle Radius <span class="value-display" id="circle-radius-value">0.15</span></label>
+            <input type="range" id="circle-radius" min="0.05" max="0.5" step="0.01" value="0.15">
+        </div>
+        <div class="slider-container">
+            <label>Circle Segments <span class="value-display" id="circle-segments-value">32</span></label>
+            <input type="range" id="circle-segments" min="8" max="64" step="1" value="32">
+        </div>
+        <div class="slider-container">
+            <label>Draw Distance <span class="value-display" id="draw-distance-value">1000</span></label>
+            <input type="range" id="draw-distance" min="100" max="5000" step="100" value="1000">
+        </div>
+        <div class="slider-container">
+            <label>Camera Distance <span class="value-display" id="camera-distance-value">3.0</span></label>
+            <input type="range" id="camera-distance" min="1" max="10" step="0.1" value="3.0">
+        </div>
+        <div class="slider-container">
+            <label>Psiboid Count <span class="value-display" id="psiboid-count-value">500</span></label>
+            <input type="range" id="psiboid-count" min="100" max="2000" step="100" value="500">
+        </div>
+        <div class="slider-container">
+            <label>Echo Spawn Rate <span class="value-display" id="echo-rate-value">0.2</span></label>
+            <input type="range" id="echo-rate" min="0.05" max="0.5" step="0.05" value="0.2">
+        </div>
+        <div class="slider-container">
+            <label>Particle Size <span class="value-display" id="particle-size-value">1.0</span></label>
+            <input type="range" id="particle-size" min="0.5" max="3" step="0.1" value="1.0">
+        </div>
+        <div class="slider-container">
+            <label>Rotation Speed <span class="value-display" id="rotation-speed-value">1.0</span></label>
+            <input type="range" id="rotation-speed" min="0.1" max="3" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('hyperCanvas');
+        const ctx = canvas.getContext('webgl');
+        const navigator = document.getElementById('navigator');
+        const escapeMeter = document.getElementById('escape-fill');
+
+        // Core state
+        const state = {
+            dimension: 4,
+            depth: 0,
+            resonance: 0,
+            timeDilation: 1,
+            escapeVelocity: 0,
+            activeEchoes: [],
+            psiboids: [],
+            quantumEchoes: [],
+            vanishingPoints: [],
+            roarkState: {
+                active: false,
+                position: { x: 0, y: 0, z: 0, w: 0 },
+                phase: 0
+            }
+        };
+
+        // Config object to store all adjustable parameters
+        const config = {
+            circleRadius: 0.15,
+            circleSegments: 32,
+            drawDistance: 1000,
+            cameraDistance: 3.0,
+            psiboidCount: 500,
+            echoSpawnRate: 0.2,
+            particleSize: 1.0,
+            rotationSpeed: 1.0
+        };
+
+        // Helper Functions
+        function findNearestEcho(position) {
+            if (state.quantumEchoes.length === 0) return null;
+            
+            let nearest = state.quantumEchoes[0];
+            let minDist = Number.MAX_VALUE;
+            
+            for (const echo of state.quantumEchoes) {
+                const dx = echo.position.x - position.x;
+                const dy = echo.position.y - position.y;
+                const dz = echo.position.z - position.z;
+                const dw = echo.position.w - position.w;
+                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz + dw*dw);
+                
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = echo;
+                }
+            }
+            
+            return nearest;
+        }
+
+        function calculateResonanceField() {
+            let field = { x: 0, y: 0, z: 0, w: 0 };
+            
+            state.quantumEchoes.forEach(echo => {
+                field.x += Math.cos(echo.phase) * echo.resonance;
+                field.y += Math.sin(echo.phase) * echo.resonance;
+                field.z += Math.cos(echo.phase * 1.5) * echo.resonance;
+                field.w += Math.sin(echo.phase * 1.5) * echo.resonance;
+            });
+            
+            return field;
+        }
+
+        function calculateEscapeVelocity() {
+            const resonanceSum = state.quantumEchoes.reduce((sum, echo) => sum + echo.resonance, 0);
+            return Math.min(resonanceSum / 10, 1.0);
+        }
+
+        // Initialize WebGL
+        function initGL() {
+            if (!ctx) {
+                console.error('WebGL not supported');
+                return null;
+            }
+
+            // Enable required WebGL features
+            ctx.enable(ctx.BLEND);
+            ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE_MINUS_SRC_ALPHA);
+            ctx.clearColor(0.0, 0.0, 0.0, 1.0);
+
+            const vertexShader = createShader(ctx, ctx.VERTEX_SHADER, `
+                attribute vec4 position;
+                attribute vec4 color;
+                attribute float size;
+                uniform mat4 projection;
+                uniform mat4 rotation;
+                varying vec4 vColor;
+                
+                void main() {
+                    gl_Position = projection * rotation * position;
+                    gl_PointSize = size / gl_Position.w;
+                    vColor = color;
+                }
+            `);
+
+            const fragmentShader = createShader(ctx, ctx.FRAGMENT_SHADER, `
+                precision mediump float;
+                varying vec4 vColor;
+                
+                void main() {
+                    vec2 coord = gl_PointCoord * 2.0 - 1.0;
+                    float r = length(coord);
+                    float a = 1.0 - smoothstep(0.8, 1.0, r);
+                    gl_FragColor = vec4(vColor.rgb, vColor.a * a);
+                }
+            `);
+
+            if (!vertexShader || !fragmentShader) {
+                console.error('Shader creation failed');
+                return null;
+            }
+
+            const program = ctx.createProgram();
+            ctx.attachShader(program, vertexShader);
+            ctx.attachShader(program, fragmentShader);
+            ctx.linkProgram(program);
+
+            if (!ctx.getProgramParameter(program, ctx.LINK_STATUS)) {
+                console.error('Program linking failed:', ctx.getProgramInfoLog(program));
+                return null;
+            }
+
+            ctx.useProgram(program);
+            return program;
+        }
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        // Quantum Echo System
+        class QuantumEcho {
+            constructor(position, resonance) {
+                this.position = position;
+                this.resonance = resonance;
+                this.phase = 0;
+                this.lifetime = 1.0;
+            }
+
+            update() {
+                this.phase += 0.02 * state.timeDilation;
+                this.lifetime -= 0.001 * state.timeDilation;
+                this.resonance *= 0.99;
+
+                return this.lifetime > 0;
+            }
+        }
+
+        // Psiboid System
+        class Psiboid {
+            constructor() {
+                this.position = {
+                    x: Math.random() * 2 - 1,
+                    y: Math.random() * 2 - 1,
+                    z: Math.random() * 2 - 1,
+                    w: Math.random() * 2 - 1
+                };
+                this.velocity = {
+                    x: 0, y: 0, z: 0, w: 0
+                };
+                this.awareness = Math.random();
+            }
+
+            update() {
+                // Follow nearest quantum echo
+                const nearestEcho = findNearestEcho(this.position);
+                if (nearestEcho) {
+                    const dx = nearestEcho.position.x - this.position.x;
+                    const dy = nearestEcho.position.y - this.position.y;
+                    const dz = nearestEcho.position.z - this.position.z;
+                    const dw = nearestEcho.position.w - this.position.w;
+                    
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz + dw*dw);
+                    
+                    if (dist > 0.001) {
+                        this.velocity.x += (dx/dist) * 0.001 * this.awareness;
+                        this.velocity.y += (dy/dist) * 0.001 * this.awareness;
+                        this.velocity.z += (dz/dist) * 0.001 * this.awareness;
+                        this.velocity.w += (dw/dist) * 0.001 * this.awareness;
+                    }
+                }
+
+                // Apply velocity
+                this.position.x += this.velocity.x * state.timeDilation;
+                this.position.y += this.velocity.y * state.timeDilation;
+                this.position.z += this.velocity.z * state.timeDilation;
+                this.position.w += this.velocity.w * state.timeDilation;
+
+                // Damping
+                this.velocity.x *= 0.99;
+                this.velocity.y *= 0.99;
+                this.velocity.z *= 0.99;
+                this.velocity.w *= 0.99;
+            }
+        }
+
+        // Roark Guide System
+        function updateRoark() {
+            if (!state.roarkState.active) return;
+
+            state.roarkState.phase += 0.01 * state.timeDilation;
+            
+            // Calculate new position based on quantum resonances
+            const resonanceField = calculateResonanceField();
+            state.roarkState.position = {
+                x: Math.cos(state.roarkState.phase) * resonanceField.x,
+                y: Math.sin(state.roarkState.phase) * resonanceField.y,
+                z: Math.cos(state.roarkState.phase * 1.5) * resonanceField.z,
+                w: Math.sin(state.roarkState.phase * 1.5) * resonanceField.w
+            };
+
+            // Create quantum echoes along Roark's path
+            if (Math.random() < 0.1) {
+                state.quantumEchoes.push(new QuantumEcho(
+                    {...state.roarkState.position},
+                    0.5 + Math.random() * 0.5
+                ));
+            }
+        }
+
+        // Gradient Orbit Collapse
+        function updateOrbitCollapse() {
+            if (state.escapeVelocity > 1.0) {
+                state.depth += 0.01 * state.timeDilation;
+                state.timeDilation = 1.0 + (state.depth * 0.1);
+                
+                // Create vanishing points at dimensional boundaries
+                if (Math.random() < 0.05) {
+                    state.vanishingPoints.push({
+                        position: {
+                            x: Math.random() * 2 - 1,
+                            y: Math.random() * 2 - 1,
+                            z: Math.random() * 2 - 1,
+                            w: Math.random() * 2 - 1
+                        },
+                        strength: Math.random(),
+                        lifetime: 1.0
+                    });
+                }
+            }
+        }
+
+        // Main update loop
+        function update() {
+            // Update quantum echoes
+            state.quantumEchoes = state.quantumEchoes.filter(echo => echo.update());
+            
+            // Update psiboids
+            state.psiboids.forEach(psiboid => psiboid.update());
+            
+            // Update Roark guide
+            updateRoark();
+            
+            // Update orbit collapse
+            updateOrbitCollapse();
+            
+            // Update escape velocity
+            state.escapeVelocity = calculateEscapeVelocity();
+            escapeMeter.style.width = `${state.escapeVelocity * 100}%`;
+            
+            // Update HUD
+            document.getElementById('depth').textContent = state.depth.toFixed(3);
+            document.getElementById('resonance').textContent = state.resonance.toFixed(3);
+            document.getElementById('time').textContent = state.timeDilation.toFixed(3);
+            document.getElementById('velocity').textContent = state.escapeVelocity.toFixed(3);
+            document.getElementById('echoes').textContent = state.quantumEchoes.length;
+
+            // Render frame
+            render();
+            
+            // Request next frame
+            requestAnimationFrame(update);
+        }
+
+        // WebGL rendering
+        let program;
+        let positionBuffer;
+        let colorBuffer;
+        let sizeBuffer;
+        let projectionLocation;
+        let rotationLocation;
+        let positionLocation;
+        let colorLocation;
+        let sizeLocation;
+
+        function initBuffers() {
+            // Create buffers
+            positionBuffer = ctx.createBuffer();
+            colorBuffer = ctx.createBuffer();
+            sizeBuffer = ctx.createBuffer();
+
+            // Get attribute locations
+            positionLocation = ctx.getAttribLocation(program, 'position');
+            colorLocation = ctx.getAttribLocation(program, 'color');
+            sizeLocation = ctx.getAttribLocation(program, 'size');
+
+            // Enable attributes
+            ctx.enableVertexAttribArray(positionLocation);
+            ctx.enableVertexAttribArray(colorLocation);
+            ctx.enableVertexAttribArray(sizeLocation);
+
+            // Get uniform locations
+            projectionLocation = ctx.getUniformLocation(program, 'projection');
+            rotationLocation = ctx.getUniformLocation(program, 'rotation');
+        }
+
+        function render() {
+            if (!program) return;
+
+            ctx.clear(ctx.COLOR_BUFFER_BIT | ctx.DEPTH_BUFFER_BIT);
+
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+
+            // Add central circle with configurable radius and segments
+            for (let i = 0; i <= config.circleSegments; i++) {
+                const angle = (i / config.circleSegments) * Math.PI * 2;
+                positions.push(
+                    Math.cos(angle) * config.circleRadius,
+                    Math.sin(angle) * config.circleRadius,
+                    0,
+                    0
+                );
+                colors.push(0.0, 1.0, 1.0, 0.8);
+                sizes.push(3.0 * config.particleSize);
+            }
+
+            // Add origin point
+            positions.push(0, 0, 0, 0);
+            colors.push(
+                0.0,    // R
+                1.0,    // G
+                1.0,    // B
+                1.0     // A
+            );
+            sizes.push(15.0);
+
+            // Add origin cross (larger)
+            const crossSize = 0.3;  // Increased from 0.2
+            // X axis
+            positions.push(-crossSize, 0, 0, 0);
+            positions.push(crossSize, 0, 0, 0);
+            colors.push(1.0, 0.2, 0.2, 0.8, 1.0, 0.2, 0.2, 0.8);
+            sizes.push(3.0, 3.0);
+            
+            // Y axis
+            positions.push(0, -crossSize, 0, 0);
+            positions.push(0, crossSize, 0, 0);
+            colors.push(0.2, 1.0, 0.2, 0.8, 0.2, 1.0, 0.2, 0.8);
+            sizes.push(3.0, 3.0);
+            
+            // Z axis
+            positions.push(0, 0, -crossSize, 0);
+            positions.push(0, 0, crossSize, 0);
+            colors.push(0.2, 0.2, 1.0, 0.8, 0.2, 0.2, 1.0, 0.8);
+            sizes.push(3.0, 3.0);
+            
+            // W axis
+            positions.push(0, 0, 0, -crossSize);
+            positions.push(0, 0, 0, crossSize);
+            colors.push(1.0, 0.2, 1.0, 0.8, 1.0, 0.2, 1.0, 0.8);
+            sizes.push(3.0, 3.0);
+
+            // Add quantum echoes
+            state.quantumEchoes.forEach(echo => {
+                positions.push(
+                    echo.position.x,
+                    echo.position.y,
+                    echo.position.z,
+                    echo.position.w
+                );
+                colors.push(
+                    0.0,  // R
+                    1.0,  // G
+                    1.0,  // B
+                    echo.lifetime * echo.resonance  // A
+                );
+                sizes.push(10.0 * echo.resonance);
+            });
+
+            // Add psiboids
+            state.psiboids.forEach(psiboid => {
+                positions.push(
+                    psiboid.position.x,
+                    psiboid.position.y,
+                    psiboid.position.z,
+                    psiboid.position.w
+                );
+                colors.push(
+                    1.0,  // R
+                    0.5,  // G
+                    1.0,  // B
+                    0.8   // A
+                );
+                sizes.push(5.0);
+            });
+
+            // Update buffers
+            ctx.bindBuffer(ctx.ARRAY_BUFFER, positionBuffer);
+            ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(positions), ctx.DYNAMIC_DRAW);
+            ctx.vertexAttribPointer(positionLocation, 4, ctx.FLOAT, false, 0, 0);
+
+            ctx.bindBuffer(ctx.ARRAY_BUFFER, colorBuffer);
+            ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(colors), ctx.DYNAMIC_DRAW);
+            ctx.vertexAttribPointer(colorLocation, 4, ctx.FLOAT, false, 0, 0);
+
+            ctx.bindBuffer(ctx.ARRAY_BUFFER, sizeBuffer);
+            ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(sizes), ctx.DYNAMIC_DRAW);
+            ctx.vertexAttribPointer(sizeLocation, 1, ctx.FLOAT, false, 0, 0);
+
+            // Set uniforms
+            const projectionMatrix = getProjectionMatrix();
+            const rotationMatrix = getRotationMatrix();
+            
+            ctx.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
+            ctx.uniformMatrix4fv(rotationLocation, false, rotationMatrix);
+
+            // Draw points
+            ctx.drawArrays(ctx.POINTS, 0, positions.length / 4);
+        }
+
+        function getProjectionMatrix() {
+            const aspect = canvas.width / canvas.height;
+            const fov = Math.PI / 3;
+            const near = 0.1;
+            const far = config.drawDistance;
+            
+            const f = 1.0 / Math.tan(fov / 2);
+            const rangeInv = 1 / (near - far);
+            
+            const translation = new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, -config.cameraDistance,
+                0, 0, 0, 1
+            ]);
+            
+            const projection = new Float32Array([
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (near + far) * rangeInv, -1,
+                0, 0, near * far * rangeInv * 2, 0
+            ]);
+            
+            return multiplyMatrices(translation, projection);
+        }
+
+        function multiplyMatrices(a, b) {
+            const result = new Float32Array(16);
+            
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    let sum = 0;
+                    for (let k = 0; k < 4; k++) {
+                        sum += a[i * 4 + k] * b[k * 4 + j];
+                    }
+                    result[i * 4 + j] = sum;
+                }
+            }
+            
+            return result;
+        }
+
+        function getRotationMatrix() {
+            const time = performance.now() * 0.0005 * config.rotationSpeed;
+            const c1 = Math.cos(time * 0.7);
+            const s1 = Math.sin(time * 0.7);
+            const c2 = Math.cos(time * 0.5);
+            const s2 = Math.sin(time * 0.5);
+            
+            // Create a scale matrix to keep things in view
+            const scale = 0.5;  // Scale everything down a bit
+            const scaleMatrix = new Float32Array([
+                scale, 0, 0, 0,
+                0, scale, 0, 0,
+                0, 0, scale, 0,
+                0, 0, 0, 1
+            ]);
+            
+            const rotationMatrix = new Float32Array([
+                c1, -s1, 0, 0,
+                s1, c1, 0, 0,
+                0, 0, c2, -s2,
+                0, 0, s2, c2
+            ]);
+            
+            return multiplyMatrices(scaleMatrix, rotationMatrix);
+        }
+
+        // Update mouse interaction to keep things centered
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width * 2 - 1) * 0.5;  // Scale down mouse movement
+            const y = ((1 - (e.clientY - rect.top) / rect.height) * 2 - 1) * 0.5;
+            
+            state.resonance = Math.sqrt(x*x + y*y);
+            
+            // Create quantum echo at cursor position (increased probability)
+            if (Math.random() < config.echoSpawnRate) {
+                state.quantumEchoes.push(new QuantumEcho(
+                    {
+                        x: x,
+                        y: y,
+                        z: Math.sin(performance.now() * 0.001) * 0.3,
+                        w: Math.cos(performance.now() * 0.001) * 0.3
+                    },
+                    state.resonance
+                ));
+            }
+        });
+
+        // Handle window resize
+        function handleResize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx.viewport(0, 0, canvas.width, canvas.height);
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        // Initialize everything when document is loaded
+        document.addEventListener('DOMContentLoaded', function init() {
+            // Set canvas size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx.viewport(0, 0, canvas.width, canvas.height);
+
+            // Initialize WebGL
+            program = initGL();
+            if (!program) {
+                console.error('Failed to initialize WebGL');
+                return;
+            }
+
+            // Initialize buffers
+            initBuffers();
+            
+            // Create initial psiboids (10x more)
+            for (let i = 0; i < config.psiboidCount; i++) {
+                state.psiboids.push(new Psiboid());
+            }
+            
+            // Start Roark guide
+            state.roarkState.active = true;
+            
+            // Add event listeners for all sliders
+            document.getElementById('circle-radius').addEventListener('input', (e) => {
+                config.circleRadius = parseFloat(e.target.value);
+                document.getElementById('circle-radius-value').textContent = config.circleRadius.toFixed(2);
+            });
+
+            document.getElementById('circle-segments').addEventListener('input', (e) => {
+                config.circleSegments = parseInt(e.target.value);
+                document.getElementById('circle-segments-value').textContent = config.circleSegments;
+            });
+
+            document.getElementById('draw-distance').addEventListener('input', (e) => {
+                config.drawDistance = parseFloat(e.target.value);
+                document.getElementById('draw-distance-value').textContent = config.drawDistance;
+            });
+
+            document.getElementById('camera-distance').addEventListener('input', (e) => {
+                config.cameraDistance = parseFloat(e.target.value);
+                document.getElementById('camera-distance-value').textContent = config.cameraDistance.toFixed(1);
+            });
+
+            document.getElementById('psiboid-count').addEventListener('input', (e) => {
+                const newCount = parseInt(e.target.value);
+                document.getElementById('psiboid-count-value').textContent = newCount;
+                
+                // Adjust psiboid count
+                while (state.psiboids.length < newCount) {
+                    state.psiboids.push(new Psiboid());
+                }
+                while (state.psiboids.length > newCount) {
+                    state.psiboids.pop();
+                }
+                config.psiboidCount = newCount;
+            });
+
+            document.getElementById('echo-rate').addEventListener('input', (e) => {
+                config.echoSpawnRate = parseFloat(e.target.value);
+                document.getElementById('echo-rate-value').textContent = config.echoSpawnRate.toFixed(2);
+            });
+
+            document.getElementById('particle-size').addEventListener('input', (e) => {
+                config.particleSize = parseFloat(e.target.value);
+                document.getElementById('particle-size-value').textContent = config.particleSize.toFixed(1);
+            });
+
+            document.getElementById('rotation-speed').addEventListener('input', (e) => {
+                config.rotationSpeed = parseFloat(e.target.value);
+                document.getElementById('rotation-speed-value').textContent = config.rotationSpeed.toFixed(1);
+            });
+
+            // Start update loop
+            update();
+        });
+    </script>
+</body>
+</html>

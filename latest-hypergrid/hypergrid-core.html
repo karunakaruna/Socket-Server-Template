@@ -1,0 +1,1555 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid Core</title>
+    <style>
+        /* Original styles */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            border-radius: 50%;
+            cursor: crosshair;
+            background: radial-gradient(circle at 50% 50%,
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        #navigator-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #navigator-grid::before,
+        #navigator-grid::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #navigator-grid::before {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        #navigator-grid::after {
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        #navigator-vector {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px cyan;
+        }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            pointer-events: none;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .quantum-coordinate {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .coordinate-label {
+            width: 120px;
+            opacity: 0.7;
+        }
+
+        .coordinate-value {
+            font-family: 'Consolas', monospace;
+            color: #0ff;
+        }
+
+        .manifold-info {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .quantum-bar {
+            width: 100px;
+            height: 4px;
+            background: rgba(0, 255, 255, 0.2);
+            margin-left: 10px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .quantum-bar-fill {
+            height: 100%;
+            background: rgba(0, 255, 255, 0.8);
+            transition: width 0.3s ease;
+        }
+
+        /* New Core Proximity Effect */
+        .core-proximity {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at center,
+                rgba(255, 0, 255, 0.2) 0%,
+                rgba(0, 255, 255, 0.1) 50%,
+                transparent 100%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .core-proximity.active {
+            opacity: 1;
+            width: 200px;
+            height: 200px;
+        }
+
+        .core-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            font-family: 'Courier New', monospace;
+            color: #ff00ff;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            display: none;
+        }
+
+        .core-indicator.visible {
+            display: block;
+        }
+
+        /* Control panel styles */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .control-btn {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+
+        .control-btn.active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: rgba(0, 255, 255, 0.8);
+        }
+
+        /* Manifold visualization */
+        .manifold-vis {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .manifold-stats {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            right: 15px;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.8;
+        }
+
+        .manifold-stats span {
+            color: #f0f;
+        }
+
+        .manifold-axis-label {
+            position: absolute;
+            color: rgba(0, 255, 255, 0.6);
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+        }
+
+        .manifold-axis-label.x {
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .manifold-axis-label.y {
+            top: 50%;
+            left: 5px;
+            transform: rotate(-90deg) translateX(-50%);
+            transform-origin: left center;
+        }
+
+        .manifold-vis.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .manifold-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .manifold-label {
+            position: absolute;
+            top: -20px;
+            left: 15px;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Core visualization styles */
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        .stats {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            z-index: 1;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1;
+        }
+
+        button {
+            background: rgba(0, 0, 0, 0.7);
+            color: #0ff;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        button.active {
+            background: rgba(0, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="quantum-navigator">
+        <div id="navigator-grid"></div>
+        <div id="navigator-vector"></div>
+    </div>
+    <div id="quantum-hud">
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">Phase:</span>
+            <span class="coordinate-value">0.00╧Ç</span>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">Spin:</span>
+            <span class="coordinate-value">Γåæ</span>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">Entangled:</span>
+            <span class="coordinate-value">No</span>
+        </div>
+        <div class="manifold-info">
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Manifold Depth:</span>
+                <span class="coordinate-value">╬╗=0.800</span>
+            </div>
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Curvature:</span>
+                <span class="coordinate-value">╬║=1.400</span>
+            </div>
+            <div class="quantum-coordinate">
+                <span class="coordinate-label">Q-Entropy:</span>
+                <span class="coordinate-value">1.317 qbits</span>
+            </div>
+        </div>
+    </div>
+    <div class="core-proximity"></div>
+    <div class="core-indicator">CORE PROXIMITY ALERT v2.1</div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="control-btn" id="homeBtn">HOME</div>
+        <div class="control-btn" id="stopBtn">STOP</div>
+        <div class="control-btn" id="manifoldBtn">MANIFOLD</div>
+    </div>
+
+    <!-- Manifold Visualization -->
+    <div class="manifold-vis">
+        <div class="manifold-label">MANIFOLD TOPOLOGY</div>
+        <canvas id="manifoldCanvas" class="manifold-canvas"></canvas>
+        <div class="manifold-axis-label x">SPATIAL POSITION</div>
+        <div class="manifold-axis-label y">CURVATURE</div>
+        <div class="manifold-stats">
+            <div>╬╗=<span id="manifoldDepth">0.000</span></div>
+            <div>╬║=<span id="manifoldCurv">0.000</span></div>
+            <div>Γêç=<span id="manifoldGrad">0.000</span></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('WebGL not available');
+            throw new Error('WebGL not available');
+        }
+
+        // Enhanced vertex shader with quantum effects
+        const vertexShaderSource = `
+            precision mediump float;
+            
+            attribute vec4 position;
+            attribute vec4 color;
+            attribute float size;
+            
+            uniform mat4 matrix;
+            uniform float wProjection;
+            uniform float hyperCurvature;
+            uniform float time;
+            uniform float focalLength;
+            
+            varying vec4 vColor;
+            varying float vSize;
+            varying float vDist;
+            
+            // Quantum noise function
+            float quantum_noise(vec4 pos) {
+                float t = time * 0.001;
+                return sin(pos.x * 10.0 + t) * cos(pos.y * 10.0 - t) * sin(pos.z * 10.0 + pos.w * 10.0);
+            }
+            
+            void main() {
+                // Apply 4D rotation
+                vec4 pos = position;
+                pos = matrix * pos;
+                float dist = length(pos.xyz);
+                
+                // Enhanced quantum effects near core
+                float coreProximity = smoothstep(0.001, 0.2, wProjection);
+                float quantumEffect = quantum_noise(pos) * (1.0 - coreProximity) * 0.1;
+                pos.xyz += pos.xyz * quantumEffect;
+                
+                // Enhanced hyperbolic distortion with focal length
+                float hyperEffect = 1.0 / (1.0 + dist * hyperCurvature * focalLength);
+                pos.xyz *= hyperEffect;
+                
+                // Enhanced w-projection with quantum tunneling
+                float w = mix(0.1, 2.0, wProjection + quantumEffect);
+                gl_Position = vec4(pos.xyz * focalLength / (w - pos.w), 1.0);
+                
+                // Dynamic point size with quantum fluctuation
+                float sizeEffect = size * hyperEffect * (1.0 + (1.0 - wProjection) * 3.0);
+                gl_PointSize = sizeEffect * (1.0 + quantumEffect) * (1.0 + (1.0 - coreProximity));
+                
+                // Enhanced color near core with quantum shift
+                vec4 coreColor = vec4(1.0, 0.2, 1.0, color.a);
+                vec4 quantumColor = vec4(0.2, 0.8, 1.0, color.a);
+                vColor = mix(mix(color, coreColor, 1.0 - coreProximity), quantumColor, abs(quantumEffect));
+                vSize = sizeEffect;
+                vDist = dist;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision mediump float;
+            
+            varying vec4 vColor;
+            varying float vSize;
+            varying float vDist;
+            uniform float time;
+            
+            void main() {
+                vec2 coord = gl_PointCoord * 2.0 - 1.0;
+                float r = length(coord);
+                if (r > 1.0) discard;
+                
+                // Enhanced quantum glow
+                float glow = exp(-r * r * 1.5);
+                float edge = smoothstep(0.8, 0.2, r);
+                
+                // Core resonance effect
+                float pulse = sin(vDist * 20.0 - time * 0.002) * 0.5 + 0.5;
+                vec4 finalColor = mix(vColor, vec4(1.0, 0.5, 1.0, vColor.a), pulse * (1.0 - r));
+                
+                gl_FragColor = vec4(finalColor.rgb, finalColor.a * (glow + edge * 0.5));
+            }
+        `;
+
+        // Create shader program
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            console.error('Vertex shader compile error:', gl.getShaderInfoLog(vertexShader));
+        }
+
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            console.error('Fragment shader compile error:', gl.getShaderInfoLog(fragmentShader));
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Program link error:', gl.getProgramInfoLog(program));
+            throw new Error('Failed to initialize shaders');
+        }
+        gl.useProgram(program);
+
+        // Add time uniform location
+        const timeLocation = gl.getUniformLocation(program, 'time');
+        
+        // Generate 4D points with enhanced density
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            
+            for (let w = -size; w <= size; w++) {
+                for (let x = -size; x <= size; x++) {
+                    for (let y = -size; y <= size; y++) {
+                        for (let z = -size; z <= size; z++) {
+                            if (Math.random() < 0.1) {  // Adjusted density
+                                points.push(w/size, x/size, y/size, z/size);
+                                
+                                // Enhanced color scheme
+                                const dist = Math.sqrt(w*w + x*x + y*y + z*z) / size;
+                                const hue = (dist * 360) % 360;
+                                const rgb = hslToRgb(hue/360, 0.8, 0.5);
+                                colors.push(...rgb, 0.8);
+                                
+                                // Dynamic point sizes
+                                sizes.push(Math.max(2, (1 - dist) * 5));
+                            }
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        }
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [r, g, b];
+        }
+
+        // Set up initial state
+        let navigatorState = {
+            position: { x: 0, y: 0, z: 0, w: 0 },
+            velocity: { x: 0, y: 0, z: 0, w: 0 },
+            wProjection: 1.0,
+            hyperCurvature: 1.0,
+            lastFrameTime: 0,
+            speed: 0.01,
+            focalLength: 1.0,
+            zoomSpeed: 0.001,
+            spinning: true,
+            showManifold: false
+        };
+
+        const baseFreqs = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0
+        };
+
+        const freqs = { ...baseFreqs };
+
+        // Add keyboard controls
+        const keys = new Set();
+        
+        document.addEventListener('keydown', (e) => {
+            keys.add(e.key.toLowerCase());
+            
+            // Reset position with R key
+            if (e.key.toLowerCase() === 'r') {
+                navigatorState.position = { x: 0, y: 0, z: 0, w: 0 };
+                navigatorState.velocity = { x: 0, y: 0, z: 0, w: 0 };
+                navigatorState.wProjection = 1.0;
+                navigatorState.focalLength = 1.0;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys.delete(e.key.toLowerCase());
+        });
+
+        function updatePosition(deltaTime) {
+            // Base movement speed
+            let speed = navigatorState.speed * deltaTime;
+            
+            // Adjust speed based on zoom level - slower when zoomed in
+            speed *= Math.min(1.0, navigatorState.wProjection);
+            
+            // WASD for X-Z movement
+            if (keys.has('w')) navigatorState.position.z -= speed;
+            if (keys.has('s')) navigatorState.position.z += speed;
+            if (keys.has('a')) navigatorState.position.x -= speed;
+            if (keys.has('d')) navigatorState.position.x += speed;
+            
+            // QE for Y movement
+            if (keys.has('q')) navigatorState.position.y += speed;
+            if (keys.has('e')) navigatorState.position.y -= speed;
+            
+            // ZX for W (4th dimension) movement
+            if (keys.has('z')) navigatorState.position.w -= speed;
+            if (keys.has('x')) navigatorState.position.w += speed;
+            
+            // Shift/Ctrl for speed control
+            if (keys.has('shift')) {
+                navigatorState.speed = 0.03;
+            } else if (keys.has('control')) {
+                navigatorState.speed = 0.003; // Ultra-fine control
+            } else {
+                navigatorState.speed = 0.01;
+            }
+            
+            // Space/C for zoom
+            const zoomSpeed = navigatorState.zoomSpeed * deltaTime;
+            if (keys.has(' ')) {
+                // Exponential zoom for smoother close-ups
+                navigatorState.wProjection *= (1 - zoomSpeed);
+                // Allow extremely close zoom (0.03 instead of 0.05)
+                navigatorState.wProjection = Math.max(0.03, navigatorState.wProjection);
+            }
+            if (keys.has('c')) {
+                navigatorState.wProjection *= (1 + zoomSpeed);
+                navigatorState.wProjection = Math.min(2.5, navigatorState.wProjection);
+            }
+            
+            // [ and ] for focal length adjustment
+            if (keys.has('[')) {
+                navigatorState.focalLength = Math.max(0.1, navigatorState.focalLength - speed);
+            }
+            if (keys.has(']')) {
+                navigatorState.focalLength = Math.min(5.0, navigatorState.focalLength + speed);
+            }
+        }
+
+        // Generate 4D points with enhanced density
+        const gridSize = 12; // Increased grid size
+        const { points, colors, sizes } = generatePoints(gridSize);
+
+        // Create and bind buffers
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+        function render(currentTime) {
+            const deltaTime = currentTime - navigatorState.lastFrameTime;
+            navigatorState.lastFrameTime = currentTime;
+
+            // Update position based on keyboard input
+            updatePosition(deltaTime);
+
+            // Update rotation frequencies
+            Object.keys(freqs).forEach(key => {
+                freqs[key] += baseFreqs[key];
+            });
+
+            // Clear and set up GL state
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+            // Pass uniforms
+            gl.uniform1f(timeLocation, currentTime);
+            gl.uniform1f(gl.getUniformLocation(program, 'focalLength'), navigatorState.focalLength);
+            
+            // Get rotation matrix and combine with position
+            const rotationMatrix = get4DRotationMatrix(
+                freqs.wx, freqs.wy, freqs.wz,
+                freqs.xy, freqs.xz, freqs.yz
+            );
+            
+            // Apply position translation
+            const matrix = new Float32Array(rotationMatrix);
+            matrix[12] = navigatorState.position.x;
+            matrix[13] = navigatorState.position.y;
+            matrix[14] = navigatorState.position.z;
+            matrix[15] = 1.0 + navigatorState.position.w;
+
+            // Set uniforms
+            gl.uniformMatrix4fv(gl.getUniformLocation(program, 'matrix'), false, matrix);
+            gl.uniform1f(gl.getUniformLocation(program, 'wProjection'), navigatorState.wProjection);
+            gl.uniform1f(gl.getUniformLocation(program, 'hyperCurvature'), navigatorState.hyperCurvature);
+
+            // Set up attributes and uniforms
+            const positionLocation = gl.getAttribLocation(program, 'position');
+            const colorLocation = gl.getAttribLocation(program, 'color');
+            const sizeLocation = gl.getAttribLocation(program, 'size');
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.enableVertexAttribArray(sizeLocation);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+            // Draw points
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+            // Update manifold visualization
+            updateManifold();
+
+            requestAnimationFrame(render);
+        }
+
+        function resizeCanvas() {
+            const canvas = document.getElementById('glCanvas');
+            const pixelRatio = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * pixelRatio;
+            canvas.height = window.innerHeight * pixelRatio;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+
+        function initQuantumNavigator() {
+            const navigator = document.getElementById('quantum-navigator');
+            const vector = document.getElementById('navigator-vector');
+            
+            let isDragging = false;
+            let startX = 0;
+            let startY = 0;
+
+            navigator.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                navigator.setPointerCapture(e.pointerId);
+            });
+
+            navigator.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                baseFreqs.wx += dx * 0.001;
+                baseFreqs.wy += dy * 0.001;
+                
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+
+            navigator.addEventListener('pointerup', () => {
+                isDragging = false;
+            });
+
+            navigator.addEventListener('pointercancel', () => {
+                isDragging = false;
+            });
+        }
+
+        function handlePinchZoom(e) {
+            if (e.touches.length !== 2) {
+                navigatorState.pinchStart = null;
+                navigatorState.lastPinchDistance = 0;
+                return;
+            }
+
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const distance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+
+            if (!navigatorState.pinchStart) {
+                navigatorState.pinchStart = distance;
+                navigatorState.lastPinchDistance = distance;
+                return;
+            }
+
+            const delta = distance - navigatorState.lastPinchDistance;
+            navigatorState.lastPinchDistance = distance;
+
+            // Enhanced pinch speed and range
+            const pinchSpeed = 0.01; // Increased from 0.008
+            const pinchDelta = delta * pinchSpeed;
+
+            // Allow even closer zoom (0.03 instead of 0.05)
+            navigatorState.wProjection = Math.max(0.03, Math.min(2.5,
+                navigatorState.wProjection + pinchDelta
+            ));
+
+            // Update core proximity effects
+            const coreProximity = document.querySelector('.core-proximity');
+            const coreIndicator = document.querySelector('.core-indicator');
+            
+            if (navigatorState.wProjection < 0.2) {
+                coreProximity.classList.add('active');
+                coreIndicator.classList.add('visible');
+                // Intensity increases as we get closer
+                const intensity = (0.2 - navigatorState.wProjection) * 5;
+                coreProximity.style.opacity = intensity;
+            } else {
+                coreProximity.classList.remove('active');
+                coreIndicator.classList.remove('visible');
+            }
+
+            // Enhanced cross-dimensional effects when close to core
+            const zoomFactor = Math.max(0.03, navigatorState.wProjection);
+            Object.keys(baseFreqs).forEach(key => {
+                if (key.includes('w')) {
+                    baseFreqs[key] += pinchDelta * (0.02 / zoomFactor);
+                }
+            });
+
+            // Update HUD with core proximity info
+            const depthValue = document.querySelector('.manifold-info .quantum-coordinate:first-child .coordinate-value');
+            depthValue.textContent = `╬╗=${navigatorState.wProjection.toFixed(3)}`;
+            
+            // Update entropy based on core proximity
+            const entropyValue = document.querySelector('.manifold-info .quantum-coordinate:last-child .coordinate-value');
+            const baseEntropy = 1.317;
+            const proximityFactor = Math.max(1, (0.2 / navigatorState.wProjection));
+            entropyValue.textContent = `${(baseEntropy * proximityFactor).toFixed(3)} qbits`;
+        }
+
+        // Add touch event listeners
+        document.addEventListener('touchstart', handlePinchZoom);
+        document.addEventListener('touchmove', handlePinchZoom);
+        document.addEventListener('touchend', handlePinchZoom);
+
+        // Initialize
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        initQuantumNavigator();
+        requestAnimationFrame(render);
+
+        // Add 4D rotation matrix function
+        function get4DRotationMatrix(wx, wy, wz, xy, xz, yz) {
+            const cwx = Math.cos(wx), swx = Math.sin(wx);
+            const cwy = Math.cos(wy), swy = Math.sin(wy);
+            const cwz = Math.cos(wz), swz = Math.sin(wz);
+            const cxy = Math.cos(xy), sxy = Math.sin(xy);
+            const cxz = Math.cos(xz), sxz = Math.sin(xz);
+            const cyz = Math.cos(yz), syz = Math.sin(yz);
+
+            // Create 4x4 rotation matrix combining all rotations
+            return new Float32Array([
+                cwx*cwy*cwz - swx*swy, -cwx*swz, cwx*cwy*swz + swx*swy, swx*cwy,
+                swx*cwy*cwz + cwx*swy, cwx*cwz, swx*cwy*swz - cwx*swy, -cwx*cwy,
+                -swy*cwz, swz, -swy*swz, cwy,
+                0, 0, 0, 1
+            ]);
+        }
+
+        // Control panel functionality
+        document.getElementById('homeBtn').addEventListener('click', () => {
+            navigatorState.position = { x: 0, y: 0, z: 0, w: 0 };
+            navigatorState.velocity = { x: 0, y: 0, z: 0, w: 0 };
+            navigatorState.wProjection = 1.0;
+            navigatorState.focalLength = 1.0;
+            Object.keys(freqs).forEach(key => freqs[key] = 0);
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            const btn = this;
+            navigatorState.spinning = !navigatorState.spinning;
+            btn.classList.toggle('active');
+            if (!navigatorState.spinning) {
+                Object.keys(baseFreqs).forEach(key => baseFreqs[key] = 0);
+            } else {
+                // Restore gentle spin
+                baseFreqs.wx = 0.0002;
+                baseFreqs.wy = 0.0001;
+            }
+        });
+
+        document.getElementById('manifoldBtn').addEventListener('click', function() {
+            const btn = this;
+            navigatorState.showManifold = !navigatorState.showManifold;
+            btn.classList.toggle('active');
+            const manifoldVis = document.querySelector('.manifold-vis');
+            if (navigatorState.showManifold) {
+                manifoldVis.style.display = 'block';
+                // Force a resize to ensure canvas is properly initialized
+                setTimeout(() => {
+                    initManifoldCanvas();
+                    updateManifold();
+                }, 50);
+            } else {
+                manifoldVis.style.display = 'none';
+            }
+        });
+
+        // Manifold visualization
+        const manifoldCanvas = document.getElementById('manifoldCanvas');
+        const manifoldCtx = manifoldCanvas.getContext('2d');
+        
+        function updateManifold() {
+            if (!navigatorState.showManifold) return;
+            
+            const width = manifoldCanvas.width;
+            const height = manifoldCanvas.height;
+            
+            // Clear with slight fade for trail effect
+            manifoldCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            manifoldCtx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            manifoldCtx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+            manifoldCtx.lineWidth = 0.5;
+            
+            // Draw grid with perspective distortion
+            const gridSize = 20;
+            const perspectiveStrength = Math.exp(-navigatorState.wProjection);
+            
+            for (let i = 0; i < width; i += gridSize) {
+                manifoldCtx.beginPath();
+                manifoldCtx.moveTo(i, 0);
+                const distortion = Math.sin(i * 0.1) * 10 * perspectiveStrength;
+                manifoldCtx.lineTo(i + distortion, height);
+                manifoldCtx.stroke();
+            }
+            for (let i = 0; i < height; i += gridSize) {
+                manifoldCtx.beginPath();
+                manifoldCtx.moveTo(0, i);
+                const distortion = Math.cos(i * 0.1) * 10 * perspectiveStrength;
+                manifoldCtx.lineTo(width, i + distortion);
+                manifoldCtx.stroke();
+            }
+            
+            const time = performance.now() * 0.001;
+            
+            // Draw core influence zone
+            const coreX = width / 2;
+            const coreY = height / 2;
+            const coreRadius = 50 * Math.exp(-navigatorState.wProjection);
+            
+            const coreGradient = manifoldCtx.createRadialGradient(
+                coreX, coreY, 0,
+                coreX, coreY, coreRadius
+            );
+            coreGradient.addColorStop(0, 'rgba(0, 255, 255, 0.1)');
+            coreGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            manifoldCtx.fillStyle = coreGradient;
+            manifoldCtx.beginPath();
+            manifoldCtx.arc(coreX, coreY, coreRadius, 0, Math.PI * 2);
+            manifoldCtx.fill();
+            
+            // Draw manifold waves
+            manifoldCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+            manifoldCtx.lineWidth = 1;
+            
+            const waveCount = 3;
+            for (let w = 0; w < waveCount; w++) {
+                manifoldCtx.beginPath();
+                for (let x = 0; x < width; x += 2) {
+                    const distFromCore = Math.abs(x - width/2) / width;
+                    const amplitude = 30 * Math.exp(-navigatorState.wProjection * 2);
+                    const frequency = 0.02 + w * 0.01;
+                    const phase = time * (1 + w * 0.5);
+                    
+                    const y = height/2 + 
+                        amplitude * Math.sin(x * frequency + phase) * 
+                        Math.exp(-distFromCore * 2);
+                    
+                    if (x === 0) manifoldCtx.moveTo(x, y);
+                    else manifoldCtx.lineTo(x, y);
+                }
+                manifoldCtx.stroke();
+            }
+            
+            // Draw quantum fluctuations
+            manifoldCtx.strokeStyle = 'rgba(255, 0, 255, 0.2)';
+            for (let i = 0; i < 3; i++) {
+                manifoldCtx.beginPath();
+                for (let x = 0; x < width; x += 2) {
+                    const distFromCore = Math.abs(x - width/2) / width;
+                    const y = height/2 + 
+                        15 * Math.sin(x * 0.1 + time * 2 + i) * 
+                        Math.exp(-navigatorState.wProjection) *
+                        Math.exp(-distFromCore * 3);
+                    if (x === 0) manifoldCtx.moveTo(x, y);
+                    else manifoldCtx.lineTo(x, y);
+                }
+                manifoldCtx.stroke();
+            }
+            
+            // Draw position indicator
+            const posX = width/2 + navigatorState.position.x * width/4;
+            const posY = height/2 + navigatorState.position.y * height/4;
+            
+            // Position trail
+            manifoldCtx.strokeStyle = 'rgba(255, 0, 255, 0.3)';
+            manifoldCtx.lineWidth = 2;
+            manifoldCtx.beginPath();
+            manifoldCtx.moveTo(width/2, height/2);
+            manifoldCtx.lineTo(posX, posY);
+            manifoldCtx.stroke();
+            
+            // Glow effect
+            const posGradient = manifoldCtx.createRadialGradient(
+                posX, posY, 0,
+                posX, posY, 10
+            );
+            posGradient.addColorStop(0, 'rgba(255, 0, 255, 0.8)');
+            posGradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
+            
+            manifoldCtx.fillStyle = posGradient;
+            manifoldCtx.beginPath();
+            manifoldCtx.arc(posX, posY, 10, 0, Math.PI * 2);
+            manifoldCtx.fill();
+            
+            // Center point
+            manifoldCtx.fillStyle = '#f0f';
+            manifoldCtx.beginPath();
+            manifoldCtx.arc(posX, posY, 3, 0, Math.PI * 2);
+            manifoldCtx.fill();
+
+            // Update stats
+            document.getElementById('manifoldDepth').textContent = 
+                navigatorState.wProjection.toFixed(3);
+            document.getElementById('manifoldCurv').textContent = 
+                navigatorState.hyperCurvature.toFixed(3);
+            const distanceFromCore = Math.sqrt(
+                navigatorState.position.x * navigatorState.position.x +
+                navigatorState.position.y * navigatorState.position.y
+            ).toFixed(3);
+            document.getElementById('manifoldGrad').textContent = distanceFromCore;
+        }
+
+        function initManifoldCanvas() {
+            const manifoldVis = document.querySelector('.manifold-vis');
+            const canvas = document.getElementById('manifoldCanvas');
+            
+            // Set canvas size to match container
+            canvas.width = manifoldVis.clientWidth - 30;  // Account for padding
+            canvas.height = manifoldVis.clientHeight - 60;  // Account for padding and stats
+            
+            manifoldCtx = canvas.getContext('2d');
+            manifoldCtx.imageSmoothingEnabled = true;
+        }
+
+        // Initialize manifold canvas size
+        function resizeManifold() {
+            const canvas = document.getElementById('manifoldCanvas');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            manifoldCtx.scale(dpr, dpr);
+        }
+        
+        window.addEventListener('resize', resizeManifold);
+        resizeManifold();
+
+        // Add click handler for dimensional collapse
+        canvas.addEventListener('click', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / canvas.width * 2 - 1;
+            const y = (e.clientY - rect.top) / canvas.height * 2 - 1;
+            
+            // Create collapse trail
+            createCollapseTrail(x, y);
+        });
+
+        function createCollapseTrail(x, y) {
+            // Create dimensional collapse effect
+            const trailCount = 20;
+            const trailLife = 1000; // ms
+            const startTime = performance.now();
+            
+            function animateTrail() {
+                const now = performance.now();
+                const progress = (now - startTime) / trailLife;
+                
+                if (progress < 1) {
+                    // Draw collapse trail
+                    manifoldCtx.strokeStyle = `rgba(0, 255, 255, ${1 - progress})`;
+                    manifoldCtx.lineWidth = 2 * (1 - progress);
+                    
+                    // Create spiral collapse effect
+                    for (let i = 0; i < trailCount; i++) {
+                        const angle = (i / trailCount) * Math.PI * 2 + progress * 10;
+                        const radius = 50 * (1 - progress);
+                        
+                        manifoldCtx.beginPath();
+                        manifoldCtx.moveTo(
+                            canvas.width/2 + Math.cos(angle) * radius,
+                            canvas.height/2 + Math.sin(angle) * radius
+                        );
+                        manifoldCtx.lineTo(
+                            canvas.width/2 + Math.cos(angle + 0.2) * (radius * 0.8),
+                            canvas.height/2 + Math.sin(angle + 0.2) * (radius * 0.8)
+                        );
+                        manifoldCtx.stroke();
+                    }
+                    
+                    // Create quantum ripple
+                    manifoldCtx.strokeStyle = `rgba(255, 0, 255, ${0.5 * (1 - progress)})`;
+                    manifoldCtx.beginPath();
+                    manifoldCtx.arc(
+                        canvas.width/2,
+                        canvas.height/2,
+                        100 * progress,
+                        0,
+                        Math.PI * 2
+                    );
+                    manifoldCtx.stroke();
+                    
+                    requestAnimationFrame(animateTrail);
+                }
+            }
+            
+            // Start trail animation
+            animateTrail();
+            
+            // Trigger dimensional shift
+            navigatorState.hyperCurvature *= 0.8;
+            navigatorState.wProjection *= 1.2;
+            
+            // Add quantum fluctuation burst
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: canvas.width/2,
+                    y: canvas.height/2,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: `hsl(${280 + Math.random() * 60}, 100%, 50%)`
+                });
+            }
+        }
+
+        // Update particle system
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                manifoldCtx.fillStyle = p.color.replace(')', `, ${p.life})`);
+                manifoldCtx.beginPath();
+                manifoldCtx.arc(p.x, p.y, 2 * p.life, 0, Math.PI * 2);
+                manifoldCtx.fill();
+            }
+        }
+
+        // Initialize particle system
+        const particles = [];
+
+        // Core visualization
+        const coreCanvas = document.createElement('canvas');
+        coreCanvas.width = window.innerWidth;
+        coreCanvas.height = window.innerHeight;
+        coreCanvas.style.position = 'fixed';
+        coreCanvas.style.top = '0';
+        coreCanvas.style.left = '0';
+        coreCanvas.style.zIndex = '1';
+        const coreCtx = coreCanvas.getContext('2d');
+        document.body.appendChild(coreCanvas);
+
+        // Add mouse tracking
+        let mouseX = coreCanvas.width / 2;
+        let mouseY = coreCanvas.height / 2;
+        
+        coreCanvas.addEventListener('mousemove', function(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        class PsiBoid {
+            constructor(x, y, z) {
+                this.x = x;
+                this.y = y;
+                this.z = z || 0;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.vz = (Math.random() - 0.5) * 2;
+                this.quantum = Math.random(); // Quantum state
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update(boids, time) {
+                // Quantum probability field influence
+                this.quantum = (this.quantum + Math.sin(time + this.phase) * 0.1) % 1;
+                
+                // Calculate center of nearby boids
+                let cx = 0, cy = 0, cz = 0;
+                let count = 0;
+                const neighborRadius = 50;
+                
+                boids.forEach(other => {
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const dz = other.z - this.z;
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    
+                    if (dist < neighborRadius && dist > 0) {
+                        cx += other.x;
+                        cy += other.y;
+                        cz += other.z;
+                        count++;
+                        
+                        // Quantum entanglement effect
+                        if (Math.random() < 0.1) {
+                            this.quantum = (this.quantum + other.quantum) / 2;
+                        }
+                    }
+                });
+
+                if (count > 0) {
+                    // Cohesion to center of flock
+                    this.vx += (cx/count - this.x) * 0.01;
+                    this.vy += (cy/count - this.y) * 0.01;
+                    this.vz += (cz/count - this.z) * 0.01;
+                }
+
+                // Mouse attraction
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const mouseDist = Math.sqrt(dx*dx + dy*dy);
+                const mouseInfluence = Math.exp(-mouseDist/200) * 0.5;
+                
+                this.vx += dx * mouseInfluence * 0.001;
+                this.vy += dy * mouseInfluence * 0.001;
+
+                // Core attraction
+                const centerX = coreCanvas.width/2;
+                const centerY = coreCanvas.height/2;
+                const toCenterX = centerX - this.x;
+                const toCenterY = centerY - this.y;
+                const centerDist = Math.sqrt(toCenterX*toCenterX + toCenterY*toCenterY);
+                
+                this.vx += toCenterX * 0.0001;
+                this.vy += toCenterY * 0.0001;
+
+                // Update position with quantum uncertainty
+                const uncertainty = 0.1 * Math.sin(time * 10 + this.phase);
+                this.x += this.vx + uncertainty;
+                this.y += this.vy + uncertainty;
+                this.z += this.vz + uncertainty;
+
+                // Damping
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+                this.vz *= 0.99;
+
+                // Keep within bounds
+                const bounds = 500;
+                if (Math.abs(this.z) > bounds) this.vz *= -0.5;
+            }
+
+            draw(ctx) {
+                // Calculate size based on z-position
+                const perspective = 1000 / (1000 - this.z);
+                const size = 1.5 * perspective;
+                
+                // Calculate alpha based on quantum state and z-position
+                const alpha = (0.3 + this.quantum * 0.7) * Math.max(0, 1 - Math.abs(this.z)/500);
+                
+                ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Initialize psi-boids
+        const psiBoids = [];
+        for (let i = 0; i < 500; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 400;
+            psiBoids.push(new PsiBoid(
+                coreCanvas.width/2 + Math.cos(angle) * radius,
+                coreCanvas.height/2 + Math.sin(angle) * radius,
+                (Math.random() - 0.5) * 200
+            ));
+        }
+
+        function drawOortCloud(timestamp) {
+            const time = timestamp * 0.001;
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
+
+            // Clear with slight fade for trail effect
+            coreCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+
+            // Update and draw psi-boids first
+            psiBoids.forEach(boid => {
+                boid.update(psiBoids, time);
+                boid.draw(coreCtx);
+            });
+
+            // Draw core elements
+            drawCore(time);
+            drawRings(time);
+            drawRays(time);
+            
+            // Update any spawned particles
+            updateParticles();
+
+            requestAnimationFrame(drawOortCloud);
+        }
+
+        // Initialize canvas and start animation
+        function initCanvas() {
+            coreCanvas.width = window.innerWidth;
+            coreCanvas.height = window.innerHeight;
+            
+            // Reinitialize psi-boids with new dimensions
+            psiBoids.length = 0; // Clear existing boids
+            for (let i = 0; i < 500; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 400;
+                psiBoids.push(new PsiBoid(
+                    coreCanvas.width/2 + Math.cos(angle) * radius,
+                    coreCanvas.height/2 + Math.sin(angle) * radius,
+                    (Math.random() - 0.5) * 200
+                ));
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', initCanvas);
+
+        // Start everything
+        initCanvas();
+        requestAnimationFrame(drawOortCloud);
+
+        function drawCore(time) {
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
+            const baseRadius = 150;
+            
+            // Draw core glow
+            const pulseSize = 1 + Math.sin(time * 2) * 0.1;
+            const gradient = coreCtx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, baseRadius * pulseSize
+            );
+            gradient.addColorStop(0, 'rgba(0, 255, 255, 0.4)');
+            gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.1)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            coreCtx.fillStyle = gradient;
+            coreCtx.beginPath();
+            coreCtx.arc(centerX, centerY, baseRadius * pulseSize, 0, Math.PI * 2);
+            coreCtx.fill();
+            
+            // Draw core outline
+            coreCtx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+            coreCtx.lineWidth = 2;
+            coreCtx.beginPath();
+            coreCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+            coreCtx.stroke();
+        }
+
+        function drawRings(time) {
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
+            const baseRadius = 150;
+            
+            // Draw original core rings
+            const ringCount = 3;
+            for (let r = 0; r < ringCount; r++) {
+                coreCtx.beginPath();
+                const segments = 100;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    const ringRadius = baseRadius + r * 20;
+                    const waveRadius = ringRadius + Math.sin(angle * 8 + time * 2) * 5;
+                    
+                    const x = centerX + Math.cos(angle) * waveRadius;
+                    const y = centerY + Math.sin(angle) * waveRadius;
+                    
+                    if (i === 0) coreCtx.moveTo(x, y);
+                    else coreCtx.lineTo(x, y);
+                }
+                coreCtx.closePath();
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.8 - r * 0.2})`;
+                coreCtx.lineWidth = 2;
+                coreCtx.stroke();
+            }
+        }
+
+        function drawRays(time) {
+            const centerX = coreCanvas.width / 2;
+            const centerY = coreCanvas.height / 2;
+            const baseRadius = 150;
+            
+            // Draw original core rays
+            const rayCount = 32;
+            
+            for (let i = 0; i < rayCount; i++) {
+                const angle = (i / rayCount) * Math.PI * 2;
+                const rayLength = 400 * (1 + Math.sin(time + i * 0.2) * 0.1);
+                const interference = Math.sin(angle * 8 + time * 3) * 0.5 + 0.5;
+                
+                // Draw the main ray
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.4 * interference})`;
+                coreCtx.lineWidth = 2;
+                
+                coreCtx.beginPath();
+                coreCtx.moveTo(
+                    centerX + Math.cos(angle) * baseRadius,
+                    centerY + Math.sin(angle) * baseRadius
+                );
+                coreCtx.lineTo(
+                    centerX + Math.cos(angle) * rayLength,
+                    centerY + Math.sin(angle) * rayLength
+                );
+                coreCtx.stroke();
+
+                // Add organic wave patterns along the ray
+                coreCtx.strokeStyle = `rgba(0, 255, 255, ${0.2 * interference})`;
+                coreCtx.lineWidth = 1;
+                const wavePoints = 8;
+                for (let w = 0; w < 3; w++) {
+                    coreCtx.beginPath();
+                    for (let p = 0; p <= wavePoints; p++) {
+                        const t = p / wavePoints;
+                        const r = baseRadius + (rayLength - baseRadius) * t;
+                        const wave = Math.sin(t * Math.PI * 4 + time * 2 + w) * 20;
+                        const x = centerX + Math.cos(angle) * r + Math.cos(angle + Math.PI/2) * wave;
+                        const y = centerY + Math.sin(angle) * r + Math.sin(angle + Math.PI/2) * wave;
+                        if (p === 0) coreCtx.moveTo(x, y);
+                        else coreCtx.lineTo(x, y);
+                    }
+                    coreCtx.stroke();
+                }
+            }
+        }
+
+        // Add click handler for particle spawning
+        coreCanvas.addEventListener('click', function(e) {
+            const rect = coreCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            spawnParticles(x, y, 50);
+        });
+
+        // Particle system
+        function spawnParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                const hue = 180 + Math.random() * 60; // Cyan to blue variation
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    size: 2 + Math.random() * 2,
+                    color: `hsla(${hue}, 100%, 50%`
+                });
+            }
+        }
+
+        function updateParticles() {
+            const time = performance.now() * 0.001;
+            
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Add spiral motion with z-depth
+                const dx = p.x - coreCanvas.width/2;
+                const dy = p.y - coreCanvas.height/2;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(dy, dx);
+                
+                p.vx += Math.cos(angle + Math.PI/2) * 0.2 / dist;
+                p.vy += Math.sin(angle + Math.PI/2) * 0.2 / dist;
+                
+                // Calculate perspective scale
+                const z = Math.sin(dist * 0.01 + time) * 100;
+                const scale = 1000 / (1000 - z);
+                
+                // Draw particle with trail
+                coreCtx.fillStyle = p.color.replace(')', `, ${p.life})`);
+                coreCtx.beginPath();
+                coreCtx.arc(p.x, p.y, p.size * p.life * scale, 0, Math.PI * 2);
+                coreCtx.fill();
+            }
+        }
+    </script>
+</body>
+</html>
