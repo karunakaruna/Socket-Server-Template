@@ -7,6 +7,8 @@ from queue import Queue
 import numpy as np
 from quantum_crypto import QuantumState, HyperMessage
 import uuid
+import time
+import random
 
 logging.basicConfig(
     level=logging.INFO,
@@ -255,21 +257,53 @@ Available commands:
                         msg = HyperMessage.from_json(data.get('encrypted', {}))
                         decrypted = msg.decrypt(self.quantum_state) if msg else None
                         
+                        # Format message with quantum foam
+                        foam_line = "▂" * 40  # Separator line
+                        timestamp = time.strftime("%H:%M:%S", time.localtime(msg.timestamp))
+                        
                         if decrypted:
-                            self.message_queue.put(f"{sender}: {decrypted}")
+                            self.message_queue.put(f"\n{foam_line}")
+                            self.message_queue.put(f"[{timestamp}] {sender} (ALIGNED)")
+                            self.message_queue.put(f"{decrypted}")
+                            self.message_queue.put(f"{foam_line}\n")
                         else:
-                            # Show quantum foam
-                            self.message_queue.put(f"{sender} [ENCRYPTED]: {foam}")
-                    except:
-                        # Fallback to showing raw foam
-                        self.message_queue.put(f"{sender} [ENCRYPTED]: {foam}")
+                            # Show quantum foam with phase difference
+                            alignment = self.quantum_state.alignment_with(msg.quantum_state)
+                            phase_bar = "▁▂▃▄▅▆▇█"[int(alignment * 8)]  # Phase indicator
+                            foam_vis = msg.to_quantum_foam()  # Get fresh foam for this view
+                            
+                            self.message_queue.put(f"\n{foam_line}")
+                            self.message_queue.put(f"[{timestamp}] {sender} (PHASE: {phase_bar})")
+                            self.message_queue.put(f"{foam_vis}")
+                            self.message_queue.put(f"{foam_line}\n")
+                            
+                    except Exception as e:
+                        # Show raw quantum noise for completely unaligned messages
+                        noise = "".join(random.choice("▀▄█▌▐░▒▓■□") for _ in range(40))
+                        self.message_queue.put(f"\n{foam_line}")
+                        self.message_queue.put(f"[QUANTUM NOISE] {noise}")
+                        self.message_queue.put(f"{foam_line}\n")
+                        
+                elif msg_type == 'client_list':
+                    clients = data.get('clients', {})
+                    if clients:
+                        self.message_queue.put("\n=== Quantum Network Status ===")
+                        for username, info in clients.items():
+                            if info['state']:
+                                their_state = QuantumState.from_json(info['state'])
+                                alignment = self.quantum_state.alignment_with(their_state)
+                                phase = "▁▂▃▄▅▆▇█"[int(alignment * 8)]
+                                foam = their_state.to_quantum_foam()
+                                self.message_queue.put(f"{phase} {username}: {foam}")
+                        self.message_queue.put("============================\n")
                         
                 elif msg_type == 'system':
-                    self.message_queue.put(f"SYSTEM: {data.get('message', '')}")
+                    self.message_queue.put(f"[SYSTEM] {data.get('message', '')}")
                     
         except Exception as e:
             logger.error(f"Error handling server message: {e}")
-            
+            self.message_queue.put(f"[ERROR] Failed to process quantum message: {e}")
+
     def stop(self):
         """Stop the client"""
         self.running = False

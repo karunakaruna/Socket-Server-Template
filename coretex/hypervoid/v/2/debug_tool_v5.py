@@ -294,7 +294,7 @@ class DebugTool:
             client_window.configure(bg="#1e1e1e")
             
             # Add text area for messages
-            text_area = ScrolledText(client_window, wrap=tk.WORD, bg="#2d2d2d", fg="#e0e0e0")
+            text_area = ScrolledText(client_window, wrap=tk.WORD, bg="#2d2d2d", fg="#e0e0e0", font=("Consolas", 10))
             text_area.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             
             # Add input frame
@@ -306,8 +306,14 @@ class DebugTool:
             input_field.pack(side=tk.LEFT, fill=tk.X, expand=True)
             
             # Add send button
-            send_button = ttk.Button(input_frame, text="Send", style="Quantum.TButton")
+            send_button = ttk.Button(input_frame, text="Send")
             send_button.pack(side=tk.RIGHT, padx=5)
+            
+            # Configure text tags for colors
+            text_area.tag_configure("encrypted", foreground="#00ff00")  # Neon green for quantum foam
+            text_area.tag_configure("system", foreground="#00ffff")    # Cyan for system messages
+            text_area.tag_configure("aligned", foreground="#ff00ff")   # Magenta for aligned messages
+            text_area.tag_configure("phase", foreground="#ffff00")     # Yellow for phase indicators
             
             # Create and start client
             client = HyperVoidClient('localhost', 8767)
@@ -316,15 +322,18 @@ class DebugTool:
                 client_window.destroy()
                 return
                 
-            # Store client reference
-            self.clients[client] = client_window
+            # Store client reference and text area
+            self.clients[client] = (client_window, text_area)
             
             def on_send():
-                message = input_field.get()
+                message = input_field.get().strip()
                 if message:
                     client.send_message(message)
                     input_field.delete(0, tk.END)
-                    text_area.insert(tk.END, f"You: {message}\n")
+                    if message.startswith('/'):
+                        text_area.insert(tk.END, f"Command: {message}\n", "system")
+                    else:
+                        text_area.insert(tk.END, f"You: {message}\n")
                     text_area.see(tk.END)
                     
             def on_close():
@@ -332,22 +341,28 @@ class DebugTool:
                 client_window.destroy()
                 del self.clients[client]
                 
-            # Start message receiver
-            def receive_messages():
-                while client.running:
-                    try:
-                        message = client.message_queue.get()
-                        if message:
-                            text_area.insert(tk.END, f"{message}\n")
-                            text_area.see(tk.END)
-                    except:
-                        pass
-                        
-            threading.Thread(target=receive_messages, daemon=True).start()
-            
+            def update_messages():
+                try:
+                    while True:
+                        message = client.message_queue.get_nowait()
+                        if "[ALIGNED]" in message:
+                            text_area.insert(tk.END, message + "\n", "aligned")
+                        elif "===" in message:
+                            text_area.insert(tk.END, message + "\n", "system")
+                        elif any(c in message for c in "░▒▓█▀▄▌▐■□▢▣▤▥▦▧▨▩"):
+                            text_area.insert(tk.END, message + "\n", "encrypted")
+                        else:
+                            text_area.insert(tk.END, message + "\n")
+                        text_area.see(tk.END)
+                except:
+                    client_window.after(100, update_messages)
+                    
             send_button.config(command=on_send)
             input_field.bind('<Return>', lambda e: on_send())
             client_window.protocol("WM_DELETE_WINDOW", on_close)
+            
+            # Start message updates
+            update_messages()
             
             self.log(f"Spawned new client", tag="client")
             

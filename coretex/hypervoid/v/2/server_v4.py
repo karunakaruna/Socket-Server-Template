@@ -95,109 +95,81 @@ class HyperVoidServer:
     def handle_client(self, client_socket: socket.socket, addr: str):
         """Handle individual client connection"""
         try:
-            # Initialize client's quantum state
-            quantum_state = QuantumState()
-            self.clients[addr] = (client_socket, None, quantum_state)
-            
-            # Send initial quantum state
-            self.send_message_to_client(addr, {
-                'command': 'quantum_state',
-                'state': quantum_state.to_json()
-            })
-            
             while True:
-                try:
-                    message = client_socket.recv(4096).decode().strip()
-                    if not message:
-                        break
-                        
-                    data = json.loads(message)
-                    self.handle_command(addr, data)
-                    
-                except ConnectionError:
+                data = client_socket.recv(4096).decode().strip()
+                if not data:
                     break
-                except json.JSONDecodeError:
-                    error = {
-                        "type": "error",
-                        "message": "Invalid message format"
-                    }
-                    self.send_message_to_client(addr, error)
-                except Exception as e:
-                    error = {
-                        "type": "error",
-                        "message": str(e)
-                    }
-                    self.send_message_to_client(addr, error)
                     
+                messages = [msg for msg in data.split('\n') if msg]
+                for message in messages:
+                    try:
+                        message_data = json.loads(message)
+                        
+                        if message_data.get('command') == 'username':
+                            username = message_data.get('username', f'User_{len(self.clients)}')
+                            self.clients[addr] = (client_socket, username, QuantumState())
+                            logger.info(f"Client {username} registered")
+                            # Broadcast updated client list
+                            self.broadcast_client_list()
+                            
+                        elif message_data.get('command') == 'message':
+                            client_id = self.get_client_id(client_socket)
+                            if client_id:
+                                _, username, state = self.clients[addr]
+                                # Create quantum encrypted message
+                                hyper_msg = HyperMessage(message_data['content'], state)
+                                # Broadcast with quantum foam
+                                broadcast_data = {
+                                    'type': 'quantum_message',
+                                    'sender': username,
+                                    'foam': hyper_msg.to_quantum_foam(),
+                                    'encrypted': hyper_msg.to_json(),
+                                    'timestamp': time.time()
+                                }
+                                self.broadcast_message(json.dumps(broadcast_data))
+                                
+                    except json.JSONDecodeError:
+                        logger.error(f"Invalid JSON: {message}")
+                        
         except Exception as e:
-            logger.error(f"Error handling client {addr}: {e}")
+            logger.error(f"Error handling client: {e}")
         finally:
-            self.disconnect_client(addr)
-            
-    def handle_command(self, addr: str, data: Dict[str, Any]):
-        """Handle client commands"""
-        client_socket, username, quantum_state = self.clients[addr]
-        command = data.get('command', '')
+            # Remove client and broadcast updated list
+            if addr in self.clients:
+                client_socket, username, _ = self.clients[addr]
+                del self.clients[addr]
+                logger.info(f"Client {username} disconnected")
+                self.broadcast_client_list()
+                
+    def broadcast_client_list(self):
+        """Broadcast list of connected clients and their quantum states"""
+        client_states = {}
+        for client_id, client_info in self.clients.items():
+            if isinstance(client_info, tuple) and len(client_info) > 2:
+                _, username, state = client_info
+                client_states[username] = {
+                    'state': state.to_json() if state else None,
+                    'foam': state.to_quantum_foam() if state else None
+                }
         
-        if command == 'broadcast':
-            if not username:
-                return self.send_error(addr, "Must set username first")
-                
-            message = data.get('message', '')
-            # Create encrypted broadcast
-            hyper_msg = HyperMessage(message, quantum_state)
-            
-            # Convert to quantum foam representation
-            foam = hyper_msg.to_quantum_foam()
-            
-            # Broadcast encrypted message to all clients
-            broadcast_data = {
-                'type': 'quantum_message',
-                'sender': addr,
-                'foam': foam,
-                'raw': str(hyper_msg)
-            }
-            
-            logger.info(f"Broadcasting quantum foam: {foam}")
-            self.broadcast_to_all(json.dumps(broadcast_data), exclude_client=addr)
-            
-        elif command == 'update_quantum':
-            # Update client's quantum state
-            new_state = QuantumState.from_json(data.get('state', '{}'))
-            self.clients[addr] = (client_socket, username, new_state)
-            
-            # Notify other clients about potential new decryption possibilities
-            self.broadcast_quantum_update(addr)
-            
-        elif command == 'username':
-            username = data.get('username', '')
-            self.clients[addr] = (client_socket, username, quantum_state)
-            
-    def broadcast_quantum_update(self, updated_addr: str):
-        """Notify clients about quantum state changes"""
-        _, username, state = self.clients[updated_addr]
-        if not username:
-            return
-            
-        for addr, (client_socket, other_username, other_state) in self.clients.items():
-            if addr != updated_addr and other_username:
-                alignment = abs(np.dot(
-                    state.get_rotation_matrix() @ state.position,
-                    other_state.get_rotation_matrix() @ other_state.position
-                ))
-                
-                self.send_message_to_client(addr, {
-                    'command': 'quantum_alignment',
-                    'username': username,
-                    'alignment': float(alignment)
-                })
-                
-    def send_error(self, addr: str, message: str):
-        error = {
-            "type": "error",
-            "message": message
+        broadcast_data = {
+            'type': 'client_list',
+            'clients': client_states
         }
-        self.send_message_to_client(addr, error)
+        self.broadcast_message(json.dumps(broadcast_data))
+        
+    def broadcast_message(self, message: str):
+        """Broadcast a message to all clients"""
+        with self.lock:
+            for client_id in list(self.clients.keys()):
+                self.send_message_to_client(client_id, message)
+                
+    def get_client_id(self, client_socket):
+        """Get client ID from socket"""
+        for addr, client_info in self.clients.items():
+            if client_info[0] == client_socket:
+                return addr
+        return None
         
     def stop(self):
         """Stop the server"""
