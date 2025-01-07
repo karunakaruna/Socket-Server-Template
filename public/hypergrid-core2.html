@@ -147,41 +147,84 @@
             }
         };
 
-        // Enhanced control mechanics and power boosting
+        // Enhanced control mechanics with safety checks
         const controls = {
             shift: false,
             space: false,
             resonanceField: 200,
             powerBoost: 1,
-            chargeRate: 0.01
+            chargeRate: 0.01,
+            psiboidAttraction: 0.2,
+            maxPsiboids: 50
         };
 
-        // Add key controls
+        // Safer key controls with null checks
         window.addEventListener('keydown', e => {
+            if(!roark) return; // Safety check
+            
             if(e.key === 'Shift') {
                 controls.shift = true;
-                controls.resonanceField = 400; // Wider field
-                roark.maxTrail = 40; // Longer trail
+                controls.resonanceField = 500; // Even wider field
+                controls.psiboidAttraction = 0.4; // Stronger base attraction
+                if(roark && roark.maxTrail) roark.maxTrail = 40;
             }
             if(e.key === ' ') {
                 controls.space = true;
-                controls.powerBoost = 2.5; // Power boost
-                controls.chargeRate = 0.03;
+                controls.powerBoost = 3.0; // More power
+                controls.chargeRate = 0.04;
+                controls.psiboidAttraction *= 2; // Double current attraction
             }
         });
 
         window.addEventListener('keyup', e => {
+            if(!roark) return; // Safety check
+            
             if(e.key === 'Shift') {
                 controls.shift = false;
                 controls.resonanceField = 200;
-                roark.maxTrail = 20;
+                controls.psiboidAttraction = 0.2;
+                if(roark && roark.maxTrail) roark.maxTrail = 20;
             }
             if(e.key === ' ') {
                 controls.space = false;
                 controls.powerBoost = 1;
                 controls.chargeRate = 0.01;
+                controls.psiboidAttraction = controls.shift ? 0.4 : 0.2; // Maintain shift boost if active
             }
         });
+
+        // Enhanced psiboid spawning
+        function spawnPsiboid(x, y) {
+            if(psiboids.length >= controls.maxPsiboids) return;
+            
+            const psiboid = {
+                x: x || Math.random() * canvas.width,
+                y: y || Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                phase: Math.random() * Math.PI * 2,
+                spin: Math.random() < 0.5 ? 1 : -1,
+                entangled: null
+            };
+            
+            // Create entangled pairs more frequently
+            if(Math.random() < 0.7 && psiboids.length > 0) {
+                const partner = psiboids[Math.floor(Math.random() * psiboids.length)];
+                if(!partner.entangled) {
+                    psiboid.entangled = partner;
+                    partner.entangled = psiboid;
+                }
+            }
+            
+            psiboids.push(psiboid);
+        }
+
+        // Spawn psiboids more frequently
+        setInterval(() => {
+            if(psiboids.length < controls.maxPsiboids) {
+                spawnPsiboid();
+            }
+        }, 500);
 
         // Guidance pulse system
         const pulses = [];
@@ -211,28 +254,41 @@
             }
         }
 
-        function resize() {
-            canvas.width = innerWidth;
-            canvas.height = innerHeight;
-        }
-
+        // Enhanced psiboid update with stronger attraction
         function updatePsiboids() {
             psiboids.forEach(psiboid => {
-                if(roark.active) {
+                if(roark && roark.active) {
                     const dx = roark.x - psiboid.x;
                     const dy = roark.y - psiboid.y;
                     const dist = Math.hypot(dx, dy);
                     
-                    // Enhanced attraction range
+                    // Enhanced attraction with inverse square falloff
                     if(dist < controls.resonanceField) {
-                        const force = (1 - dist/controls.resonanceField) * 0.2 * controls.powerBoost;
+                        const force = (1 - Math.pow(dist/controls.resonanceField, 2)) 
+                                    * controls.psiboidAttraction 
+                                    * controls.powerBoost;
                         psiboid.vx += (dx/dist) * force;
                         psiboid.vy += (dy/dist) * force;
+                        
+                        // Add slight orbital tendency
+                        psiboid.vx += dy/dist * force * 0.2;
+                        psiboid.vy -= dx/dist * force * 0.2;
                     }
                 }
+
+                // Enhanced entanglement forces
+                if(psiboid.entangled) {
+                    const dx = psiboid.entangled.x - psiboid.x;
+                    const dy = psiboid.entangled.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    const force = dist * 0.001 * controls.powerBoost;
+                    
+                    psiboid.vx += dx * force;
+                    psiboid.vy += dy * force;
+                }
                 
-                // Speed limiting based on power boost
-                const maxSpeed = 5 * controls.powerBoost;
+                // Speed limiting with momentum preservation
+                const maxSpeed = 8 * controls.powerBoost;
                 const speed = Math.hypot(psiboid.vx, psiboid.vy);
                 if(speed > maxSpeed) {
                     const scale = maxSpeed / speed;
@@ -240,20 +296,31 @@
                     psiboid.vy *= scale;
                 }
 
-                // Update with enhanced momentum
+                // Add slight attraction to nearest node
+                const nearestNode = findNearestNode(psiboid.x, psiboid.y);
+                if(nearestNode) {
+                    const dx = nearestNode.x - psiboid.x;
+                    const dy = nearestNode.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    const force = 0.01 * controls.powerBoost;
+                    
+                    psiboid.vx += (dx/dist) * force;
+                    psiboid.vy += (dy/dist) * force;
+                }
+
+                // Update position with enhanced momentum
                 psiboid.x += psiboid.vx * state.timeDilation;
                 psiboid.y += psiboid.vy * state.timeDilation;
                 
-                // Wrap with quantum tunneling
+                // Smooth wrapping
                 if(psiboid.x < 0) psiboid.x = canvas.width;
                 if(psiboid.x > canvas.width) psiboid.x = 0;
                 if(psiboid.y < 0) psiboid.y = canvas.height;
                 if(psiboid.y > canvas.height) psiboid.y = 0;
 
-                // Enhanced phase update
+                // Enhanced visuals
                 psiboid.phase += 0.02 * psiboid.spin * state.timeDilation * controls.powerBoost;
                 
-                // Draw enhanced psiboid
                 const size = 5 * (1 + (controls.powerBoost - 1) * 0.5);
                 ctx.beginPath();
                 ctx.arc(psiboid.x, psiboid.y, size, 0, Math.PI * 2);
@@ -262,7 +329,9 @@
 
                 // Enhanced quantum bridges
                 if(psiboid.entangled) {
-                    const strength = state.fieldStrength * (1 + Math.sin(psiboid.phase)) * controls.powerBoost;
+                    const strength = state.fieldStrength 
+                                   * (1 + Math.sin(psiboid.phase)) 
+                                   * controls.powerBoost;
                     ctx.beginPath();
                     ctx.moveTo(psiboid.x, psiboid.y);
                     ctx.lineTo(psiboid.entangled.x, psiboid.entangled.y);
@@ -270,6 +339,31 @@
                     ctx.stroke();
                 }
             });
+        }
+
+        function findNearestNode(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            
+            nodes.forEach(pair => {
+                [pair.matter, pair.antimatter].forEach(node => {
+                    const nx = canvas.width/2 + Math.cos(node.angle) * (200 + node.charge * 30);
+                    const ny = canvas.height/2 + Math.sin(node.angle) * (200 + node.charge * 30);
+                    const dist = Math.hypot(x - nx, y - ny);
+                    
+                    if(dist < minDist) {
+                        minDist = dist;
+                        nearest = {x: nx, y: ny};
+                    }
+                });
+            });
+            
+            return nearest;
+        }
+
+        function resize() {
+            canvas.width = innerWidth;
+            canvas.height = innerHeight;
         }
 
         function update() {
