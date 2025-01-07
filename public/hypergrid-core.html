@@ -1234,18 +1234,26 @@
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
                 this.vz = (Math.random() - 0.5) * 2;
-                this.quantum = Math.random(); // Quantum state
+                this.quantum = Math.random();
                 this.phase = Math.random() * Math.PI * 2;
+                this.energy = 0; // Energy level for feeding
+                this.dimension = Math.random() * 4; // Hyperdimensional state
             }
 
             update(boids, time) {
-                // Quantum probability field influence
-                this.quantum = (this.quantum + Math.sin(time + this.phase) * 0.1) % 1;
+                // Energy decay
+                this.energy *= 0.98;
+                
+                // Quantum state evolution with energy influence
+                this.quantum = (this.quantum + Math.sin(time + this.phase) * 0.1 + this.energy * 0.2) % 1;
+                
+                // Dimensional drift
+                this.dimension = (this.dimension + Math.sin(time * 0.5 + this.phase) * 0.02) % 4;
                 
                 // Calculate center of nearby boids
                 let cx = 0, cy = 0, cz = 0;
                 let count = 0;
-                const neighborRadius = 50;
+                const neighborRadius = 50 + this.energy * 30; // Larger radius when energized
                 
                 boids.forEach(other => {
                     const dx = other.x - this.x;
@@ -1259,21 +1267,46 @@
                         cz += other.z;
                         count++;
                         
-                        // Quantum entanglement effect
-                        if (Math.random() < 0.1) {
+                        // Energy transfer between boids
+                        if (other.energy > this.energy) {
+                            this.energy += (other.energy - this.energy) * 0.1;
+                        }
+                        
+                        // Quantum entanglement with energy boost
+                        if (Math.random() < 0.1 + this.energy * 0.2) {
                             this.quantum = (this.quantum + other.quantum) / 2;
+                            this.dimension = (this.dimension + other.dimension) / 2;
                         }
                     }
                 });
 
-                if (count > 0) {
-                    // Cohesion to center of flock
-                    this.vx += (cx/count - this.x) * 0.01;
-                    this.vy += (cy/count - this.y) * 0.01;
-                    this.vz += (cz/count - this.z) * 0.01;
+                // Core interaction
+                const centerX = coreCanvas.width/2;
+                const centerY = coreCanvas.height/2;
+                const toCenterX = centerX - this.x;
+                const toCenterY = centerY - this.y;
+                const centerDist = Math.sqrt(toCenterX*toCenterX + toCenterY*toCenterY);
+                
+                // Stronger core attraction when energized
+                const coreAttraction = 0.0001 * (1 + this.energy * 2);
+                this.vx += toCenterX * coreAttraction;
+                this.vy += toCenterY * coreAttraction;
+                
+                // Hyperdimensional folding near core
+                if (centerDist < 200) {
+                    const foldStrength = (1 - centerDist/200) * 0.1;
+                    this.dimension = (this.dimension + foldStrength) % 4;
+                    this.z += Math.sin(this.dimension * Math.PI * 2) * 2;
                 }
 
-                // Mouse attraction
+                if (count > 0) {
+                    const cohesion = 0.01 * (1 + this.energy); // Stronger flocking when energized
+                    this.vx += (cx/count - this.x) * cohesion;
+                    this.vy += (cy/count - this.y) * cohesion;
+                    this.vz += (cz/count - this.z) * cohesion;
+                }
+
+                // Mouse interaction
                 const dx = mouseX - this.x;
                 const dy = mouseY - this.y;
                 const mouseDist = Math.sqrt(dx*dx + dy*dy);
@@ -1282,26 +1315,22 @@
                 this.vx += dx * mouseInfluence * 0.001;
                 this.vy += dy * mouseInfluence * 0.001;
 
-                // Core attraction
-                const centerX = coreCanvas.width/2;
-                const centerY = coreCanvas.height/2;
-                const toCenterX = centerX - this.x;
-                const toCenterY = centerY - this.y;
-                const centerDist = Math.sqrt(toCenterX*toCenterX + toCenterY*toCenterY);
-                
-                this.vx += toCenterX * 0.0001;
-                this.vy += toCenterY * 0.0001;
+                // Feed when near mouse and clicking
+                if (mouseDist < 100 && mousePressed) {
+                    this.energy = Math.min(1, this.energy + 0.1);
+                }
 
-                // Update position with quantum uncertainty
-                const uncertainty = 0.1 * Math.sin(time * 10 + this.phase);
+                // Update position with quantum uncertainty and energy
+                const uncertainty = 0.1 * Math.sin(time * 10 + this.phase) * (1 + this.energy);
                 this.x += this.vx + uncertainty;
                 this.y += this.vy + uncertainty;
                 this.z += this.vz + uncertainty;
 
-                // Damping
-                this.vx *= 0.99;
-                this.vy *= 0.99;
-                this.vz *= 0.99;
+                // Velocity damping based on energy
+                const damping = 0.99 - this.energy * 0.01;
+                this.vx *= damping;
+                this.vy *= damping;
+                this.vz *= damping;
 
                 // Keep within bounds
                 const bounds = 500;
@@ -1309,20 +1338,41 @@
             }
 
             draw(ctx) {
-                // Calculate size based on z-position
+                // Calculate size based on z-position and energy
                 const perspective = 1000 / (1000 - this.z);
-                const size = 1.5 * perspective;
+                const size = (1.5 + this.energy * 2) * perspective;
                 
-                // Calculate alpha based on quantum state and z-position
-                const alpha = (0.3 + this.quantum * 0.7) * Math.max(0, 1 - Math.abs(this.z)/500);
+                // Calculate alpha based on quantum state, z-position, and energy
+                const alpha = (0.3 + this.quantum * 0.7 + this.energy * 0.5) * 
+                             Math.max(0, 1 - Math.abs(this.z)/500);
                 
-                ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                // Color varies with dimension and energy
+                const hue = 180 + this.dimension * 20 + this.energy * 40;
+                const saturation = 100 - this.energy * 20;
+                const lightness = 50 + this.energy * 30;
+                
+                ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
                 ctx.fill();
+                
+                // Draw dimensional echo
+                if (this.energy > 0.2) {
+                    const echoSize = size * (1 + this.energy);
+                    ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha * 0.3})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, echoSize, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             }
         }
 
+        // Track mouse state
+        let mousePressed = false;
+        coreCanvas.addEventListener('mousedown', () => mousePressed = true);
+        coreCanvas.addEventListener('mouseup', () => mousePressed = false);
+        
         // Initialize psi-boids
         const psiBoids = [];
         for (let i = 0; i < 500; i++) {
