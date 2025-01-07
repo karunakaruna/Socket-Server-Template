@@ -471,6 +471,12 @@
         <div class="q-entropy">1.317 qbits</div>
     </div>
 
+    <div id="quantum-metrics" style="position: fixed; top: 10px; right: 10px; color: #00ffff; font-family: monospace;">
+        <div id="depth-display">λ=0.000</div>
+        <div id="curvature-display">κ=1.000</div>
+        <div id="entropy-display">1.317 qbits</div>
+    </div>
+
     <script>
         // Initialize core canvas and event tracking
         const coreCanvas = document.createElement('canvas');
@@ -624,10 +630,8 @@
                 }
             });
             
-            // Update Roark if present
-            if (roark) {
-                roark.update();
-            }
+            // Update the GUARDIAN
+            guardian.update();
             
             // Request next frame
             requestAnimationFrame(updateFrame);
@@ -1040,7 +1044,10 @@
                 const dist = Math.hypot(dx, dy);
                 
                 // Calculate orbital force
-                const angle = Math.atan2(dy, dx) + quantumState.orbitalPlane.angle;
+                const angle = quantumState.orbitalPlane.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(quantumState.phase) * 0.2;
+                
                 const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
                 const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
                 
@@ -1237,7 +1244,7 @@
                 );
                 gradient.addColorStop(0, `rgba(0, 255, 255, ${excitation.strength * 0.5})`);
                 gradient.addColorStop(0.5, `rgba(0, 200, 255, ${excitation.strength * 0.3})`);
-                gradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                gradient.addColorStop(1, `rgba(0, 150, 255, 0)`);
                 coreCtx.fillStyle = gradient;
                 coreCtx.fill();
                 
@@ -1247,7 +1254,7 @@
                     const points = [];
                     for (let t = 0; t <= 1; t += 0.02) {
                         const radius = excitation.radius * t;
-                        const angle = spiral.phase + t * Math.PI * 8 + 
+                        const angle = spiral.phase + t * Math.PI * 4 + 
                                     Math.sin(time * spiral.frequency + spiral.temporalPhase) * spiral.amplitude;
                         const x = excitation.x + Math.cos(angle) * radius;
                         const y = excitation.y + Math.sin(angle) * radius;
@@ -1263,28 +1270,27 @@
                     }
                     
                     coreCtx.strokeStyle = `rgba(0, 255, 255, ${excitation.strength * 0.3})`;
-                    coreCtx.lineWidth = 2;
                     coreCtx.stroke();
                 });
                 
                 // Affect nearby psiboids
-                psiBoids.forEach(psiboid => {
-                    const dx = psiboid.x - excitation.x;
-                    const dy = psiboid.y - excitation.y;
+                psiBoids.forEach(other => {
+                    const dx = other.x - excitation.x;
+                    const dy = other.y - excitation.y;
                     const dist = Math.hypot(dx, dy);
                     if (dist < excitation.radius) {
                         const influence = (1 - dist/excitation.radius) * excitation.strength;
                         
                         // Add temporal spiral motion
                         const angle = Math.atan2(dy, dx) + 
-                                    Math.sin(time * 0.1 + psiboid.phase) * influence;
-                        const speed = Math.hypot(psiboid.vx, psiboid.vy);
-                        psiboid.vx += Math.cos(angle) * influence * 2;
-                        psiboid.vy += Math.sin(angle) * influence * 2;
+                                    Math.sin(time * 0.1 + other.phase) * influence;
+                        const speed = Math.hypot(other.vx, other.vy);
+                        other.vx += Math.cos(angle) * influence * 2;
+                        other.vy += Math.sin(angle) * influence * 2;
                         
                         // Add temporal distortion
-                        psiboid.phase += influence * 0.2;
-                        psiboid.temporalShift = influence;
+                        other.phase += influence * 0.2;
+                        other.temporalShift = influence;
                     }
                 });
                 
@@ -1297,37 +1303,141 @@
             
             // Start excitation
             updateExcitation();
+            
+            // Initiate deep dive
+            quantumState.diving = true;
+            quantumState.depth = Math.min(1, quantumState.depth + 0.3);
+            
+            // Create quantum entanglement
+            psiBoids.forEach(other => {
+                if (other !== psiboid) {
+                    const dx = other.x - psiboid.x;
+                    const dy = other.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < kissResonance.maxRadius) {
+                        createQuantumBridge(
+                            psiboid.x, psiboid.y,
+                            other.x, other.y,
+                            (1 - dist/kissResonance.maxRadius) * kissResonance.strength
+                        );
+                    }
+                }
+            });
         }
 
-        // Update quantum interaction handler
-        coreCanvas.addEventListener('click', e => {
-            const rect = coreCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+        // Update psiboid behavior for deep diving
+        function updatePsiboidBehavior(psiboid) {
+            // Get orbital influence
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const dx = centerX - psiboid.x;
+            const dy = centerY - psiboid.y;
+            const dist = Math.hypot(dx, dy);
             
-            // Check for hyperstring excitation
-            const nearestPsiboid = findNearestPsiboid(x, y);
-            if (nearestPsiboid) {
-                const dx = nearestPsiboid.x - x;
-                const dy = nearestPsiboid.y - y;
-                const dist = Math.hypot(dx, dy);
-                
-                if (dist < 50) {
-                    // Initiate quantum kiss
-                    initiateQuantumKiss(nearestPsiboid);
-                } else {
-                    // Excite hyperstring
-                    exciteHyperstring(x, y);
-                }
-            } else {
-                // Excite hyperstring
-                exciteHyperstring(x, y);
+            // Calculate orbital force
+            const angle = Math.atan2(dy, dx) + quantumState.orbitalPlane.angle;
+            const targetX = centerX + Math.cos(angle) * quantumState.orbitalPlane.radius;
+            const targetY = centerY + Math.sin(angle) * quantumState.orbitalPlane.radius;
+            
+            // Apply orbital force
+            const orbitStrength = 0.1 * quantumState.depth;
+            psiboid.vx += (targetX - psiboid.x) * orbitStrength;
+            psiboid.vy += (targetY - psiboid.y) * orbitStrength;
+            
+            // Add depth-based behavior
+            if (quantumState.depth > 0.5) {
+                // Create vortex effect
+                const vortexAngle = Math.atan2(psiboid.vy, psiboid.vx) + 
+                    (0.1 * quantumState.depth * (dist < 200 ? -1 : 1));
+                const speed = Math.hypot(psiboid.vx, psiboid.vy);
+                psiboid.vx = Math.cos(vortexAngle) * speed;
+                psiboid.vy = Math.sin(vortexAngle) * speed;
             }
-        });
+        }
 
-        // Remove space key handler and update mouse events
-        window.addEventListener('keydown', e => keyState.add(e.key.toLowerCase()));
-        window.addEventListener('keyup', e => keyState.delete(e.key.toLowerCase()));
+        // Initialize quantum displays
+        const depthDisplay = document.getElementById('depth-display');
+        const curvatureDisplay = document.getElementById('curvature-display');
+        const entropyDisplay = document.getElementById('entropy-display');
+        
+        // Update quantum metrics
+        function updateQuantumMetrics() {
+            if (depthDisplay && curvatureDisplay && entropyDisplay) {
+                depthDisplay.textContent = 
+                    `λ=${(divineSingularity.intensity).toFixed(3)}`;
+                curvatureDisplay.textContent = 
+                    `κ=${(Math.sin(divineSingularity.phase) * 0.5 + 0.5).toFixed(3)}`;
+                entropyDisplay.textContent = 
+                    `${(1.317 + divineSingularity.intensity * 0.1).toFixed(3)} qbits`;
+            }
+        }
+        
+        // Update frame with safe display updates
+        function updateFrame() {
+            // Clear with divine fade
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${0.1 + divineSingularity.intensity * 0.1})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
+            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
+            orbitalState.depth = Math.min(orbitalState.maxDepth, 
+                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
+            
+            // Update all entities
+            updatePsiboids();
+            if (guardian) guardian.update();
+            
+            // Safely update displays
+            updateQuantumMetrics();
+            
+            // Continue divine animation
+            requestAnimationFrame(updateFrame);
+        }
+
+        // Divine quantum singularity
+        const divineSingularity = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            radius: 300,
+            phase: 0,
+            depth: 0,
+            intensity: 0
+        };
+
+        // Unified quantum state
+        function updateUnifiedQuantumState() {
+            // Update divine singularity
+            divineSingularity.phase += 0.02;
+            divineSingularity.intensity = Math.min(1, divineSingularity.intensity + 0.001);
+            divineSingularity.radius = Math.max(50, 300 - orbitalState.depth * 0.3);
+            
+            // Create divine gradient
+            const gradient = coreCtx.createRadialGradient(
+                divineSingularity.x, divineSingularity.y, 0,
+                divineSingularity.x, divineSingularity.y, divineSingularity.radius
+            );
+            
+            // Divine color progression
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${0.8 * divineSingularity.intensity})`);
+            gradient.addColorStop(0.2, `rgba(100, 200, 255, ${0.6 * divineSingularity.intensity})`);
+            gradient.addColorStop(0.5, `rgba(0, 150, 255, ${0.4 * divineSingularity.intensity})`);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            // Draw quantum core
+            coreCtx.beginPath();
+            coreCtx.arc(divineSingularity.x, divineSingularity.y, 
+                       divineSingularity.radius, 0, Math.PI * 2);
+            coreCtx.fillStyle = gradient;
+            coreCtx.fill();
+            
+            // Add divine glow
+            coreCtx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+            coreCtx.shadowBlur = 20 * divineSingularity.intensity;
+            coreCtx.fill();
+        }
         
         // Initialize everything and get guardian reference
         let guardian;
@@ -1339,6 +1449,239 @@
             initSliders();
             updateFrame();
         });
+
+        // Optimize rendering with offscreen canvas
+        const offscreenCanvas = document.createElement('canvas');
+        const offscreenCtx = offscreenCanvas.getContext('2d');
+
+        // The GUARDIAN
+        guardian = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            vx: 0,
+            vy: 0,
+            phase: 0,
+            radius: 15,
+            target: null,
+            trailPoints: [],
+            maxTrailPoints: 50,
+            
+            update() {
+                // Find most quantum-active psiboid
+                let targetPsiboid = null;
+                let maxQuantumActivity = -1;
+                psiBoids.forEach(psiboid => {
+                    const activity = psiboid.phase * (1 + psiboid.temporalShift);
+                    if (activity > maxQuantumActivity) {
+                        targetPsiboid = psiboid;
+                        maxQuantumActivity = activity;
+                    }
+                });
+                
+                if (targetPsiboid) {
+                    // Calculate quantum attraction
+                    const dx = targetPsiboid.x - this.x;
+                    const dy = targetPsiboid.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    if (dist > 0) {
+                        // Add quantum-influenced movement
+                        const quantumAngle = Math.atan2(dy, dx) + 
+                            Math.sin(quantumState.phase) * (1 - quantumState.depth);
+                        this.vx += Math.cos(quantumAngle) * 0.5;
+                        this.vy += Math.sin(quantumAngle) * 0.5;
+                    }
+                }
+                
+                // Add quantum flow influence
+                const flowAngle = time * 0.02 + Math.sin(quantumState.phase) * 2;
+                this.vx += Math.cos(flowAngle) * 0.1 * quantumState.depth;
+                this.vy += Math.sin(flowAngle) * 0.1 * quantumState.depth;
+                
+                // Update position with quantum uncertainty
+                this.x += this.vx + (Math.random() - 0.5) * (1 - quantumState.depth);
+                this.y += this.vy + (Math.random() - 0.5) * (1 - quantumState.depth);
+                
+                // Apply quantum damping
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                
+                // Update quantum trail
+                this.trailPoints.unshift({
+                    x: this.x,
+                    y: this.y,
+                    phase: this.phase,
+                    strength: quantumState.depth
+                });
+                if (this.trailPoints.length > this.maxTrailPoints) {
+                    this.trailPoints.pop();
+                }
+                
+                // Draw the GUARDIAN
+                this.draw();
+            },
+            
+            draw() {
+                // Draw quantum trail
+                if (this.trailPoints.length > 1) {
+                    coreCtx.beginPath();
+                    this.trailPoints.forEach((point, i) => {
+                        const alpha = (1 - i / this.maxTrailPoints) * point.strength;
+                        if (i === 0) {
+                            coreCtx.moveTo(point.x, point.y);
+                        } else {
+                            const xc = (point.x + this.trailPoints[i-1].x) / 2;
+                            const yc = (point.y + this.trailPoints[i-1].y) / 2;
+                            coreCtx.quadraticCurveTo(point.x, point.y, xc, yc);
+                        }
+                        coreCtx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                        coreCtx.stroke();
+                    });
+                }
+                
+                // Draw GUARDIAN's quantum core
+                coreCtx.beginPath();
+                coreCtx.arc(this.x, this.y, this.radius * (1 + Math.sin(time * 0.1) * 0.2), 0, Math.PI * 2);
+                const gradient = coreCtx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius * 2
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                gradient.addColorStop(0.5, 'rgba(200, 255, 255, 0.5)');
+                gradient.addColorStop(1, 'rgba(150, 255, 255, 0)');
+                coreCtx.fillStyle = gradient;
+                coreCtx.fill();
+                
+                // Add quantum glow
+                coreCtx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                coreCtx.shadowBlur = 15 * quantumState.depth;
+                coreCtx.fill();
+            }
+        };
+
+        // Optimize canvas for performance
+        coreCtx.imageSmoothingEnabled = false;
+        let lastTime = performance.now();
+        const deltaHistory = new Array(10).fill(16);
+        
+        // Fast orbital mechanics
+        const orbitalState = {
+            angle: 0,
+            velocity: 0,
+            radius: 300,
+            depth: 0,
+            maxDepth: 1000,
+            rotationSpeed: 0.02
+        };
+
+        // Performance-optimized update frame
+        function updateFrame() {
+            // Calculate delta time for smooth animations
+            const currentTime = performance.now();
+            const delta = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            // Update delta history for adaptive performance
+            deltaHistory.shift();
+            deltaHistory.push(delta);
+            const avgDelta = deltaHistory.reduce((a, b) => a + b) / deltaHistory.length;
+            
+            // Adaptive quality based on performance
+            const performanceRatio = 16 / avgDelta;
+            const quality = Math.max(0.5, Math.min(1, performanceRatio));
+            
+            // Fast clear with depth-based fade
+            coreCtx.fillStyle = `rgba(0, 0, 0, ${0.2 * quality})`;
+            coreCtx.fillRect(0, 0, coreCanvas.width, coreCanvas.height);
+            
+            // Update quantum singularity
+            updateUnifiedQuantumState();
+            
+            // Update orbital state with divine influence
+            orbitalState.angle += 0.02 * (1 + divineSingularity.intensity);
+            orbitalState.depth = Math.min(orbitalState.maxDepth, 
+                orbitalState.depth + 0.5 * (1 + divineSingularity.intensity));
+            
+            // Unified center point
+            const centerX = divineSingularity.x;
+            const centerY = divineSingularity.y;
+            
+            // Update psiboids with divine orbital forces
+            psiBoids.forEach((psiboid, i) => {
+                // Calculate divine orbital position
+                const angle = orbitalState.angle + 
+                    (i / psiBoids.length) * Math.PI * 2 + 
+                    Math.sin(divineSingularity.phase) * divineSingularity.intensity;
+                
+                const orbitRadius = divineSingularity.radius * 
+                    (1 + Math.sin(time * 0.01 + i) * 0.2);
+                
+                const targetX = centerX + Math.cos(angle) * orbitRadius;
+                const targetY = centerY + Math.sin(angle) * orbitRadius;
+                
+                // Apply divine attraction
+                const dx = targetX - psiboid.x;
+                const dy = targetY - psiboid.y;
+                const dist = Math.hypot(dx, dy);
+                
+                // Strong orbital force
+                psiboid.vx += dx * 0.2 * (1 + divineSingularity.intensity);
+                psiboid.vy += dy * 0.2 * (1 + divineSingularity.intensity);
+                
+                // Add spiral descent
+                const spiralAngle = angle + divineSingularity.phase;
+                const spiralForce = 3 * divineSingularity.intensity;
+                psiboid.vx += Math.cos(spiralAngle) * spiralForce;
+                psiboid.vy += Math.sin(spiralAngle) * spiralForce;
+                
+                // Update with divine physics
+                psiboid.x += psiboid.vx;
+                psiboid.y += psiboid.vy;
+                psiboid.vx *= 0.9;
+                psiboid.vy *= 0.9;
+                
+                // Draw divine psiboid
+                coreCtx.beginPath();
+                coreCtx.arc(psiboid.x, psiboid.y, 5, 0, Math.PI * 2);
+                const psiboidGradient = coreCtx.createRadialGradient(
+                    psiboid.x, psiboid.y, 0,
+                    psiboid.x, psiboid.y, 10
+                );
+                psiboidGradient.addColorStop(0, `rgba(255, 255, 255, ${0.8 * divineSingularity.intensity})`);
+                psiboidGradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                coreCtx.fillStyle = psiboidGradient;
+                coreCtx.fill();
+            });
+            
+            // Update guardian with divine guidance
+            if (guardian) {
+                // Divine attraction to singularity
+                const dx = centerX - guardian.x;
+                const dy = centerY - guardian.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist > 0) {
+                    const divineForce = 5 * (1 + divineSingularity.intensity);
+                    guardian.vx += (dx / dist) * divineForce;
+                    guardian.vy += (dy / dist) * divineForce;
+                }
+                
+                // Update with divine influence
+                guardian.phase = divineSingularity.phase;
+                guardian.update();
+            }
+            
+            // Update quantum metrics with divine values
+            document.getElementById('depth-display').textContent = 
+                `λ=${(divineSingularity.intensity).toFixed(3)}`;
+            document.getElementById('curvature-display').textContent = 
+                `κ=${(Math.sin(divineSingularity.phase) * 0.5 + 0.5).toFixed(3)}`;
+            document.getElementById('entropy-display').textContent = 
+                `${(1.317 + divineSingularity.intensity * 0.1).toFixed(3)} qbits`;
+            
+            // Continue divine animation
+            requestAnimationFrame(updateFrame);
+        }
     </script>
 </body>
 </html>
