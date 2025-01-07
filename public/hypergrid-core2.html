@@ -3,220 +3,327 @@
 <head>
     <title>Hypergrid Core II</title>
     <style>
-        body { margin: 0; background: black; overflow: hidden; }
-        canvas { position: fixed; }
-        .quantum-state {
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: crosshair;
+        }
+        #ui {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             color: #0ff;
             font-family: monospace;
-            background: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 5px;
+            font-size: 12px;
+            text-align: right;
+            pointer-events: none;
+            text-shadow: 0 0 2px #0ff;
+        }
+        #fullscreen {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #0ff;
+            color: #0ff;
+            font-family: monospace;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #fullscreen:hover {
+            background: rgba(0,255,255,0.3);
         }
     </style>
 </head>
 <body>
-    <canvas id="core"></canvas>
-    <div class="quantum-state">
+    <div id="ui">
         <div>Orbital Depth: <span id="depth">0.000</span></div>
         <div>Field Strength: <span id="field">0.000</span></div>
-        <div>Time Dilation: <span id="time">1.000</span></div>
+        <div>Time Dilation: <span id="time">0.000</span></div>
     </div>
+    <button id="fullscreen">[ FULLSCREEN ]</button>
+    <canvas id="core"></canvas>
     <script>
         const canvas = document.getElementById('core');
         const ctx = canvas.getContext('2d');
+        
+        // Initialize core variables
         let time = 0;
         let observerMode = true;
         let momentum = {x: 0, y: 0};
         
-        // Quantum state
+        // Initialize core state and objects before any updates
         const state = {
-            depth: 0,
+            timeDilation: 1,
             fieldStrength: 0,
-            timeDilation: 1
+            orbitalDepth: 0
         };
 
-        // Super symmetry nodes - 8 pairs for 16 total points
-        const nodes = Array(8).fill().map((_, i) => {
-            const angle = (i/8) * Math.PI * 2;
-            return {
-                matter: {
-                    angle,
-                    charge: 0,
-                    locked: false,
-                    phase: 0
-                },
-                antimatter: {
-                    angle: angle + Math.PI,
-                    charge: 0,
-                    locked: false,
-                    phase: Math.PI
-                }
-            };
-        });
-
-        // Psiboids with quantum entanglement
-        const psiboids = Array(16).fill().map(() => ({
-            x: Math.random() * innerWidth,
-            y: Math.random() * innerHeight,
-            vx: (Math.random() - 0.5) * 2,
-            vy: (Math.random() - 0.5) * 2,
-            phase: Math.random() * Math.PI * 2,
-            entangled: null,
-            spin: Math.random() < 0.5 ? 1 : -1
-        }));
-
-        // Create entangled pairs
-        for(let i = 0; i < psiboids.length; i += 2) {
-            psiboids[i].entangled = psiboids[i+1];
-            psiboids[i+1].entangled = psiboids[i];
-        }
-
-        // Roark's quantum presence
         const roark = {
-            x: 0, y: 0,
+            x: 0,
+            y: 0,
+            active: false,
             phase: 0,
             depth: 0,
-            active: false,
             trail: [],
             maxTrail: 20,
-            
-            update() {
-                if(!this.active) return;
+            update: function() {
+                if(!this.active || !ctx) return;
                 
-                this.phase += 0.05 * state.timeDilation * controls.powerBoost;
-                this.depth = Math.min(1, this.depth + 0.01 * controls.powerBoost);
+                this.phase += 0.05 * (state.timeDilation || 1) * (controls.powerBoost || 1);
+                this.depth = Math.min(1, this.depth + 0.01 * (controls.powerBoost || 1));
                 
-                // Enhanced trail with power boost
-                this.trail.unshift({
-                    x: this.x, 
-                    y: this.y, 
+                // Safety check for trail
+                if(!Array.isArray(this.trail)) this.trail = [];
+                
+                // Enhanced trail with quantum bridge mechanics
+                const trailPoint = {
+                    x: this.x,
+                    y: this.y,
                     phase: this.phase,
-                    power: controls.powerBoost
-                });
+                    power: controls.powerBoost || 1,
+                    depth: this.depth,
+                    time: time
+                };
+                
+                this.trail.unshift(trailPoint);
                 if(this.trail.length > this.maxTrail) this.trail.pop();
                 
-                // Draw enhanced quantum wake
-                this.trail.forEach((point, i) => {
-                    const alpha = (1 - i/this.maxTrail) * 0.5 * point.power;
-                    const size = 20 * (1 - i/this.maxTrail) * point.power;
-                    
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(0,255,255,${alpha})`;
-                    ctx.fill();
-
-                    // Add power rings when boosting
-                    if(point.power > 1) {
+                // Draw enhanced quantum wake with safety checks
+                if(this.trail.length > 1) {
+                    this.trail.forEach((point, i) => {
+                        if(!point) return;
+                        
+                        const t = i / (this.maxTrail || 1);
+                        const alpha = Math.max(0, Math.min(1, (1 - t) * 0.5 * (point.power || 1)));
+                        const size = Math.max(1, 20 * (1 - t) * (point.power || 1));
+                        
+                        // Quantum bridge effect with safety checks
+                        const bridgeStrength = Math.sin(point.phase + t * Math.PI);
+                        const bridgeSize = Math.max(1, size * (1 + bridgeStrength * 0.5));
+                        const bridgeAlpha = Math.max(0, Math.min(1, alpha * (0.5 + bridgeStrength * 0.5)));
+                        
+                        // Draw main wake point
                         ctx.beginPath();
-                        ctx.arc(point.x, point.y, size * 1.5, 0, Math.PI * 2);
-                        ctx.strokeStyle = `rgba(0,255,255,${alpha * 0.5})`;
-                        ctx.stroke();
-                    }
-                });
+                        ctx.arc(point.x, point.y, bridgeSize, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(0,255,255,${bridgeAlpha})`;
+                        ctx.fill();
+                    });
+                }
                 
-                // Draw enhanced Roark
-                const pulseSize = 20 * (1 + Math.sin(this.phase) * 0.3) * controls.powerBoost;
+                // Draw enhanced Roark with wormhole effect
+                const pulseSize = Math.max(1, 20 * (1 + Math.sin(this.phase) * 0.3) * (controls.powerBoost || 1));
+                const wormholeSize = Math.max(1, pulseSize * (1 + this.depth));
+                
+                // Draw core
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, pulseSize, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(this.phase) * 0.3})`;
                 ctx.fill();
-                
-                // Power boost visual
-                if(controls.powerBoost > 1) {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, pulseSize * 1.5, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(0,255,255,0.3)`;
-                    ctx.stroke();
-                }
-                
-                // Wider field visual
-                if(controls.resonanceField > 200) {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, controls.resonanceField, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(0,255,255,0.1)`;
-                    ctx.stroke();
-                }
-                
-                // Enhanced guidance pulses
-                if(Math.sin(this.phase) > 0.9) {
-                    createGuidancePulse(this.x, this.y, controls.powerBoost);
-                }
             }
         };
 
-        // Enhanced control mechanics with safety checks
+        // Initialize controls with power modes
         const controls = {
             shift: false,
             space: false,
-            resonanceField: 200,
             powerBoost: 1,
-            chargeRate: 0.01,
-            psiboidAttraction: 0.2,
-            maxPsiboids: 50
+            psiboidAttraction: 0.1,
+            resonanceField: 200,
+            chargeRate: 0.02,
+            maxPsiboids: 48
         };
 
-        // Safer key controls with null checks
-        window.addEventListener('keydown', e => {
-            if(!roark) return; // Safety check
-            
-            if(e.key === 'Shift') {
-                controls.shift = true;
-                controls.resonanceField = 500; // Even wider field
-                controls.psiboidAttraction = 0.4; // Stronger base attraction
-                if(roark && roark.maxTrail) roark.maxTrail = 40;
-            }
-            if(e.key === ' ') {
-                controls.space = true;
-                controls.powerBoost = 3.0; // More power
-                controls.chargeRate = 0.04;
-                controls.psiboidAttraction *= 2; // Double current attraction
-            }
-        });
+        // Initialize arrays
+        const psiboids = [];
+        const pulses = [];
+        const nodes = [];
 
-        window.addEventListener('keyup', e => {
-            if(!roark) return; // Safety check
+        // Enhanced psiboid behavior
+        function updatePsiboids() {
+            if(!Array.isArray(psiboids)) return;
             
-            if(e.key === 'Shift') {
-                controls.shift = false;
-                controls.resonanceField = 200;
-                controls.psiboidAttraction = 0.2;
-                if(roark && roark.maxTrail) roark.maxTrail = 20;
-            }
-            if(e.key === ' ') {
-                controls.space = false;
-                controls.powerBoost = 1;
-                controls.chargeRate = 0.01;
-                controls.psiboidAttraction = controls.shift ? 0.4 : 0.2; // Maintain shift boost if active
-            }
-        });
+            const scale = window.devicePixelRatio || 1;
+            const width = Math.max(1, canvas.width / scale);
+            const height = Math.max(1, canvas.height / scale);
+            
+            // Power mode effects
+            const baseAttraction = 0.5 * (controls.powerBoost || 1);
+            const baseSpeed = controls.powerBoost || 1;
+            const trailLength = controls.shift ? 20 : (controls.space ? 25 : 15);
+            
+            psiboids.forEach(psiboid => {
+                if(!psiboid) return;
+                
+                // Enhanced electron seeking in power modes
+                let nearestElectron = null;
+                let minDist = Infinity;
+                
+                nodes.forEach(pair => {
+                    [pair.matter, pair.antimatter].forEach(electron => {
+                        if(!electron || electron.locked) return;
+                        const dx = electron.x - psiboid.x;
+                        const dy = electron.y - psiboid.y;
+                        const dist = Math.hypot(dx, dy);
+                        if(dist < minDist) {
+                            minDist = dist;
+                            nearestElectron = electron;
+                        }
+                    });
+                });
+                
+                if(nearestElectron) {
+                    const dx = nearestElectron.x - psiboid.x;
+                    const dy = nearestElectron.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    if(dist > 0) {
+                        // Enhanced attraction in power modes
+                        const force = baseAttraction / (1 + dist * 0.01);
+                        psiboid.vx += (dx / dist) * force;
+                        psiboid.vy += (dy / dist) * force;
+                        
+                        // Enhanced orbital motion in power modes
+                        const orbitalForce = force * (controls.shift ? 0.8 : (controls.space ? 1.2 : 0.5));
+                        psiboid.vx += (dy / dist) * orbitalForce * psiboid.spin;
+                        psiboid.vy -= (dx / dist) * orbitalForce * psiboid.spin;
+                        
+                        // Enhanced electron charging in power modes
+                        if(dist < 30 * controls.powerBoost) {
+                            nearestElectron.charge = Math.min(1, (nearestElectron.charge || 0) + controls.chargeRate);
+                            psiboid.phase += 0.2 * controls.powerBoost;
+                        }
+                    }
+                }
 
-        // Enhanced psiboid spawning
+                // Entanglement forces
+                if(psiboid.entangled) {
+                    const dx = psiboid.entangled.x - psiboid.x;
+                    const dy = psiboid.entangled.y - psiboid.y;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    if(dist > 0) {
+                        // Stronger connection when both near electrons
+                        const force = 0.02 * (1 + Math.sin(psiboid.phase) * 0.5);
+                        psiboid.vx += (dx / dist) * force;
+                        psiboid.vy += (dy / dist) * force;
+                    }
+                }
+                
+                // Grid line reflection
+                const gridLines = 8;
+                for(let i = 1; i < gridLines; i++) {
+                    const y = (height / gridLines) * i;
+                    const distToLine = Math.abs(psiboid.y - y);
+                    
+                    if(distToLine < 5) {
+                        // Gentle bounce off grid lines
+                        const force = (1 - distToLine/5) * 0.5;
+                        const direction = psiboid.y > y ? 1 : -1;
+                        psiboid.vy += force * direction;
+                        
+                        // Add some horizontal motion along lines
+                        psiboid.vx += psiboid.spin * 0.1;
+                    }
+                }
+                
+                // Update position with improved momentum
+                psiboid.x += psiboid.vx;
+                psiboid.y += psiboid.vy;
+                
+                // Screen wrapping with momentum preservation
+                if(psiboid.x < 0) { psiboid.x = width; psiboid.trail = []; }
+                if(psiboid.x > width) { psiboid.x = 0; psiboid.trail = []; }
+                if(psiboid.y < 0) { psiboid.y = height; psiboid.trail = []; }
+                if(psiboid.y > height) { psiboid.y = 0; psiboid.trail = []; }
+                
+                // Enhanced trail effect
+                if(!Array.isArray(psiboid.trail)) psiboid.trail = [];
+                psiboid.trail.unshift({
+                    x: psiboid.x,
+                    y: psiboid.y,
+                    phase: psiboid.phase
+                });
+                if(psiboid.trail.length > trailLength) psiboid.trail.pop();
+                
+                // Draw enhanced trail
+                if(psiboid.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(psiboid.trail[0].x, psiboid.trail[0].y);
+                    psiboid.trail.forEach((point, i) => {
+                        const alpha = 1 - i/psiboid.trail.length;
+                        ctx.lineTo(point.x, point.y);
+                        if(i > 0) {
+                            const prev = psiboid.trail[i-1];
+                            const dx = point.x - prev.x;
+                            const dy = point.y - prev.y;
+                            const dist = Math.hypot(dx, dy);
+                            if(dist > 0) {
+                                const perpX = -dy / dist * 2;
+                                const perpY = dx / dist * 2;
+                                ctx.lineTo(point.x + perpX, point.y + perpY);
+                                ctx.lineTo(point.x - perpX, point.y - perpY);
+                            }
+                        }
+                    });
+                    ctx.strokeStyle = `rgba(0,255,255,${0.3 + Math.sin(psiboid.phase) * 0.1})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+                
+                // Draw enhanced psiboid core
+                const size = (psiboid.size || 3) * (1 + Math.sin(psiboid.phase) * 0.3);
+                ctx.beginPath();
+                ctx.arc(psiboid.x, psiboid.y, size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0,255,255,${0.6 + Math.sin(psiboid.phase) * 0.4})`;
+                ctx.fill();
+                
+                // Update phase and velocity
+                psiboid.phase += 0.1;
+                psiboid.vx *= 0.98; // Slightly less damping
+                psiboid.vy *= 0.98;
+            });
+        }
+
+        // Enhanced psiboid spawning with power modes
         function spawnPsiboid(x, y) {
             if(psiboids.length >= controls.maxPsiboids) return;
             
+            const speed = 2 * (controls.powerBoost || 1);
             const psiboid = {
                 x: x || Math.random() * canvas.width,
                 y: y || Math.random() * canvas.height,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
+                vx: (Math.random() - 0.5) * speed,
+                vy: (Math.random() - 0.5) * speed,
                 phase: Math.random() * Math.PI * 2,
                 spin: Math.random() < 0.5 ? 1 : -1,
+                size: 3 + Math.random() * 2,
+                trail: [],
                 entangled: null
             };
             
-            // Create entangled pairs more frequently
-            if(Math.random() < 0.7 && psiboids.length > 0) {
-                const partner = psiboids[Math.floor(Math.random() * psiboids.length)];
-                if(!partner.entangled) {
-                    psiboid.entangled = partner;
-                    partner.entangled = psiboid;
+            // Enhanced entanglement in power modes
+            if(controls.shift || controls.space) {
+                const lastPsiboid = psiboids[psiboids.length - 1];
+                if(lastPsiboid && !lastPsiboid.entangled) {
+                    psiboid.entangled = lastPsiboid;
+                    lastPsiboid.entangled = psiboid;
+                    psiboid.phase = lastPsiboid.phase + Math.PI; // Opposite phase
                 }
             }
             
             psiboids.push(psiboid);
+            return psiboid;
         }
 
         // Spawn psiboids more frequently
@@ -227,8 +334,6 @@
         }, 500);
 
         // Guidance pulse system
-        const pulses = [];
-        
         function createGuidancePulse(x, y, power = 1) {
             pulses.push({
                 x, y,
@@ -254,91 +359,33 @@
             }
         }
 
-        // Enhanced psiboid update with stronger attraction
-        function updatePsiboids() {
-            psiboids.forEach(psiboid => {
-                if(roark && roark.active) {
-                    const dx = roark.x - psiboid.x;
-                    const dy = roark.y - psiboid.y;
-                    const dist = Math.hypot(dx, dy);
-                    
-                    // Enhanced attraction with inverse square falloff
-                    if(dist < controls.resonanceField) {
-                        const force = (1 - Math.pow(dist/controls.resonanceField, 2)) 
-                                    * controls.psiboidAttraction 
-                                    * controls.powerBoost;
-                        psiboid.vx += (dx/dist) * force;
-                        psiboid.vy += (dy/dist) * force;
-                        
-                        // Add slight orbital tendency
-                        psiboid.vx += dy/dist * force * 0.2;
-                        psiboid.vy -= dx/dist * force * 0.2;
-                    }
-                }
+        // Initialize psiboids with screen-aware positioning
+        function initPsiboids() {
+            psiboids.length = 0; // Clear existing
+            const scale = window.devicePixelRatio || 1;
+            const screenWidth = window.innerWidth * scale;
+            const screenHeight = window.innerHeight * scale;
+            
+            for(let i = 0; i < 24; i++) {
+                const psiboid = {
+                    x: Math.random() * screenWidth / scale,
+                    y: Math.random() * screenHeight / scale,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    phase: Math.random() * Math.PI * 2,
+                    spin: Math.random() < 0.5 ? 1 : -1,
+                    size: 3 + Math.random() * 2,
+                    entangled: null,
+                    trail: []
+                };
+                psiboids.push(psiboid);
+            }
 
-                // Enhanced entanglement forces
-                if(psiboid.entangled) {
-                    const dx = psiboid.entangled.x - psiboid.x;
-                    const dy = psiboid.entangled.y - psiboid.y;
-                    const dist = Math.hypot(dx, dy);
-                    const force = dist * 0.001 * controls.powerBoost;
-                    
-                    psiboid.vx += dx * force;
-                    psiboid.vy += dy * force;
-                }
-                
-                // Speed limiting with momentum preservation
-                const maxSpeed = 8 * controls.powerBoost;
-                const speed = Math.hypot(psiboid.vx, psiboid.vy);
-                if(speed > maxSpeed) {
-                    const scale = maxSpeed / speed;
-                    psiboid.vx *= scale;
-                    psiboid.vy *= scale;
-                }
-
-                // Add slight attraction to nearest node
-                const nearestNode = findNearestNode(psiboid.x, psiboid.y);
-                if(nearestNode) {
-                    const dx = nearestNode.x - psiboid.x;
-                    const dy = nearestNode.y - psiboid.y;
-                    const dist = Math.hypot(dx, dy);
-                    const force = 0.01 * controls.powerBoost;
-                    
-                    psiboid.vx += (dx/dist) * force;
-                    psiboid.vy += (dy/dist) * force;
-                }
-
-                // Update position with enhanced momentum
-                psiboid.x += psiboid.vx * state.timeDilation;
-                psiboid.y += psiboid.vy * state.timeDilation;
-                
-                // Smooth wrapping
-                if(psiboid.x < 0) psiboid.x = canvas.width;
-                if(psiboid.x > canvas.width) psiboid.x = 0;
-                if(psiboid.y < 0) psiboid.y = canvas.height;
-                if(psiboid.y > canvas.height) psiboid.y = 0;
-
-                // Enhanced visuals
-                psiboid.phase += 0.02 * psiboid.spin * state.timeDilation * controls.powerBoost;
-                
-                const size = 5 * (1 + (controls.powerBoost - 1) * 0.5);
-                ctx.beginPath();
-                ctx.arc(psiboid.x, psiboid.y, size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(0,255,255,${0.5 + Math.sin(psiboid.phase) * 0.3})`;
-                ctx.fill();
-
-                // Enhanced quantum bridges
-                if(psiboid.entangled) {
-                    const strength = state.fieldStrength 
-                                   * (1 + Math.sin(psiboid.phase)) 
-                                   * controls.powerBoost;
-                    ctx.beginPath();
-                    ctx.moveTo(psiboid.x, psiboid.y);
-                    ctx.lineTo(psiboid.entangled.x, psiboid.entangled.y);
-                    ctx.strokeStyle = `rgba(0,255,255,${0.2 * strength})`;
-                    ctx.stroke();
-                }
-            });
+            // Create entangled pairs
+            for(let i = 0; i < psiboids.length - 1; i += 2) {
+                psiboids[i].entangled = psiboids[i+1];
+                psiboids[i+1].entangled = psiboids[i];
+            }
         }
 
         function findNearestNode(x, y) {
@@ -359,11 +406,6 @@
             });
             
             return nearest;
-        }
-
-        function resize() {
-            canvas.width = innerWidth;
-            canvas.height = innerHeight;
         }
 
         // Time-slice mechanics
@@ -500,16 +542,100 @@
             });
         }
 
+        // Initialize nodes
+        for(let i = 0; i < 8; i++) {
+            const angle = (i/8) * Math.PI * 2;
+            nodes.push({
+                matter: {
+                    angle: angle,
+                    charge: 0,
+                    phase: 0,
+                    locked: false
+                },
+                antimatter: {
+                    angle: angle + Math.PI,
+                    charge: 0,
+                    phase: Math.PI,
+                    locked: false
+                }
+            });
+        }
+
+        initPsiboids();
+
+        // Create entangled pairs
+        for(let i = 0; i < psiboids.length - 1; i += 2) {
+            psiboids[i].entangled = psiboids[i+1];
+            psiboids[i+1].entangled = psiboids[i];
+        }
+
+        // Enhanced key controls
+        window.addEventListener('keydown', e => {
+            if(e.key === 'Shift' && !controls.shift) {
+                controls.shift = true;
+                controls.resonanceField *= 2;
+                controls.psiboidAttraction *= 3;
+                controls.powerBoost *= 2;
+                
+                // Spawn additional psiboids in shift mode
+                const extras = 16;
+                for(let i = 0; i < extras; i++) {
+                    const angle = (i / extras) * Math.PI * 2;
+                    const radius = 100;
+                    const x = canvas.width/2 + Math.cos(angle) * radius;
+                    const y = canvas.height/2 + Math.sin(angle) * radius;
+                    spawnPsiboid(x, y);
+                }
+            }
+            
+            if(e.key === ' ' && !controls.space) {
+                controls.space = true;
+                controls.powerBoost *= 3;
+                controls.psiboidAttraction *= 2;
+                controls.chargeRate *= 4;
+                
+                // Power surge effect
+                psiboids.forEach(psiboid => {
+                    if(!psiboid) return;
+                    psiboid.phase += Math.PI; // Phase jump
+                    psiboid.vx *= 2; // Velocity boost
+                    psiboid.vy *= 2;
+                });
+            }
+
+            if(e.key === 'f') {
+                document.getElementById('fullscreen').click();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if(e.key === 'Shift') {
+                controls.shift = false;
+                controls.resonanceField = 200;
+                controls.psiboidAttraction = 0.1;
+                controls.powerBoost = controls.space ? 3 : 1;
+            }
+            
+            if(e.key === ' ') {
+                controls.space = false;
+                controls.powerBoost = controls.shift ? 2 : 1;
+                controls.psiboidAttraction = controls.shift ? 0.3 : 0.1;
+                controls.chargeRate = 0.02;
+            }
+        });
+
+        // Safe update function
         function update() {
-            time++;
+            if(!ctx || !canvas) return;
+            
             ctx.fillStyle = 'rgba(0,0,0,0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Update all systems
             updatePsiboids();
             updatePulses();
-            roark.update();
-            updateTunnels();
+            if(roark) roark.update();
+            if(typeof updateTunnels === 'function') updateTunnels();
             
             const cx = canvas.width/2;
             const cy = canvas.height/2;
@@ -518,7 +644,7 @@
             if(observerMode) {
                 momentum.x *= 0.99;
                 momentum.y *= 0.99;
-                state.depth = Math.max(0, state.depth - 0.001);
+                state.orbitalDepth = Math.max(0, state.orbitalDepth - 0.001);
             }
             
             state.fieldStrength = 0;
@@ -574,7 +700,7 @@
             state.timeDilation = 1 + state.fieldStrength * 0.5;
 
             // Update UI
-            document.getElementById('depth').textContent = state.depth.toFixed(3);
+            document.getElementById('depth').textContent = state.orbitalDepth.toFixed(3);
             document.getElementById('field').textContent = state.fieldStrength.toFixed(3);
             document.getElementById('time').textContent = state.timeDilation.toFixed(3);
 
@@ -604,7 +730,7 @@
             momentum.y = (y - canvas.height/2) * 0.001;
             
             // Increase orbital depth
-            state.depth = Math.min(1, state.depth + 0.01);
+            state.orbitalDepth = Math.min(1, state.orbitalDepth + 0.01);
 
             // Charge nearby nodes
             nodes.forEach(pair => {
@@ -624,10 +750,58 @@
             observerMode = true;
         }
         
-        resize();
+        function resize() {
+            const scale = window.devicePixelRatio || 1;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // Set canvas size accounting for pixel ratio
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            canvas.width = width * scale;
+            canvas.height = height * scale;
+            
+            // Scale context to match device
+            ctx.scale(scale, scale);
+            
+            // Reinitialize psiboids for new screen size
+            initPsiboids();
+            
+            // Update node positions with proper scaling
+            const cx = width / 2;
+            const cy = height / 2;
+            const orbitRadius = Math.min(width, height) * 0.3;
+            
+            nodes.forEach((pair, i) => {
+                const angle = (i / nodes.length) * Math.PI * 2;
+                [pair.matter, pair.antimatter].forEach(node => {
+                    node.x = cx + Math.cos(node.angle) * orbitRadius * (1 + node.charge * 0.2);
+                    node.y = cy + Math.sin(node.angle) * orbitRadius * (1 + node.charge * 0.2);
+                });
+            });
+        }
+
         window.onresize = resize;
         canvas.onmousemove = handleInteraction;
         canvas.onmouseup = handleMouseUp;
+
+        // Add fullscreen handler
+        const fullscreenBtn = document.getElementById('fullscreen');
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Update canvas size on fullscreen change
+        document.addEventListener('fullscreenchange', () => {
+            resize();
+        });
+
         update();
     </script>
 </body>
