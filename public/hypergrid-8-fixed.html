@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quantum Hyperspace Navigator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { width: 100vw; height: 100vh; }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 20, 40, 0.85);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            color: #0ff;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+        }
+
+        .quantum-readout {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.5);
+            border-radius: 8px;
+        }
+
+        .coordinate-value {
+            display: inline-block;
+            min-width: 80px;
+            padding: 3px 8px;
+            margin: 2px;
+            background: rgba(0, 60, 120, 0.3);
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 20, 40, 0.85);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            color: #0ff;
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.85);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            color: #0ff;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 0 4px;
+            background: rgba(0, 60, 120, 0.3);
+            border: 1px solid #0ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <div id="quantum-hud">
+        <div class="quantum-readout">
+            <div>Dimensional Coordinates</div>
+            <div id="coordinates">
+                <div class="coordinate-value">W: 0.000</div>
+                <div class="coordinate-value">X: 0.000</div>
+                <div class="coordinate-value">Y: 0.000</div>
+                <div class="coordinate-value">Z: 0.000</div>
+            </div>
+        </div>
+        <div class="quantum-readout">
+            <div>Quantum Metrics</div>
+            <div id="quantum-metrics">
+                <div class="coordinate-value">Entanglement: 0.000</div>
+                <div class="coordinate-value">Coherence: 0.000</div>
+                <div class="coordinate-value">Density: 0.000</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <div>Movement: <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> | 
+             Y-axis: <span class="key">Q</span><span class="key">E</span> | 
+             W-axis: <span class="key">R</span><span class="key">F</span></div>
+    </div>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { alpha: false, antialias: true });
+        
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.enable(gl.DEPTH_TEST);
+        
+        const vsSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            uniform mat4 matrix;
+            uniform vec4 offset;
+            varying vec4 vColor;
+            void main() {
+                vec4 pos = position + offset;
+                gl_Position = matrix * pos;
+                vColor = color;
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vec4(vColor.rgb, vColor.a);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const matrixLocation = gl.getUniformLocation(program, 'matrix');
+        const offsetLocation = gl.getUniformLocation(program, 'offset');
+
+        // Game state
+        const state = {
+            position: { w: 0, x: 0, y: 0, z: 0 },
+            velocity: { w: 0, x: 0, y: 0, z: 0 },
+            rotation: { wx: 0, wy: 0, wz: 0, xy: 0, xz: 0, yz: 0 },
+            keys: new Set(),
+            trails: []
+        };
+
+        function createQuantumCurves() {
+            const vertices = [];
+            const colors = [];
+            
+            function addCurve(points, color) {
+                for(let i = 0; i < points.length - 1; i++) {
+                    const p1 = points[i];
+                    const p2 = points[i + 1];
+                    vertices.push(p1.x, p1.y, p1.z, p1.w, p2.x, p2.y, p2.z, p2.w);
+                    colors.push(color.r, color.g, color.b, color.a, color.r, color.g, color.b, color.a);
+                }
+            }
+
+            // Create quantum curves
+            const numCurves = 8;
+            for(let i = 0; i < numCurves; i++) {
+                const points = [];
+                const numPoints = 100;
+                const phase = (i / numCurves) * Math.PI * 2;
+                
+                for(let j = 0; j < numPoints; j++) {
+                    const t = j / (numPoints - 1);
+                    const angle = t * Math.PI * 4 + phase;
+                    const radius = 2 + Math.sin(angle * 2) * 0.5;
+                    
+                    points.push({
+                        x: Math.cos(angle) * radius,
+                        y: Math.sin(angle * 1.5) * radius,
+                        z: Math.cos(angle * 0.5) * radius,
+                        w: Math.sin(angle * 0.7) * radius
+                    });
+                }
+
+                // Color gradient from cyan to yellow
+                const t = i / numCurves;
+                const color = {
+                    r: t,
+                    g: 0.7 + t * 0.3,
+                    b: 1.0 - t,
+                    a: 0.8
+                };
+
+                addCurve(points, color);
+            }
+
+            // Add reference axes
+            const axisLength = 3;
+            vertices.push(
+                -axisLength, 0, 0, 0, axisLength, 0, 0, 0,  // W axis
+                0, -axisLength, 0, 0, 0, axisLength, 0, 0,  // X axis
+                0, 0, -axisLength, 0, 0, 0, axisLength, 0,  // Y axis
+                0, 0, 0, -axisLength, 0, 0, 0, axisLength   // Z axis
+            );
+            colors.push(
+                1, 1, 1, 1, 1, 1, 1, 1,  // W axis (white)
+                1, 0, 0, 1, 1, 0, 0, 1,  // X axis (red)
+                0, 1, 0, 1, 0, 1, 0, 1,  // Y axis (green)
+                0, 0, 1, 1, 0, 0, 1, 1   // Z axis (blue)
+            );
+
+            return { vertices, colors };
+        }
+
+        const { vertices, colors } = createQuantumCurves();
+        
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        function updatePhysics(deltaTime) {
+            const moveSpeed = 2.0;
+            const friction = 0.95;
+
+            // Apply keyboard input with smooth acceleration
+            if (state.keys.has('KeyW')) state.velocity.z += moveSpeed * deltaTime;
+            if (state.keys.has('KeyS')) state.velocity.z -= moveSpeed * deltaTime;
+            if (state.keys.has('KeyA')) state.velocity.x -= moveSpeed * deltaTime;
+            if (state.keys.has('KeyD')) state.velocity.x += moveSpeed * deltaTime;
+            if (state.keys.has('KeyQ')) state.velocity.y += moveSpeed * deltaTime;
+            if (state.keys.has('KeyE')) state.velocity.y -= moveSpeed * deltaTime;
+            if (state.keys.has('KeyR')) state.velocity.w += moveSpeed * deltaTime;
+            if (state.keys.has('KeyF')) state.velocity.w -= moveSpeed * deltaTime;
+
+            // Apply velocity
+            state.position.w += state.velocity.w;
+            state.position.x += state.velocity.x;
+            state.position.y += state.velocity.y;
+            state.position.z += state.velocity.z;
+
+            // Apply friction
+            state.velocity.w *= friction;
+            state.velocity.x *= friction;
+            state.velocity.y *= friction;
+            state.velocity.z *= friction;
+
+            // Update trails
+            if (Math.abs(state.velocity.w) > 0.01 || 
+                Math.abs(state.velocity.x) > 0.01 || 
+                Math.abs(state.velocity.y) > 0.01 || 
+                Math.abs(state.velocity.z) > 0.01) {
+                state.trails.push({...state.position});
+                if (state.trails.length > 50) state.trails.shift();
+            }
+
+            // Update HUD
+            const coordinates = document.querySelectorAll('#coordinates .coordinate-value');
+            coordinates[0].textContent = `W: ${state.position.w.toFixed(3)}`;
+            coordinates[1].textContent = `X: ${state.position.x.toFixed(3)}`;
+            coordinates[2].textContent = `Y: ${state.position.y.toFixed(3)}`;
+            coordinates[3].textContent = `Z: ${state.position.z.toFixed(3)}`;
+
+            // Update quantum metrics based on position and velocity
+            const speed = Math.sqrt(
+                state.velocity.w * state.velocity.w +
+                state.velocity.x * state.velocity.x +
+                state.velocity.y * state.velocity.y +
+                state.velocity.z * state.velocity.z
+            );
+
+            const metrics = document.querySelectorAll('#quantum-metrics .coordinate-value');
+            metrics[0].textContent = `Entanglement: ${(Math.abs(Math.sin(state.position.w)) * 0.8 + 0.2).toFixed(3)}`;
+            metrics[1].textContent = `Coherence: ${(Math.abs(Math.cos(state.position.x)) * 0.8 + 0.2).toFixed(3)}`;
+            metrics[2].textContent = `Density: ${(speed * 0.5).toFixed(3)}`;
+        }
+
+        function get4DRotationMatrix() {
+            const matrix = mat4.create();
+            const { wx, wy, wz } = state.rotation;
+            
+            mat4.rotate(matrix, matrix, wx, [1, 0, 0]);
+            mat4.rotate(matrix, matrix, wy, [0, 1, 0]);
+            mat4.rotate(matrix, matrix, wz, [0, 0, 1]);
+
+            mat4.perspective(matrix, Math.PI/3, canvas.width/canvas.height, 0.1, 100.0);
+            mat4.translate(matrix, matrix, [0, 0, -6]);
+
+            return matrix;
+        }
+
+        let lastTime = 0;
+        function render(currentTime) {
+            const deltaTime = (currentTime - lastTime) * 0.001;
+            lastTime = currentTime;
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            updatePhysics(deltaTime);
+
+            // Auto-rotation for better visualization
+            state.rotation.wx += deltaTime * 0.2;
+            state.rotation.wy += deltaTime * 0.1;
+
+            gl.uniformMatrix4fv(matrixLocation, false, get4DRotationMatrix());
+            gl.uniform4f(offsetLocation, 
+                state.position.w, 
+                state.position.x, 
+                state.position.y, 
+                state.position.z
+            );
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(colorLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.lineWidth(2.0);
+            gl.drawArrays(gl.LINES, 0, vertices.length / 4);
+
+            requestAnimationFrame(render);
+        }
+
+        // Input handling
+        document.addEventListener('keydown', e => state.keys.add(e.code));
+        document.addEventListener('keyup', e => state.keys.delete(e.code));
+
+        requestAnimationFrame(render);
+    })();
+    </script>
+</body>
+</html>

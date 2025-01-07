@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid 8 - Quantum Hyperspace</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: 'Courier New', monospace; }
+        canvas { display: block; }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 20, 40, 0.85);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+        }
+
+        .quantum-readout {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.5);
+            border-radius: 8px;
+            border-left: 3px solid rgba(0, 150, 255, 0.5);
+        }
+
+        .readout-label {
+            color: #0ff;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .coordinate-value {
+            display: inline-block;
+            min-width: 80px;
+            padding: 3px 8px;
+            margin: 2px;
+            background: rgba(0, 60, 120, 0.3);
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        #quantum-metrics div {
+            margin: 5px 0;
+            color: #0ff;
+        }
+
+        #quantum-metrics span {
+            float: right;
+            color: #fff;
+        }
+
+        .hud-title {
+            font-size: 1.2em;
+            color: #0ff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        #quantum-time {
+            font-size: 1.1em;
+            color: #0f0;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at 50% 50%, 
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: crosshair;
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <div id="quantum-navigator"></div>
+    
+    <div id="quantum-hud">
+        <div id="quantum-hud-header">
+            <span class="hud-title">QUANTUM HYPERSPACE MONITOR</span>
+            <span id="quantum-time">t=0.000</span>
+        </div>
+
+        <div class="quantum-readout">
+            <div class="readout-label">DIMENSIONAL COORDINATES</div>
+            <div id="coordinates">
+                <div class="coordinate-value">W: 0.000</div>
+                <div class="coordinate-value">X: 0.000</div>
+                <div class="coordinate-value">Y: 0.000</div>
+                <div class="coordinate-value">Z: 0.000</div>
+            </div>
+        </div>
+
+        <div class="quantum-readout">
+            <div class="readout-label">QUANTUM METRICS</div>
+            <div id="quantum-metrics">
+                <div>Entanglement: <span id="entanglement-value">0.000</span></div>
+                <div>Coherence: <span id="coherence-value">0.000</span></div>
+                <div>Density: <span id="density-value">0.000</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById("glCanvas");
+        const gl = canvas.getContext("webgl");
+
+        if (!gl) {
+            alert("Unable to initialize WebGL. Your browser may not support it.");
+            return;
+        }
+
+        // Vertex shader for points
+        const vertexShaderSource = `
+            attribute vec4 position;
+            attribute vec3 color;
+            attribute float pointSize;
+            uniform mat4 matrix;
+            varying vec3 vColor;
+            void main() {
+                gl_Position = matrix * position;
+                gl_PointSize = pointSize;
+                vColor = color;
+            }
+        `;
+
+        // Fragment shader for points
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec3 vColor;
+            void main() {
+                float dist = length(gl_PointCoord - vec2(0.5));
+                if (dist > 0.5) discard;
+                float alpha = 1.0 - smoothstep(0.45, 0.5, dist);
+                gl_FragColor = vec4(vColor * alpha, alpha);
+            }
+        `;
+
+        // Create shader program
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // Get locations
+        const positionLocation = gl.getAttribLocation(program, "position");
+        const colorLocation = gl.getAttribLocation(program, "color");
+        const sizeLocation = gl.getAttribLocation(program, "pointSize");
+        const matrixLocation = gl.getUniformLocation(program, "matrix");
+
+        // Create buffers
+        const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
+        const sizeBuffer = gl.createBuffer();
+        const lineBuffer = gl.createBuffer();
+        const lineColorBuffer = gl.createBuffer();
+
+        // Initialize state
+        let rotationState = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0,
+            autoRotate: true
+        };
+
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            const step = 2.0 / (size - 1);
+
+            for (let w = 0; w < size; w++) {
+                for (let x = 0; x < size; x++) {
+                    for (let y = 0; y < size; y++) {
+                        for (let z = 0; z < size; z++) {
+                            points.push(
+                                w * step - 1.0,
+                                x * step - 1.0,
+                                y * step - 1.0,
+                                z * step - 1.0
+                            );
+
+                            colors.push(
+                                0.5 + 0.5 * Math.sin(w * 0.5),
+                                0.5 + 0.5 * Math.cos(x * 0.5),
+                                0.5 + 0.5 * Math.sin((y + z) * 0.25)
+                            );
+
+                            sizes.push(2.0 + Math.sin(w * 0.5) * Math.cos(z * 0.5));
+                        }
+                    }
+                }
+            }
+
+            return { points, colors, sizes };
+        }
+
+        function generateReferenceLines(currentTime) {
+            const lines = [];
+            const colors = [];
+            const t = currentTime * 0.001;
+            
+            // Main axes (bright)
+            // W axis (white)
+            lines.push(-1, 0, 0, 0,  1, 0, 0, 0);
+            colors.push(1, 1, 1,  1, 1, 1);
+            
+            // X axis (cyan)
+            lines.push(0, -1, 0, 0,  0, 1, 0, 0);
+            colors.push(0, 1, 1,  0, 1, 1);
+            
+            // Y axis (magenta)
+            lines.push(0, 0, -1, 0,  0, 0, 1, 0);
+            colors.push(1, 0, 1,  1, 0, 1);
+            
+            // Z axis (yellow)
+            lines.push(0, 0, 0, -1,  0, 0, 0, 1);
+            colors.push(1, 1, 0,  1, 1, 0);
+
+            // Grid lines
+            const gridStep = 0.2;
+            for (let i = -1; i <= 1; i += gridStep) {
+                // WX plane
+                lines.push(-1, i, 0, 0,  1, i, 0, 0);
+                colors.push(0.2, 0.2, 0.2,  0.2, 0.2, 0.2);
+                
+                // WY plane
+                lines.push(-1, 0, i, 0,  1, 0, i, 0);
+                colors.push(0.2, 0.2, 0.2,  0.2, 0.2, 0.2);
+                
+                // WZ plane
+                lines.push(-1, 0, 0, i,  1, 0, 0, i);
+                colors.push(0.2, 0.2, 0.2,  0.2, 0.2, 0.2);
+            }
+
+            // Quantum plane indicators
+            const r = 0.5;
+            const steps = 64;
+            for (let i = 0; i < steps; i++) {
+                const angle1 = (i / steps) * Math.PI * 2;
+                const angle2 = ((i + 1) / steps) * Math.PI * 2;
+                const cos1 = Math.cos(angle1) * r;
+                const sin1 = Math.sin(angle1) * r;
+                const cos2 = Math.cos(angle2) * r;
+                const sin2 = Math.sin(angle2) * r;
+
+                // WX plane (bright cyan)
+                lines.push(cos1, sin1, 0, 0,  cos2, sin2, 0, 0);
+                colors.push(0, 1, 1,  0, 1, 1);
+
+                // WY plane (bright magenta)
+                lines.push(cos1, 0, sin1, 0,  cos2, 0, sin2, 0);
+                colors.push(1, 0, 1,  1, 0, 1);
+
+                // WZ plane (bright yellow)
+                lines.push(cos1, 0, 0, sin1,  cos2, 0, 0, sin2);
+                colors.push(1, 1, 0,  1, 1, 0);
+            }
+
+            return { lines, colors };
+        }
+
+        function updatePoints(size) {
+            const { points, colors, sizes } = generatePoints(size);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
+
+            return points.length / 4;
+        }
+
+        function updateRotations(currentTime) {
+            if (rotationState.autoRotate) {
+                const t = currentTime * 0.001;
+                rotationState.wx = Math.sin(t * 0.3) * 0.5;
+                rotationState.wy = Math.cos(t * 0.4) * 0.5;
+                rotationState.wz = Math.sin(t * 0.5) * 0.5;
+                rotationState.xy = Math.cos(t * 0.6) * 0.5;
+                rotationState.xz = Math.sin(t * 0.7) * 0.5;
+                rotationState.yz = Math.cos(t * 0.8) * 0.5;
+            }
+        }
+
+        function updateQuantumHud(currentTime) {
+            const t = currentTime * 0.001;
+            
+            document.getElementById('quantum-time').textContent = `t=${t.toFixed(3)}`;
+
+            const coordinates = document.querySelectorAll('.coordinate-value');
+            coordinates[0].textContent = `W: ${rotationState.wx.toFixed(3)}`;
+            coordinates[1].textContent = `X: ${rotationState.wy.toFixed(3)}`;
+            coordinates[2].textContent = `Y: ${rotationState.wz.toFixed(3)}`;
+            coordinates[3].textContent = `Z: ${rotationState.xy.toFixed(3)}`;
+
+            document.getElementById('entanglement-value').textContent = 
+                (0.5 + 0.5 * Math.sin(t * 0.7)).toFixed(3);
+            document.getElementById('coherence-value').textContent = 
+                (0.5 + 0.5 * Math.cos(t * 0.8)).toFixed(3);
+            document.getElementById('density-value').textContent = 
+                (0.5 + 0.5 * Math.sin(t * 0.9)).toFixed(3);
+        }
+
+        function get4DRotationMatrix(wx, wy, wz, xy, xz, yz) {
+            const matrix = mat4.create();
+            const c1 = Math.cos(wx), s1 = Math.sin(wx);
+            const c2 = Math.cos(wy), s2 = Math.sin(wy);
+            const c3 = Math.cos(wz), s3 = Math.sin(wz);
+            const c4 = Math.cos(xy), s4 = Math.sin(xy);
+            const c5 = Math.cos(xz), s5 = Math.sin(xz);
+            const c6 = Math.cos(yz), s6 = Math.sin(yz);
+
+            matrix[0] = c1*c2;
+            matrix[1] = c1*s2*s3 - s1*c3;
+            matrix[2] = c1*s2*c3 + s1*s3;
+            matrix[3] = 0;
+
+            matrix[4] = s1*c2;
+            matrix[5] = s1*s2*s3 + c1*c3;
+            matrix[6] = s1*s2*c3 - c1*s3;
+            matrix[7] = 0;
+
+            matrix[8] = -s2;
+            matrix[9] = c2*s3;
+            matrix[10] = c2*c3;
+            matrix[11] = 0;
+
+            matrix[12] = 0;
+            matrix[13] = 0;
+            matrix[14] = 0;
+            matrix[15] = 1;
+
+            return matrix;
+        }
+
+        function render(currentTime) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            updateRotations(currentTime);
+            updateQuantumHud(currentTime);
+
+            const matrix = get4DRotationMatrix(
+                rotationState.wx, rotationState.wy, rotationState.wz,
+                rotationState.xy, rotationState.xz, rotationState.yz
+            );
+
+            gl.uniformMatrix4fv(matrixLocation, false, matrix);
+
+            // Draw points
+            gl.enableVertexAttribArray(positionLocation);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.enableVertexAttribArray(sizeLocation);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+            gl.drawArrays(gl.POINTS, 0, numPoints);
+
+            // Draw reference lines
+            const { lines, colors } = generateReferenceLines(currentTime);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lines), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+
+            gl.vertexAttrib1f(sizeLocation, 1.0);
+
+            for (let i = 0; i < lines.length / 8; i++) {
+                gl.drawArrays(gl.LINES, i * 2, 2);
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        function initQuantumNavigator() {
+            const navigator = document.getElementById('quantum-navigator');
+            let isDragging = false;
+            let startX, startY;
+
+            navigator.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                const rect = navigator.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                updateRotationVector(startX, startY);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const rect = navigator.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                updateRotationVector(x, y);
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        }
+
+        function updateRotationVector(x, y) {
+            const navigator = document.getElementById('quantum-navigator');
+            const rect = navigator.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const dx = x - centerX;
+            const dy = y - centerY;
+            
+            const radius = Math.min(rect.width, rect.height) / 2;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            const normalizedDistance = Math.min(distance / radius, 1);
+            
+            rotationState.autoRotate = false;
+            rotationState.wx = normalizedDistance * Math.cos(angle);
+            rotationState.wy = normalizedDistance * Math.sin(angle);
+        }
+
+        // Initialize
+        let numPoints = updatePoints(5);
+        initQuantumNavigator();
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        // Start rendering
+        requestAnimationFrame(render);
+    })();
+    </script>
+</body>
+</html>

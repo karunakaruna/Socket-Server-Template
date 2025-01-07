@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Quantum Navigator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { width: 100vw; height: 100vh; }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 20, 40, 0.85);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            color: #0ff;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+        }
+
+        .quantum-readout {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.5);
+            border-radius: 8px;
+            border-left: 3px solid rgba(0, 150, 255, 0.5);
+        }
+
+        .coordinate-value {
+            display: inline-block;
+            min-width: 80px;
+            padding: 3px 8px;
+            margin: 2px;
+            background: rgba(0, 60, 120, 0.3);
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 20, 40, 0.85);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            color: #0ff;
+        }
+
+        .control-group {
+            margin: 10px 0;
+        }
+
+        .toggle-button {
+            background: rgba(0, 60, 120, 0.3);
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background: rgba(0, 100, 200, 0.3);
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.85);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            color: #0ff;
+            text-align: center;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 0 4px;
+            background: rgba(0, 60, 120, 0.3);
+            border: 1px solid #0ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <div id="quantum-hud">
+        <div class="quantum-readout">
+            <div>Position:</div>
+            <div id="coordinates">
+                <div class="coordinate-value">W: 0.000</div>
+                <div class="coordinate-value">X: 0.000</div>
+                <div class="coordinate-value">Y: 0.000</div>
+                <div class="coordinate-value">Z: 0.000</div>
+            </div>
+        </div>
+        <div class="quantum-readout">
+            <div>Velocity:</div>
+            <div id="velocity">
+                <div class="coordinate-value">VW: 0.000</div>
+                <div class="coordinate-value">VX: 0.000</div>
+                <div class="coordinate-value">VY: 0.000</div>
+                <div class="coordinate-value">VZ: 0.000</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <button id="autoRotateToggle" class="toggle-button active">Auto-Rotate</button>
+            <button id="gridToggle" class="toggle-button active">Show Grid</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <div>Movement: <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> | 
+             Ascend/Descend: <span class="key">Q</span><span class="key">E</span> | 
+             4D Motion: <span class="key">R</span><span class="key">F</span> |
+             Mouse: Click & Drag</div>
+    </div>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { alpha: false, antialias: true });
+        
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.enable(gl.DEPTH_TEST);
+        
+        // Shader setup
+        const vsSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            uniform mat4 matrix;
+            uniform vec4 offset;
+            varying vec4 vColor;
+            void main() {
+                vec4 pos = position + offset;
+                gl_Position = matrix * pos;
+                vColor = color;
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vec4(vColor.rgb * 2.0, vColor.a);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const matrixLocation = gl.getUniformLocation(program, 'matrix');
+        const offsetLocation = gl.getUniformLocation(program, 'offset');
+
+        // Game state
+        const state = {
+            autoRotate: true,
+            showGrid: true,
+            position: { w: 0, x: 0, y: 0, z: 0 },
+            velocity: { w: 0, x: 0, y: 0, z: 0 },
+            rotation: { wx: 0, wy: 0, wz: 0, xy: 0, xz: 0, yz: 0 },
+            keys: new Set(),
+            mouseDown: false,
+            lastMouseX: 0,
+            lastMouseY: 0
+        };
+
+        function createGeometry() {
+            const vertices = [];
+            const colors = [];
+            const numLines = 300;
+            
+            function addLine(x1, y1, z1, w1, x2, y2, z2, w2, r, g, b, a = 1) {
+                vertices.push(x1, y1, z1, w1, x2, y2, z2, w2);
+                colors.push(r, g, b, a, r, g, b, a);
+            }
+
+            // Create spiral patterns
+            for(let i = 0; i < numLines; i++) {
+                const t = i / numLines;
+                const angle = t * Math.PI * 2;
+                const radius = 1.5;
+                
+                const r = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+                const g = Math.sin(t * Math.PI * 2 + Math.PI * 2/3) * 0.5 + 0.5;
+                const b = Math.sin(t * Math.PI * 2 + Math.PI * 4/3) * 0.5 + 0.5;
+
+                for(let j = 0; j < 3; j++) {
+                    const offset = j * Math.PI * 2 / 3;
+                    addLine(
+                        Math.cos(angle + offset) * radius,
+                        Math.sin(angle + offset) * radius,
+                        Math.cos(angle * 2) * radius * 0.5,
+                        Math.sin(angle * 2) * radius * 0.5,
+                        Math.cos(angle + 0.1 + offset) * radius,
+                        Math.sin(angle + 0.1 + offset) * radius,
+                        Math.cos((angle + 0.1) * 2) * radius * 0.5,
+                        Math.sin((angle + 0.1) * 2) * radius * 0.5,
+                        r, g, b
+                    );
+                }
+            }
+
+            // Main axes
+            addLine(-2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1);     // W
+            addLine(0, -2, 0, 0, 0, 2, 0, 0, 1, 0.2, 0.2); // X
+            addLine(0, 0, -2, 0, 0, 0, 2, 0, 0.2, 1, 0.2); // Y
+            addLine(0, 0, 0, -2, 0, 0, 0, 2, 0.2, 0.2, 1); // Z
+
+            if (state.showGrid) {
+                const gridSize = 2;
+                const gridStep = 0.5;
+                for(let i = -gridSize; i <= gridSize; i += gridStep) {
+                    addLine(-gridSize, i, 0, 0, gridSize, i, 0, 0, 0.2, 0.2, 0.2, 0.3);
+                    addLine(i, -gridSize, 0, 0, i, gridSize, 0, 0, 0.2, 0.2, 0.2, 0.3);
+                    addLine(-gridSize, 0, i, 0, gridSize, 0, i, 0, 0.2, 0.2, 0.2, 0.3);
+                    addLine(i, 0, -gridSize, 0, i, 0, gridSize, 0, 0.2, 0.2, 0.2, 0.3);
+                }
+            }
+
+            return { vertices, colors };
+        }
+
+        const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
+        let numVertices;
+
+        function updateGeometry() {
+            const { vertices, colors } = createGeometry();
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+            numVertices = vertices.length / 4;
+        }
+
+        updateGeometry();
+
+        // Movement and physics
+        function updatePhysics(deltaTime) {
+            const speed = 2.0;
+            const friction = 0.95;
+
+            // Apply keyboard input
+            if (state.keys.has('KeyW')) state.velocity.z += speed * deltaTime;
+            if (state.keys.has('KeyS')) state.velocity.z -= speed * deltaTime;
+            if (state.keys.has('KeyA')) state.velocity.x -= speed * deltaTime;
+            if (state.keys.has('KeyD')) state.velocity.x += speed * deltaTime;
+            if (state.keys.has('KeyQ')) state.velocity.y += speed * deltaTime;
+            if (state.keys.has('KeyE')) state.velocity.y -= speed * deltaTime;
+            if (state.keys.has('KeyR')) state.velocity.w += speed * deltaTime;
+            if (state.keys.has('KeyF')) state.velocity.w -= speed * deltaTime;
+
+            // Apply velocity to position
+            state.position.w += state.velocity.w;
+            state.position.x += state.velocity.x;
+            state.position.y += state.velocity.y;
+            state.position.z += state.velocity.z;
+
+            // Apply friction
+            state.velocity.w *= friction;
+            state.velocity.x *= friction;
+            state.velocity.y *= friction;
+            state.velocity.z *= friction;
+
+            // Update HUD
+            const coordinates = document.querySelectorAll('#coordinates .coordinate-value');
+            coordinates[0].textContent = `W: ${state.position.w.toFixed(3)}`;
+            coordinates[1].textContent = `X: ${state.position.x.toFixed(3)}`;
+            coordinates[2].textContent = `Y: ${state.position.y.toFixed(3)}`;
+            coordinates[3].textContent = `Z: ${state.position.z.toFixed(3)}`;
+
+            const velocities = document.querySelectorAll('#velocity .coordinate-value');
+            velocities[0].textContent = `VW: ${state.velocity.w.toFixed(3)}`;
+            velocities[1].textContent = `VX: ${state.velocity.x.toFixed(3)}`;
+            velocities[2].textContent = `VY: ${state.velocity.y.toFixed(3)}`;
+            velocities[3].textContent = `VZ: ${state.velocity.z.toFixed(3)}`;
+        }
+
+        function updateRotation(currentTime) {
+            const t = currentTime * 0.001;
+            
+            if (state.autoRotate) {
+                state.rotation.wx = Math.sin(t * 0.3) * Math.PI;
+                state.rotation.wy = Math.cos(t * 0.4) * Math.PI;
+                state.rotation.wz = Math.sin(t * 0.5) * Math.PI;
+                state.rotation.xy = Math.cos(t * 0.6) * Math.PI;
+                state.rotation.xz = Math.sin(t * 0.7) * Math.PI;
+                state.rotation.yz = Math.cos(t * 0.8) * Math.PI;
+            }
+        }
+
+        function get4DRotationMatrix() {
+            const matrix = mat4.create();
+            const { wx, wy, wz, xy, xz, yz } = state.rotation;
+            
+            const c1 = Math.cos(wx), s1 = Math.sin(wx);
+            const c2 = Math.cos(wy), s2 = Math.sin(wy);
+            const c3 = Math.cos(wz), s3 = Math.sin(wz);
+            const c4 = Math.cos(xy), s4 = Math.sin(xy);
+            const c5 = Math.cos(xz), s5 = Math.sin(xz);
+            const c6 = Math.cos(yz), s6 = Math.sin(yz);
+
+            mat4.multiply(matrix, matrix, [
+                c1*c2, -s1*c3+c1*s2*s3, s1*s3+c1*s2*c3, 0,
+                s1*c2, c1*c3+s1*s2*s3, -c1*s3+s1*s2*c3, 0,
+                -s2, c2*s3, c2*c3, 0,
+                0, 0, 0, 1
+            ]);
+
+            mat4.perspective(matrix, Math.PI/3, canvas.width/canvas.height, 0.1, 100.0);
+            mat4.translate(matrix, matrix, [0, 0, -4]);
+
+            return matrix;
+        }
+
+        let lastTime = 0;
+        function render(currentTime) {
+            const deltaTime = (currentTime - lastTime) * 0.001;
+            lastTime = currentTime;
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            updatePhysics(deltaTime);
+            updateRotation(currentTime);
+
+            gl.uniformMatrix4fv(matrixLocation, false, get4DRotationMatrix());
+            gl.uniform4f(offsetLocation, 
+                state.position.w, 
+                state.position.x, 
+                state.position.y, 
+                state.position.z
+            );
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(colorLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.lineWidth(2.0);
+            gl.drawArrays(gl.LINES, 0, numVertices);
+
+            requestAnimationFrame(render);
+        }
+
+        // Input handling
+        document.addEventListener('keydown', e => state.keys.add(e.code));
+        document.addEventListener('keyup', e => state.keys.delete(e.code));
+
+        canvas.addEventListener('mousedown', e => {
+            state.mouseDown = true;
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!state.mouseDown) return;
+            const dx = e.clientX - state.lastMouseX;
+            const dy = e.clientY - state.lastMouseY;
+            
+            state.autoRotate = false;
+            state.rotation.wy += dx * 0.01;
+            state.rotation.wx += dy * 0.01;
+            
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', () => state.mouseDown = false);
+        document.addEventListener('mouseleave', () => state.mouseDown = false);
+
+        // Control buttons
+        document.getElementById('autoRotateToggle').addEventListener('click', (e) => {
+            state.autoRotate = !state.autoRotate;
+            e.target.classList.toggle('active');
+        });
+
+        document.getElementById('gridToggle').addEventListener('click', (e) => {
+            state.showGrid = !state.showGrid;
+            e.target.classList.toggle('active');
+            updateGeometry();
+        });
+
+        requestAnimationFrame(render);
+    })();
+    </script>
+</body>
+</html>

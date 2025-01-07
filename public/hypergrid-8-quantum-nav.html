@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quantum Hyperspace Navigator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { width: 100vw; height: 100vh; }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 20, 40, 0.85);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            color: #0ff;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+        }
+
+        .quantum-readout {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.5);
+            border-radius: 8px;
+            border-left: 3px solid rgba(0, 150, 255, 0.5);
+        }
+
+        .readout-label {
+            color: #0ff;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .coordinate-value {
+            display: inline-block;
+            min-width: 80px;
+            padding: 3px 8px;
+            margin: 2px;
+            background: rgba(0, 60, 120, 0.3);
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        .phase-indicator {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 150, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .phase-value {
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #0080ff);
+            transition: width 0.3s ease;
+        }
+
+        #quantum-metrics div {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            color: #0ff;
+        }
+
+        .metric-value {
+            color: #fff;
+            font-family: monospace;
+            background: rgba(0, 60, 120, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .hud-title {
+            font-size: 1.2em;
+            color: #0ff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        #quantum-time {
+            font-size: 1.1em;
+            color: #0f0;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            text-align: right;
+        }
+
+        #quantum-navigator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at 50% 50%, 
+                rgba(255, 255, 255, 0.1),
+                rgba(0, 100, 255, 0.15),
+                rgba(0, 0, 0, 0.5)
+            );
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: crosshair;
+            box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 20, 40, 0.85);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            color: #0ff;
+        }
+
+        .control-group {
+            margin: 10px 0;
+        }
+
+        .toggle-button {
+            background: rgba(0, 60, 120, 0.3);
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background: rgba(0, 100, 200, 0.3);
+        }
+
+        .toggle-button.active {
+            background: rgba(0, 150, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <div id="quantum-navigator"></div>
+    
+    <div id="quantum-hud">
+        <div class="hud-title">QUANTUM HYPERSPACE MONITOR</div>
+        <div id="quantum-time">t=0.000</div>
+
+        <div class="quantum-readout">
+            <div class="readout-label">Dimensional Coordinates</div>
+            <div id="coordinates">
+                <div class="coordinate-value">W: 0.000</div>
+                <div class="coordinate-value">X: 0.000</div>
+                <div class="coordinate-value">Y: 0.000</div>
+                <div class="coordinate-value">Z: 0.000</div>
+            </div>
+            <div class="phase-indicator">
+                <div class="phase-value" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="quantum-readout">
+            <div class="readout-label">Quantum Metrics</div>
+            <div id="quantum-metrics">
+                <div>
+                    <span class="metric-label">Entanglement</span>
+                    <span id="entanglement-value" class="metric-value">0.000</span>
+                </div>
+                <div>
+                    <span class="metric-label">Coherence</span>
+                    <span id="coherence-value" class="metric-value">0.000</span>
+                </div>
+                <div>
+                    <span class="metric-label">Density</span>
+                    <span id="density-value" class="metric-value">0.000</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <button id="autoRotateToggle" class="toggle-button active">Auto-Rotate</button>
+            <button id="gridToggle" class="toggle-button active">Show Grid</button>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { alpha: false, antialias: true });
+        
+        // Enable required WebGL features
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.enable(gl.DEPTH_TEST);
+        
+        const vsSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            uniform mat4 matrix;
+            varying vec4 vColor;
+            void main() {
+                gl_Position = matrix * position;
+                vColor = color;
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vec4(vColor.rgb * 2.0, vColor.a);
+            }
+        `;
+
+        // Create shader program
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const matrixLocation = gl.getUniformLocation(program, 'matrix');
+
+        // State
+        const state = {
+            autoRotate: true,
+            showGrid: true,
+            rotation: {
+                wx: 0, wy: 0, wz: 0,
+                xy: 0, xz: 0, yz: 0
+            }
+        };
+
+        function createGeometry() {
+            const vertices = [];
+            const colors = [];
+            const numLines = 300;
+            
+            function addLine(x1, y1, z1, w1, x2, y2, z2, w2, r, g, b, a = 1) {
+                vertices.push(x1, y1, z1, w1, x2, y2, z2, w2);
+                colors.push(r, g, b, a, r, g, b, a);
+            }
+
+            // Rainbow patterns
+            for(let i = 0; i < numLines; i++) {
+                const t = i / numLines;
+                const angle = t * Math.PI * 2;
+                const radius = 1.5;
+                
+                const r = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+                const g = Math.sin(t * Math.PI * 2 + Math.PI * 2/3) * 0.5 + 0.5;
+                const b = Math.sin(t * Math.PI * 2 + Math.PI * 4/3) * 0.5 + 0.5;
+
+                // Create spiral patterns in multiple dimensions
+                for(let j = 0; j < 3; j++) {
+                    const offset = j * Math.PI * 2 / 3;
+                    addLine(
+                        Math.cos(angle + offset) * radius,
+                        Math.sin(angle + offset) * radius,
+                        Math.cos(angle * 2) * radius * 0.5,
+                        Math.sin(angle * 2) * radius * 0.5,
+                        Math.cos(angle + 0.1 + offset) * radius,
+                        Math.sin(angle + 0.1 + offset) * radius,
+                        Math.cos((angle + 0.1) * 2) * radius * 0.5,
+                        Math.sin((angle + 0.1) * 2) * radius * 0.5,
+                        r, g, b
+                    );
+                }
+            }
+
+            // Main axes (extra bright)
+            addLine(-2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1);     // W (white)
+            addLine(0, -2, 0, 0, 0, 2, 0, 0, 1, 0.2, 0.2); // X (red)
+            addLine(0, 0, -2, 0, 0, 0, 2, 0, 0.2, 1, 0.2); // Y (green)
+            addLine(0, 0, 0, -2, 0, 0, 0, 2, 0.2, 0.2, 1); // Z (blue)
+
+            // Grid (if enabled)
+            if (state.showGrid) {
+                const gridSize = 2;
+                const gridStep = 0.5;
+                for(let i = -gridSize; i <= gridSize; i += gridStep) {
+                    // WX plane
+                    addLine(-gridSize, i, 0, 0, gridSize, i, 0, 0, 0.2, 0.2, 0.2, 0.5);
+                    addLine(i, -gridSize, 0, 0, i, gridSize, 0, 0, 0.2, 0.2, 0.2, 0.5);
+                    
+                    // WY plane
+                    addLine(-gridSize, 0, i, 0, gridSize, 0, i, 0, 0.2, 0.2, 0.2, 0.5);
+                    addLine(i, 0, -gridSize, 0, i, 0, gridSize, 0, 0.2, 0.2, 0.2, 0.5);
+                    
+                    // WZ plane
+                    addLine(-gridSize, 0, 0, i, gridSize, 0, 0, i, 0.2, 0.2, 0.2, 0.5);
+                    addLine(i, 0, 0, -gridSize, i, 0, 0, gridSize, 0.2, 0.2, 0.2, 0.5);
+                }
+            }
+
+            return { vertices, colors };
+        }
+
+        function updateGeometry() {
+            const { vertices, colors } = createGeometry();
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+            return vertices.length / 4;
+        }
+
+        const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
+        let numVertices = updateGeometry();
+
+        function updateRotation(currentTime) {
+            const t = currentTime * 0.001;
+            
+            if (state.autoRotate) {
+                state.rotation.wx = Math.sin(t * 0.3) * Math.PI;
+                state.rotation.wy = Math.cos(t * 0.4) * Math.PI;
+                state.rotation.wz = Math.sin(t * 0.5) * Math.PI;
+                state.rotation.xy = Math.cos(t * 0.6) * Math.PI;
+                state.rotation.xz = Math.sin(t * 0.7) * Math.PI;
+                state.rotation.yz = Math.cos(t * 0.8) * Math.PI;
+            }
+            
+            // Update HUD
+            document.getElementById('quantum-time').textContent = `t=${t.toFixed(3)}`;
+            
+            const coordinates = document.querySelectorAll('.coordinate-value');
+            coordinates[0].textContent = `W: ${state.rotation.wx.toFixed(3)}`;
+            coordinates[1].textContent = `X: ${state.rotation.wy.toFixed(3)}`;
+            coordinates[2].textContent = `Y: ${state.rotation.wz.toFixed(3)}`;
+            coordinates[3].textContent = `Z: ${state.rotation.xy.toFixed(3)}`;
+
+            // Update quantum metrics
+            document.getElementById('entanglement-value').textContent = 
+                (0.5 + 0.5 * Math.sin(t * 0.7)).toFixed(3);
+            document.getElementById('coherence-value').textContent = 
+                (0.5 + 0.5 * Math.cos(t * 0.8)).toFixed(3);
+            document.getElementById('density-value').textContent = 
+                (0.5 + 0.5 * Math.sin(t * 0.9)).toFixed(3);
+
+            // Update phase indicator
+            document.querySelector('.phase-value').style.width = 
+                `${(Math.sin(t) + 1) * 50}%`;
+        }
+
+        function get4DRotationMatrix() {
+            const matrix = mat4.create();
+            const { wx, wy, wz, xy, xz, yz } = state.rotation;
+            
+            const c1 = Math.cos(wx), s1 = Math.sin(wx);
+            const c2 = Math.cos(wy), s2 = Math.sin(wy);
+            const c3 = Math.cos(wz), s3 = Math.sin(wz);
+            const c4 = Math.cos(xy), s4 = Math.sin(xy);
+            const c5 = Math.cos(xz), s5 = Math.sin(xz);
+            const c6 = Math.cos(yz), s6 = Math.sin(yz);
+
+            mat4.multiply(matrix, matrix, [
+                c1*c2, -s1*c3+c1*s2*s3, s1*s3+c1*s2*c3, 0,
+                s1*c2, c1*c3+s1*s2*s3, -c1*s3+s1*s2*c3, 0,
+                -s2, c2*s3, c2*c3, 0,
+                0, 0, 0, 1
+            ]);
+
+            mat4.perspective(matrix, Math.PI/3, canvas.width/canvas.height, 0.1, 100.0);
+            mat4.translate(matrix, matrix, [0, 0, -4]);
+
+            return matrix;
+        }
+
+        function render(currentTime) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            updateRotation(currentTime);
+            gl.uniformMatrix4fv(matrixLocation, false, get4DRotationMatrix());
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(colorLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.lineWidth(2.0);
+            gl.drawArrays(gl.LINES, 0, numVertices);
+
+            requestAnimationFrame(render);
+        }
+
+        // Initialize quantum navigator
+        const navigator = document.getElementById('quantum-navigator');
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        navigator.addEventListener('mousedown', e => {
+            isDragging = true;
+            const rect = navigator.getBoundingClientRect();
+            lastMouseX = e.clientX - rect.left;
+            lastMouseY = e.clientY - rect.top;
+            updateNavigatorRotation(lastMouseX, lastMouseY);
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            const rect = navigator.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            updateNavigatorRotation(x, y);
+        });
+
+        document.addEventListener('mouseup', () => isDragging = false);
+
+        function updateNavigatorRotation(x, y) {
+            const rect = navigator.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const dx = x - centerX;
+            const dy = y - centerY;
+            
+            const radius = Math.min(rect.width, rect.height) / 2;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            const normalizedDistance = Math.min(distance / radius, 1);
+            
+            state.autoRotate = false;
+            state.rotation.wx = normalizedDistance * Math.cos(angle);
+            state.rotation.wy = normalizedDistance * Math.sin(angle);
+        }
+
+        // Control buttons
+        document.getElementById('autoRotateToggle').addEventListener('click', (e) => {
+            state.autoRotate = !state.autoRotate;
+            e.target.classList.toggle('active');
+        });
+
+        document.getElementById('gridToggle').addEventListener('click', (e) => {
+            state.showGrid = !state.showGrid;
+            e.target.classList.toggle('active');
+            numVertices = updateGeometry();
+        });
+
+        // Start rendering
+        requestAnimationFrame(render);
+    })();
+    </script>
+</body>
+</html>

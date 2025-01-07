@@ -1,0 +1,13 @@
+# Expansion & Error Correction Rules
+
+1. **Redundancy Reduction**
+   - Each glyph is **contextually dependent**, minimizing repetition.
+   - Compound meanings (Ψ → Σ) resolve only at **interpretation level**.
+
+2. **Error Handling Mechanisms**
+   - **Self-healing structures:** If (Q rep) is lost, infer from (Ξ(Ψ) ⊕ H(Ψ)).
+   - **Fuzzy tolerance:** Minor alterations to Σ allow recovery through ML(Σ).
+
+3. **Context-Dependent Decoding**
+   - Ψ states remain **observer-relative** (Ξ affects interpretation).
+   - Σ layers adapt to **dimensional transitions (L).**

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- Previous head and style sections remain the same -->
+
+<script>
+    (function() {
+        // Previous initialization code remains the same until generatePoints function
+
+        // Add function to generate reference lines
+        function generateReferenceLines() {
+            const lines = [];
+            const colors = [];
+            
+            // Axis lines
+            // W axis (bright white)
+            lines.push(-1, 0, 0, 0,  1, 0, 0, 0);
+            colors.push(1, 1, 1,  1, 1, 1);
+            
+            // X axis (cyan)
+            lines.push(0, -1, 0, 0,  0, 1, 0, 0);
+            colors.push(0, 1, 1,  0, 1, 1);
+            
+            // Y axis (magenta)
+            lines.push(0, 0, -1, 0,  0, 0, 1, 0);
+            colors.push(1, 0, 1,  1, 0, 1);
+            
+            // Z axis (yellow)
+            lines.push(0, 0, 0, -1,  0, 0, 0, 1);
+            colors.push(1, 1, 0,  1, 1, 0);
+
+            // Grid lines
+            const gridStep = 0.2;
+            for (let i = -1; i <= 1; i += gridStep) {
+                // WX plane
+                lines.push(-1, i, 0, 0,  1, i, 0, 0);
+                colors.push(0.3, 0.3, 0.3,  0.3, 0.3, 0.3);
+                lines.push(i, -1, 0, 0,  i, 1, 0, 0);
+                colors.push(0.3, 0.3, 0.3,  0.3, 0.3, 0.3);
+
+                // WY plane
+                lines.push(-1, 0, i, 0,  1, 0, i, 0);
+                colors.push(0.3, 0.3, 0.3,  0.3, 0.3, 0.3);
+                lines.push(i, 0, -1, 0,  i, 0, 1, 0);
+                colors.push(0.3, 0.3, 0.3,  0.3, 0.3, 0.3);
+
+                // WZ plane
+                lines.push(-1, 0, 0, i,  1, 0, 0, i);
+                colors.push(0.3, 0.3, 0.3,  0.3, 0.3, 0.3);
+                lines.push(i, 0, 0, -1,  i, 0, 0, 1);
+                colors.push(0.3, 0.3, 0.3,  0.3, 0.3, 0.3);
+            }
+
+            // Quantum plane indicators (bright lines showing current rotation plane)
+            function addQuantumPlane(t) {
+                const r = 0.5; // radius of the plane indicator
+                const steps = 32;
+                for (let i = 0; i < steps; i++) {
+                    const angle1 = (i / steps) * Math.PI * 2;
+                    const angle2 = ((i + 1) / steps) * Math.PI * 2;
+                    const cos1 = Math.cos(angle1) * r;
+                    const sin1 = Math.sin(angle1) * r;
+                    const cos2 = Math.cos(angle2) * r;
+                    const sin2 = Math.sin(angle2) * r;
+
+                    // WX plane (bright blue)
+                    lines.push(cos1, sin1, 0, 0,  cos2, sin2, 0, 0);
+                    colors.push(0.5, 0.8, 1,  0.5, 0.8, 1);
+
+                    // WY plane (bright purple)
+                    lines.push(cos1, 0, sin1, 0,  cos2, 0, sin2, 0);
+                    colors.push(0.8, 0.5, 1,  0.8, 0.5, 1);
+
+                    // WZ plane (bright gold)
+                    lines.push(cos1, 0, 0, sin1,  cos2, 0, 0, sin2);
+                    colors.push(1, 0.8, 0.5,  1, 0.8, 0.5);
+                }
+            }
+            addQuantumPlane(currentTime * 0.001);
+
+            return { lines, colors };
+        }
+
+        // Create line buffers
+        const lineBuffer = gl.createBuffer();
+        const lineColorBuffer = gl.createBuffer();
+
+        // Modify render function to include lines
+        function render(currentTime) {
+            // Previous render code...
+
+            // Draw points first
+            gl.drawArrays(gl.POINTS, 0, numPoints);
+
+            // Generate and draw reference lines
+            const { lines, colors } = generateReferenceLines();
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lines), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+
+            // Draw lines
+            gl.lineWidth(2.0);
+            for (let i = 0; i < lines.length / 8; i++) {
+                gl.drawArrays(gl.LINES, i * 2, 2);
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        // Rest of the code remains the same...
+    })();
+</script>
+</body>
+</html>

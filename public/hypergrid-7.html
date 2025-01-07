@@ -191,6 +191,213 @@
         .label-x { bottom: 5px; left: 50%; transform: translateX(-50%); }
         .label-y { left: 5px; top: 50%; transform: translateY(-50%); }
         .label-z { right: 5px; top: 50%; transform: translateY(-50%); }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 280px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 255, 0.8);
+            cursor: move;
+            user-select: none;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+        }
+
+        #quantum-hud.dragging {
+            opacity: 0.8;
+        }
+
+        #quantum-hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 150, 255, 0.3);
+            font-size: 12px;
+        }
+
+        .hud-title {
+            color: rgba(0, 200, 255, 0.9);
+            font-weight: bold;
+        }
+
+        .quantum-coordinate {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            font-size: 11px;
+        }
+
+        .coordinate-label {
+            color: rgba(0, 200, 255, 0.7);
+        }
+
+        .coordinate-value {
+            font-family: 'Consolas', monospace;
+            color: rgba(0, 255, 200, 0.9);
+        }
+
+        .quantum-metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            font-size: 11px;
+        }
+
+        .metric-label {
+            color: rgba(200, 100, 255, 0.7);
+        }
+
+        .metric-value {
+            font-family: 'Consolas', monospace;
+            color: rgba(255, 100, 255, 0.9);
+        }
+
+        .separator {
+            height: 1px;
+            background: linear-gradient(to right, 
+                rgba(0, 150, 255, 0), 
+                rgba(0, 150, 255, 0.3),
+                rgba(0, 150, 255, 0));
+            margin: 8px 0;
+        }
+
+        #quantum-memories {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            color: rgba(0, 255, 255, 0.8);
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+            max-height: 80vh;
+            overflow-y: auto;
+            cursor: move;
+            user-select: none;
+        }
+
+        #quantum-memories.dragging {
+            opacity: 0.8;
+        }
+
+        #quantum-memories-header {
+            color: rgba(0, 200, 255, 0.9);
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 150, 255, 0.3);
+        }
+
+        .memory-entry {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(0, 40, 80, 0.5);
+            border: 1px solid rgba(0, 150, 255, 0.2);
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .memory-entry:hover {
+            background: rgba(0, 60, 100, 0.5);
+            border-color: rgba(0, 200, 255, 0.4);
+        }
+
+        .memory-time {
+            color: rgba(100, 200, 255, 0.7);
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        .memory-coords {
+            font-family: 'Consolas', monospace;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2px;
+        }
+
+        .coord-row {
+            display: flex;
+            justify-content: space-between;
+            color: rgba(0, 255, 200, 0.9);
+            font-size: 10px;
+        }
+
+        .coord-label {
+            color: rgba(100, 200, 255, 0.7);
+        }
+
+        #save-quantum-state {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: rgba(0, 100, 200, 0.3);
+            border: 1px solid rgba(0, 150, 255, 0.4);
+            border-radius: 4px;
+            color: rgba(0, 255, 255, 0.8);
+            font-size: 16px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #save-quantum-state:hover {
+            background: rgba(0, 150, 255, 0.3);
+            border-color: rgba(0, 200, 255, 0.6);
+        }
+
+        .memory-entry.active {
+            border-color: rgba(0, 255, 100, 0.6);
+            box-shadow: 0 0 10px rgba(0, 255, 100, 0.3);
+        }
+
+        #return-origin {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: rgba(0, 40, 80, 0.8);
+            border: 1px solid rgba(0, 150, 255, 0.4);
+            border-radius: 20px;
+            color: rgba(0, 255, 255, 0.9);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #return-origin:hover {
+            background: rgba(0, 60, 100, 0.8);
+            border-color: rgba(0, 200, 255, 0.6);
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.3);
+        }
+
+        #return-origin::before {
+            content: '⌂';
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
@@ -282,6 +489,42 @@
         <div class="coordinate-label label-y">Y</div>
         <div class="coordinate-label label-z">Z</div>
     </div>
+
+    <div id="quantum-hud">
+        <div id="quantum-hud-header">
+            <span class="hud-title">QUANTUM COORDINATES</span>
+            <span id="quantum-time">t=0.000</span>
+            <button id="save-quantum-state" title="Save Quantum State">💾</button>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">ℍ[quaternion]</span>
+            <span class="coordinate-value">1.000i + 0.000j + 0.000k</span>
+        </div>
+        <div class="quantum-coordinate">
+            <span class="coordinate-label">Ω[rotation]</span>
+            <span class="coordinate-value">φ=0.000 θ=0.000 ψ=0.000</span>
+        </div>
+        <div class="separator"></div>
+        <div class="quantum-metric">
+            <span class="metric-label">∇[phase]</span>
+            <span class="metric-value">0.000π rad</span>
+        </div>
+        <div class="quantum-metric">
+            <span class="metric-label">∂[entropy]</span>
+            <span class="metric-value">0.000 bits</span>
+        </div>
+        <div class="quantum-metric">
+            <span class="metric-label">λ[coherence]</span>
+            <span class="metric-value">100%</span>
+        </div>
+    </div>
+
+    <div id="quantum-memories">
+        <div id="quantum-memories-header">QUANTUM MEMORY BANK</div>
+        <!-- Memory entries will be added here -->
+    </div>
+
+    <button id="return-origin">⌂</button>
 
     <script>
         // Load presets from JSON file
@@ -904,10 +1147,111 @@
             }
         }
 
+        // Quantum HUD state and management
+        let hudState = {
+            quaternion: { i: 1, j: 0, k: 0 },
+            rotation: { phi: 0, theta: 0, psi: 0 },
+            phase: 0,
+            entropy: 0,
+            coherence: 1.0,
+            time: 0
+        };
+
+        function initQuantumHud() {
+            const hud = document.getElementById('quantum-hud');
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            hud.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+
+            function dragStart(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === hud || e.target.parentNode === hud) {
+                    isDragging = true;
+                    hud.classList.add('dragging');
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    
+                    hud.style.transform = 
+                        `translate(${currentX}px, ${currentY}px)`;
+                }
+            }
+
+            function dragEnd(e) {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+                hud.classList.remove('dragging');
+            }
+        }
+
+        function updateQuantumHud(currentTime) {
+            // Update quantum time
+            hudState.time = (currentTime / 1000) % 1000;
+            
+            // Calculate quaternion from rotation state
+            const wx = rotationState.wx, wy = rotationState.wy, wz = rotationState.wz;
+            const magnitude = Math.sqrt(wx*wx + wy*wy + wz*wz);
+            hudState.quaternion = {
+                i: magnitude > 0 ? wx/magnitude : 1,
+                j: magnitude > 0 ? wy/magnitude : 0,
+                k: magnitude > 0 ? wz/magnitude : 0
+            };
+            
+            // Calculate Euler angles
+            hudState.rotation = {
+                phi: Math.atan2(rotationState.wy, rotationState.wx),
+                theta: Math.atan2(rotationState.wz, Math.sqrt(wx*wx + wy*wy)),
+                psi: Math.atan2(rotationState.yz, rotationState.xz)
+            };
+            
+            // Calculate quantum metrics
+            hudState.phase = (Math.atan2(rotationState.xy, rotationState.wx) + Math.PI) / (2 * Math.PI);
+            hudState.entropy = magnitude > 0 ? -Math.log2(1/magnitude) : 0;
+            hudState.coherence = Math.exp(-hudState.entropy/8);
+            
+            // Update HUD display
+            document.getElementById('quantum-time').textContent = 
+                `t=${hudState.time.toFixed(3)}`;
+            
+            document.querySelector('#quantum-hud .quantum-coordinate:nth-child(2) .coordinate-value')
+                .textContent = `${hudState.quaternion.i.toFixed(3)}i + ${hudState.quaternion.j.toFixed(3)}j + ${hudState.quaternion.k.toFixed(3)}k`;
+            
+            document.querySelector('#quantum-hud .quantum-coordinate:nth-child(3) .coordinate-value')
+                .textContent = `φ=${hudState.rotation.phi.toFixed(3)} θ=${hudState.rotation.theta.toFixed(3)} ψ=${hudState.rotation.psi.toFixed(3)}`;
+            
+            document.querySelector('#quantum-hud .quantum-metric:nth-child(5) .metric-value')
+                .textContent = `${hudState.phase.toFixed(3)}π rad`;
+            
+            document.querySelector('#quantum-hud .quantum-metric:nth-child(6) .metric-value')
+                .textContent = `${hudState.entropy.toFixed(3)} bits`;
+            
+            document.querySelector('#quantum-hud .quantum-metric:nth-child(7) .metric-value')
+                .textContent = `${(hudState.coherence * 100).toFixed(1)}%`;
+        }
+
         // Start rendering
         function render(currentTime) {
             updateRotations(currentTime);
             updateNavigator(currentTime);
+            updateQuantumHud(currentTime);
             
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.drawArrays(gl.POINTS, 0, points.length / 4);
@@ -918,6 +1262,268 @@
 
         // Initialize quantum navigator
         initQuantumNavigator();
+
+        // Initialize quantum HUD
+        initQuantumHud();
+
+        // Quantum memory system
+        let quantumMemories = [];
+        const MAX_MEMORIES = 10;
+
+        function saveQuantumState() {
+            const timestamp = new Date().toISOString();
+            const state = {
+                timestamp,
+                rotationState: { ...rotationState },
+                baseFreqs: { ...baseFreqs },
+                hudState: { ...hudState },
+                navigatorState: { 
+                    currentVector: { ...navigatorState.currentVector },
+                    targetVector: navigatorState.targetVector ? { ...navigatorState.targetVector } : null
+                }
+            };
+
+            quantumMemories.unshift(state);
+            if (quantumMemories.length > MAX_MEMORIES) {
+                quantumMemories.pop();
+            }
+
+            updateMemoryDisplay();
+            
+            // Visual feedback
+            const saveBtn = document.getElementById('save-quantum-state');
+            saveBtn.style.backgroundColor = 'rgba(0, 255, 100, 0.3)';
+            setTimeout(() => {
+                saveBtn.style.backgroundColor = '';
+            }, 300);
+        }
+
+        function recallQuantumState(state) {
+            // Smoothly transition to saved state
+            const transitionDuration = 1000; // ms
+            const startState = {
+                rotationState: { ...rotationState },
+                baseFreqs: { ...baseFreqs },
+                navigatorState: { ...navigatorState }
+            };
+            const startTime = performance.now();
+
+            function transition(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / transitionDuration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+
+                // Interpolate all values
+                Object.keys(rotationState).forEach(key => {
+                    if (key !== 'time' && key !== 'lastTime') {
+                        rotationState[key] = startState.rotationState[key] + 
+                            (state.rotationState[key] - startState.rotationState[key]) * eased;
+                    }
+                });
+
+                Object.keys(baseFreqs).forEach(key => {
+                    baseFreqs[key] = startState.baseFreqs[key] + 
+                        (state.baseFreqs[key] - startState.baseFreqs[key]) * eased;
+                });
+
+                navigatorState.currentVector = {
+                    x: startState.navigatorState.currentVector.x + 
+                        (state.navigatorState.currentVector.x - startState.navigatorState.currentVector.x) * eased,
+                    y: startState.navigatorState.currentVector.y + 
+                        (state.navigatorState.currentVector.y - startState.navigatorState.currentVector.y) * eased
+                };
+
+                updateVectorPosition(
+                    document.getElementById('navigator-vector'),
+                    navigatorState.currentVector
+                );
+
+                // Continue transition if not complete
+                if (progress < 1) {
+                    requestAnimationFrame(transition);
+                } else {
+                    // Update memory display to show active state
+                    updateMemoryDisplay(state.timestamp);
+                }
+            }
+
+            requestAnimationFrame(transition);
+        }
+
+        function updateMemoryDisplay(activeTimestamp = null) {
+            const container = document.getElementById('quantum-memories');
+            const header = container.querySelector('#quantum-memories-header');
+            
+            // Clear existing entries
+            while (container.firstChild && container.firstChild !== header) {
+                container.removeChild(container.lastChild);
+            }
+
+            // Add memory entries
+            quantumMemories.forEach(memory => {
+                const entry = document.createElement('div');
+                entry.className = 'memory-entry' + 
+                    (memory.timestamp === activeTimestamp ? ' active' : '');
+                
+                const time = document.createElement('div');
+                time.className = 'memory-time';
+                time.textContent = new Date(memory.timestamp).toLocaleTimeString();
+                
+                const coords = document.createElement('div');
+                coords.className = 'memory-coords';
+                
+                const standardCoords = getStandardizedCoordinates(memory);
+                
+                // Quaternion coordinates
+                const qRow = document.createElement('div');
+                qRow.className = 'coord-row';
+                qRow.innerHTML = `
+                    <span class="coord-label">ℍ</span>
+                    <span>${formatCoordinate(standardCoords.quaternion.i)}i ${formatCoordinate(standardCoords.quaternion.j)}j ${formatCoordinate(standardCoords.quaternion.k)}k</span>
+                `;
+                
+                // Rotation angles
+                const rRow = document.createElement('div');
+                rRow.className = 'coord-row';
+                rRow.innerHTML = `
+                    <span class="coord-label">Ω</span>
+                    <span>${formatCoordinate(standardCoords.rotation.wx, 2)}° ${formatCoordinate(standardCoords.rotation.wy, 2)}° ${formatCoordinate(standardCoords.rotation.wz, 2)}°</span>
+                `;
+                
+                coords.appendChild(qRow);
+                coords.appendChild(rRow);
+                
+                entry.appendChild(time);
+                entry.appendChild(coords);
+                entry.addEventListener('click', () => recallQuantumState(memory));
+                
+                container.appendChild(entry);
+            });
+        }
+
+        // Origin state definition
+        const ORIGIN_STATE = {
+            rotationState: {
+                wx: 0, wy: 0, wz: 0,
+                xy: 0, xz: 0, yz: 0,
+                time: 0,
+                lastTime: performance.now()
+            },
+            baseFreqs: {
+                wx: 0.02, wy: 0.025, wz: 0.03,
+                xy: 0.015, xz: 0.035, yz: 0.022
+            },
+            navigatorState: {
+                currentVector: { x: 100, y: 100 },
+                targetVector: null
+            }
+        };
+
+        // Standardized coordinate format
+        function formatCoordinate(value, precision = 4) {
+            return value.toFixed(precision).padStart(8, ' ');
+        }
+
+        function getStandardizedCoordinates(state) {
+            return {
+                quaternion: {
+                    i: state.hudState.quaternion.i,
+                    j: state.hudState.quaternion.j,
+                    k: state.hudState.quaternion.k
+                },
+                rotation: {
+                    wx: state.rotationState.wx,
+                    wy: state.rotationState.wy,
+                    wz: state.rotationState.wz,
+                    xy: state.rotationState.xy,
+                    xz: state.rotationState.xz,
+                    yz: state.rotationState.yz
+                },
+                metrics: {
+                    phase: state.hudState.phase,
+                    entropy: state.hudState.entropy,
+                    coherence: state.hudState.coherence
+                }
+            };
+        }
+
+        // Make memories panel draggable
+        function initDraggableMemories() {
+            const memories = document.getElementById('quantum-memories');
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            memories.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+
+            function dragStart(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+                
+                if (e.target === memories || memories.contains(e.target)) {
+                    isDragging = true;
+                    memories.classList.add('dragging');
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    
+                    memories.style.transform = 
+                        `translate(${currentX}px, ${currentY}px)`;
+                }
+            }
+
+            function dragEnd(e) {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+                memories.classList.remove('dragging');
+            }
+        }
+
+        // Return to origin function
+        function returnToOrigin() {
+            const originState = {
+                timestamp: new Date().toISOString(),
+                ...ORIGIN_STATE,
+                hudState: {
+                    quaternion: { i: 1, j: 0, k: 0 },
+                    rotation: { phi: 0, theta: 0, psi: 0 },
+                    phase: 0,
+                    entropy: 0,
+                    coherence: 1.0,
+                    time: 0
+                }
+            };
+            
+            recallQuantumState(originState);
+            
+            // Visual feedback
+            const btn = document.getElementById('return-origin');
+            btn.style.backgroundColor = 'rgba(0, 255, 100, 0.3)';
+            setTimeout(() => {
+                btn.style.backgroundColor = '';
+            }, 300);
+        }
+
+        // Initialize draggable memories and origin button
+        initDraggableMemories();
+        document.getElementById('return-origin').addEventListener('click', returnToOrigin);
+        
+        // Initialize quantum memory system
+        document.getElementById('save-quantum-state').addEventListener('click', saveQuantumState);
 
         // Start the animation
         render();

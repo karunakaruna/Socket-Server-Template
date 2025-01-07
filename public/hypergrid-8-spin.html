@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HyperGrid 8 - Rainbow Spin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        canvas { width: 100vw; height: 100vh; }
+        #hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: #0ff;
+            font-family: monospace;
+            background: rgba(0,0,32,0.8);
+            padding: 20px;
+            border: 1px solid #0ff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="hud">
+        <div>W: <span id="w">0.000</span></div>
+        <div>X: <span id="x">0.000</span></div>
+        <div>Y: <span id="y">0.000</span></div>
+        <div>Z: <span id="z">0.000</span></div>
+    </div>
+    <script>
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { alpha: false, antialias: true });
+        
+        // Enable required WebGL features
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.enable(gl.DEPTH_TEST);
+        
+        const vsSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            uniform mat4 matrix;
+            varying vec4 vColor;
+            void main() {
+                gl_Position = matrix * position;
+                vColor = color;
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vec4(vColor.rgb * 2.0, vColor.a); // Extra bright
+            }
+        `;
+
+        // Create shader program
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const matrixLocation = gl.getUniformLocation(program, 'matrix');
+
+        function createRainbowLines() {
+            const vertices = [];
+            const colors = [];
+            const numLines = 300; // Even more lines!
+            
+            function addLine(x1, y1, z1, w1, x2, y2, z2, w2, r, g, b) {
+                vertices.push(x1, y1, z1, w1, x2, y2, z2, w2);
+                colors.push(r, g, b, 1, r, g, b, 1);
+            }
+
+            // Create multiple rotating circles of lines
+            for(let i = 0; i < numLines; i++) {
+                const t = i / numLines;
+                const angle = t * Math.PI * 2;
+                const radius = 1.5;
+                
+                // Rainbow colors with extra vibrancy
+                const r = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+                const g = Math.sin(t * Math.PI * 2 + Math.PI * 2/3) * 0.5 + 0.5;
+                const b = Math.sin(t * Math.PI * 2 + Math.PI * 4/3) * 0.5 + 0.5;
+
+                // Create circular patterns in multiple dimensions
+                for(let j = 0; j < 3; j++) {
+                    const offset = j * Math.PI * 2 / 3;
+                    
+                    // Spiral pattern
+                    addLine(
+                        Math.cos(angle + offset) * radius, 
+                        Math.sin(angle + offset) * radius,
+                        Math.cos(angle * 2) * radius * 0.5,
+                        Math.sin(angle * 2) * radius * 0.5,
+                        Math.cos(angle + 0.1 + offset) * radius,
+                        Math.sin(angle + 0.1 + offset) * radius,
+                        Math.cos((angle + 0.1) * 2) * radius * 0.5,
+                        Math.sin((angle + 0.1) * 2) * radius * 0.5,
+                        r, g, b
+                    );
+                }
+            }
+
+            // Add bright central axes
+            addLine(-2, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1);     // W axis (white)
+            addLine(0, -2, 0, 0, 0, 2, 0, 0, 1, 0.2, 0.2); // X axis (red)
+            addLine(0, 0, -2, 0, 0, 0, 2, 0, 0.2, 1, 0.2); // Y axis (green)
+            addLine(0, 0, 0, -2, 0, 0, 0, 2, 0.2, 0.2, 1); // Z axis (blue)
+
+            return { vertices, colors };
+        }
+
+        const { vertices, colors } = createRainbowLines();
+        
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        // Rotation state with continuous motion
+        const rotation = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0,
+            autoRotate: true
+        };
+
+        function updateRotation(currentTime) {
+            const t = currentTime * 0.001;
+            
+            // Continuous rotation in multiple dimensions
+            rotation.wx = Math.sin(t * 0.5) * Math.PI;
+            rotation.wy = Math.cos(t * 0.4) * Math.PI;
+            rotation.wz = Math.sin(t * 0.3) * Math.PI;
+            rotation.xy = Math.cos(t * 0.2) * Math.PI;
+            rotation.xz = Math.sin(t * 0.1) * Math.PI;
+            rotation.yz = Math.cos(t * 0.15) * Math.PI;
+            
+            // Update HUD
+            document.getElementById('w').textContent = rotation.wx.toFixed(3);
+            document.getElementById('x').textContent = rotation.wy.toFixed(3);
+            document.getElementById('y').textContent = rotation.wz.toFixed(3);
+            document.getElementById('z').textContent = rotation.xy.toFixed(3);
+        }
+
+        function get4DRotationMatrix() {
+            const matrix = mat4.create();
+            
+            // Apply 4D rotations
+            const c1 = Math.cos(rotation.wx), s1 = Math.sin(rotation.wx);
+            const c2 = Math.cos(rotation.wy), s2 = Math.sin(rotation.wy);
+            const c3 = Math.cos(rotation.wz), s3 = Math.sin(rotation.wz);
+            const c4 = Math.cos(rotation.xy), s4 = Math.sin(rotation.xy);
+            const c5 = Math.cos(rotation.xz), s5 = Math.sin(rotation.xz);
+            const c6 = Math.cos(rotation.yz), s6 = Math.sin(rotation.yz);
+
+            // Combine rotations
+            mat4.multiply(matrix, matrix, [
+                c1*c2, -s1*c3+c1*s2*s3, s1*s3+c1*s2*c3, 0,
+                s1*c2, c1*c3+s1*s2*s3, -c1*s3+s1*s2*c3, 0,
+                -s2, c2*s3, c2*c3, 0,
+                0, 0, 0, 1
+            ]);
+
+            // Add perspective
+            mat4.perspective(matrix, Math.PI/3, canvas.width/canvas.height, 0.1, 100.0);
+            mat4.translate(matrix, matrix, [0, 0, -4]);
+
+            return matrix;
+        }
+
+        function render(currentTime) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            updateRotation(currentTime);
+            gl.uniformMatrix4fv(matrixLocation, false, get4DRotationMatrix());
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(colorLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.lineWidth(2.0); // Thicker lines
+            gl.drawArrays(gl.LINES, 0, vertices.length / 4);
+
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+
+        // Add mouse interaction that doesn't stop auto-rotation
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+            
+            // Add to current rotation instead of replacing
+            rotation.wx += deltaY * 0.01;
+            rotation.wy += deltaX * 0.01;
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+    </script>
+</body>
+</html>

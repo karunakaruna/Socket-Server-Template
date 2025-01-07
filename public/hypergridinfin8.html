@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid Infinite 8 - Quantum Hyperspace</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Space Mono', monospace;
+        }
+        canvas { display: block; }
+        
+        /* Quantum Navigator */
+        #quantum-navigator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            color: rgba(0, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-control {
+            margin: 10px 0;
+        }
+
+        .quantum-slider {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(0, 100, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .quantum-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(0, 255, 255, 0.8);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Memory Palace */
+        #memory-palace {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 250px;
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            color: rgba(0, 255, 255, 0.9);
+        }
+
+        .memory-crystal {
+            margin: 8px 0;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .memory-crystal:hover {
+            background: rgba(0, 60, 120, 0.7);
+            transform: translateX(5px);
+        }
+
+        /* Quantum Stream */
+        #quantum-stream {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(90deg,
+                rgba(0, 50, 100, 0.3),
+                rgba(0, 150, 255, 0.4),
+                rgba(0, 50, 100, 0.3)
+            );
+            animation: flow 20s linear infinite;
+        }
+
+        @keyframes flow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        /* State Display */
+        #quantum-state {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Space Mono', monospace;
+            color: rgba(0, 255, 255, 0.9);
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .coordinate-label {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    
+    <div id="quantum-navigator">
+        <h3>⚛ Quantum Navigation</h3>
+        <div class="nav-control">
+            <label>Hyperspace Density</label>
+            <input type="range" class="quantum-slider" id="density" min="10" max="50" value="20">
+        </div>
+        <div class="nav-control">
+            <label>Temporal Flow</label>
+            <input type="range" class="quantum-slider" id="temporal-flow" min="0" max="100" value="50">
+        </div>
+        <div class="nav-control">
+            <label>Dimensional Resonance</label>
+            <input type="range" class="quantum-slider" id="resonance" min="0" max="100" value="70">
+        </div>
+    </div>
+
+    <div id="memory-palace">
+        <h3>💎 Memory Palace</h3>
+        <div id="memory-crystals"></div>
+        <button id="crystallize" class="starseed-button">Crystallize State</button>
+    </div>
+
+    <div id="quantum-stream"></div>
+    <div id="quantum-state">
+        <div id="state-vector">|ψ⟩ = 1.000|0⟩ + 0.000|1⟩</div>
+        <div id="sector-coords">Sector: 0,0,0,0</div>
+    </div>
+
+    <script>
+        // Initialize WebGL
+        const canvas = document.getElementById("glCanvas");
+        const gl = canvas.getContext("webgl");
+        if (!gl) {
+            alert("Unable to initialize WebGL");
+            return;
+        }
+
+        // Vertex shader program
+        const vsSource = `
+            attribute vec4 aPosition;
+            attribute vec4 aColor;
+            uniform mat4 uProjection;
+            uniform mat4 uRotation;
+            varying vec4 vColor;
+            void main() {
+                vec4 rotated = uRotation * aPosition;
+                gl_Position = uProjection * vec4(rotated.xyz, 1.0);
+                gl_PointSize = 2.0;
+                vColor = aColor;
+            }
+        `;
+
+        // Fragment shader program
+        const fsSource = `
+            precision mediump float;
+            varying vec4 vColor;
+            void main() {
+                float r = distance(gl_PointCoord, vec2(0.5));
+                if(r > 0.5) discard;
+                gl_FragColor = vColor;
+            }
+        `;
+
+        // Create shader program
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            console.error('Program link error:', gl.getProgramInfoLog(shaderProgram));
+            return;
+        }
+
+        // Get attribute and uniform locations
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                position: gl.getAttribLocation(shaderProgram, 'aPosition'),
+                color: gl.getAttribLocation(shaderProgram, 'aColor'),
+            },
+            uniformLocations: {
+                projection: gl.getUniformLocation(shaderProgram, 'uProjection'),
+                rotation: gl.getUniformLocation(shaderProgram, 'uRotation'),
+            },
+        };
+
+        // Initialize state
+        let state = {
+            rotation: { x: 0, y: 0, z: 0, w: 0 },
+            sector: [0, 0, 0, 0],
+            density: 20,
+            temporalFlow: 0.5,
+            resonance: 0.7,
+            quantum: {
+                alpha: 1.0,
+                beta: 0.0,
+                phase: 0.0
+            },
+            memories: []
+        };
+
+        // Generate infinite hyperspace points
+        function generatePoints(density, sector) {
+            const points = [];
+            const colors = [];
+            const scale = 2.0;
+            
+            for (let w = -scale; w <= scale; w += scale/density) {
+                for (let x = -scale; x <= scale; x += scale/density) {
+                    for (let y = -scale; y <= scale; y += scale/density) {
+                        for (let z = -scale; z <= scale; z += scale/density) {
+                            points.push(
+                                x + sector[0] * scale * 2,
+                                y + sector[1] * scale * 2,
+                                z + sector[2] * scale * 2,
+                                w + sector[3] * scale * 2
+                            );
+
+                            // Quantum-influenced colors
+                            const phase = Math.atan2(state.quantum.beta, state.quantum.alpha);
+                            const r = 0.5 + 0.5 * Math.cos(phase + x/scale);
+                            const g = 0.5 + 0.5 * Math.sin(phase + y/scale);
+                            const b = 0.5 + 0.5 * Math.cos(phase + z/scale);
+                            colors.push(r, g, b, 1.0);
+                        }
+                    }
+                }
+            }
+            return { points, colors };
+        }
+
+        // Create buffers
+        let { points, colors } = generatePoints(state.density, state.sector);
+        
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        // Memory Palace Functions
+        function crystallizeMemory() {
+            const memory = {
+                timestamp: Date.now(),
+                state: { ...state },
+                quantum: { ...state.quantum }
+            };
+            state.memories.push(memory);
+            updateMemoryPalace();
+        }
+
+        function updateMemoryPalace() {
+            const container = document.getElementById('memory-crystals');
+            container.innerHTML = '';
+            
+            state.memories.forEach((memory, index) => {
+                const crystal = document.createElement('div');
+                crystal.className = 'memory-crystal';
+                crystal.innerHTML = `
+                    Memory Crystal ${index + 1}<br>
+                    α: ${memory.quantum.alpha.toFixed(3)}<br>
+                    β: ${memory.quantum.beta.toFixed(3)}
+                `;
+                crystal.onclick = () => recallMemory(memory);
+                container.appendChild(crystal);
+            });
+        }
+
+        function recallMemory(memory) {
+            state = { ...state, ...memory.state };
+            state.quantum = { ...memory.quantum };
+            updateQuantumState();
+        }
+
+        // Quantum Stream Visualization
+        function updateQuantumStream() {
+            const stream = document.getElementById('quantum-stream');
+            const particles = Array.from({ length: 50 }, (_, i) => {
+                const particle = document.createElement('div');
+                particle.className = 'quantum-particle';
+                particle.style.left = `${i * 2}%`;
+                particle.style.opacity = 0.5 + 0.5 * Math.cos(state.quantum.phase + i/10);
+                return particle;
+            });
+            stream.replaceChildren(...particles);
+        }
+
+        // Main render loop
+        function render(time) {
+            // Update quantum state
+            const t = time * 0.001 * state.temporalFlow;
+            state.quantum.alpha = Math.cos(t);
+            state.quantum.beta = Math.sin(t);
+            state.quantum.phase = (t * 0.1) % (2 * Math.PI);
+
+            // Update display
+            document.getElementById('state-vector').textContent =
+                `|ψ⟩ = ${state.quantum.alpha.toFixed(3)}|0⟩ + ${state.quantum.beta.toFixed(3)}|1⟩`;
+            document.getElementById('sector-coords').textContent =
+                `Sector: ${state.sector.join(',')}`;
+
+            // Clear canvas
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // Set up projection
+            const aspect = canvas.clientWidth / canvas.clientHeight;
+            const projectionMatrix = mat4.perspective(mat4.create(), 45 * Math.PI / 180, aspect, 0.1, 100.0);
+            gl.uniformMatrix4fv(programInfo.uniformLocations.projection, false, projectionMatrix);
+
+            // Update rotation
+            const rotationMatrix = mat4.create();
+            mat4.rotate(rotationMatrix, rotationMatrix, time * 0.001, [0, 1, 0]);
+            mat4.rotate(rotationMatrix, rotationMatrix, time * 0.0007, [1, 0, 0]);
+            gl.uniformMatrix4fv(programInfo.uniformLocations.rotation, false, rotationMatrix);
+
+            // Draw points
+            gl.useProgram(programInfo.program);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(programInfo.attribLocations.position, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.position);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(programInfo.attribLocations.color, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(programInfo.attribLocations.color);
+
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+            // Update quantum stream
+            updateQuantumStream();
+
+            requestAnimationFrame(render);
+        }
+
+        // Initialize
+        function init() {
+            // Set up canvas
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            // Event listeners
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            });
+
+            document.getElementById('density').addEventListener('input', (e) => {
+                state.density = parseInt(e.target.value);
+                let newGeometry = generatePoints(state.density, state.sector);
+                points = newGeometry.points;
+                colors = newGeometry.colors;
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+            });
+
+            document.getElementById('temporal-flow').addEventListener('input', (e) => {
+                state.temporalFlow = e.target.value / 100;
+            });
+
+            document.getElementById('resonance').addEventListener('input', (e) => {
+                state.resonance = e.target.value / 100;
+            });
+
+            document.getElementById('crystallize').addEventListener('click', crystallizeMemory);
+
+            // Start rendering
+            requestAnimationFrame(render);
+        }
+
+        init();
+    </script>
+</body>
+</html>

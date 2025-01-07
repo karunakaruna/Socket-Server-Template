@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>4D Quantum Explorer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { width: 100vw; height: 100vh; cursor: move; }
+
+        #quantum-hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 20, 40, 0.85);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            color: #0ff;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.2);
+            z-index: 1000;
+            font-size: 14px;
+        }
+
+        .quantum-readout {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.5);
+            border-radius: 8px;
+            border-left: 3px solid #0ff;
+        }
+
+        .readout-title {
+            color: #0ff;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            color: #0ff;
+        }
+
+        .metric-value {
+            color: #fff;
+            font-family: monospace;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.85);
+            padding: 15px 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 150, 255, 0.5);
+            color: #0ff;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 0 4px;
+            background: rgba(0, 60, 120, 0.3);
+            border: 1px solid #0ff;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .control-group {
+            margin: 0 15px;
+            display: inline-block;
+        }
+
+        .control-label {
+            color: rgba(0, 255, 255, 0.7);
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <div id="quantum-hud">
+        <div class="quantum-readout">
+            <div class="readout-title">Dimensional Coordinates</div>
+            <div class="metric-row">
+                <span>W-axis:</span>
+                <span id="w-coord" class="metric-value">0.000</span>
+            </div>
+            <div class="metric-row">
+                <span>X-axis:</span>
+                <span id="x-coord" class="metric-value">0.000</span>
+            </div>
+            <div class="metric-row">
+                <span>Y-axis:</span>
+                <span id="y-coord" class="metric-value">0.000</span>
+            </div>
+            <div class="metric-row">
+                <span>Z-axis:</span>
+                <span id="z-coord" class="metric-value">0.000</span>
+            </div>
+        </div>
+
+        <div class="quantum-readout">
+            <div class="readout-title">Quantum Metrics</div>
+            <div class="metric-row">
+                <span>Entanglement:</span>
+                <span id="entanglement" class="metric-value">0.000</span>
+            </div>
+            <div class="metric-row">
+                <span>Coherence:</span>
+                <span id="coherence" class="metric-value">0.000</span>
+            </div>
+            <div class="metric-row">
+                <span>Density:</span>
+                <span id="density" class="metric-value">0.000</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <span class="control-label">Movement:</span>
+            <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Y-axis:</span>
+            <span class="key">Q</span><span class="key">E</span>
+        </div>
+        <div class="control-group">
+            <span class="control-label">4D Motion:</span>
+            <span class="key">R</span><span class="key">F</span>
+        </div>
+        <div class="control-group">
+            <span class="control-label">Look:</span>
+            <span class="key">Mouse Drag</span>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { alpha: false, antialias: true });
+        
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.enable(gl.DEPTH_TEST);
+        
+        // Shaders with glow effect
+        const vsSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            uniform mat4 matrix;
+            uniform vec4 offset;
+            varying vec4 vColor;
+            void main() {
+                vec4 pos = position + offset;
+                gl_Position = matrix * pos;
+                vColor = color;
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                vec3 glow = vColor.rgb * 1.5;  // Enhance glow
+                gl_FragColor = vec4(glow, vColor.a);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const matrixLocation = gl.getUniformLocation(program, 'matrix');
+        const offsetLocation = gl.getUniformLocation(program, 'offset');
+
+        // Game state
+        const state = {
+            position: { w: 0, x: 0, y: 0, z: 0 },
+            velocity: { w: 0, x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0 },
+            camera: { x: 0, y: 0 },
+            keys: new Set(),
+            mouseDown: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            time: 0
+        };
+
+        function createQuantumPaths() {
+            const vertices = [];
+            const colors = [];
+            
+            function addCurve(points, color) {
+                for(let i = 0; i < points.length - 1; i++) {
+                    vertices.push(
+                        points[i].x, points[i].y, points[i].z, points[i].w,
+                        points[i+1].x, points[i+1].y, points[i+1].z, points[i+1].w
+                    );
+                    colors.push(
+                        color.r, color.g, color.b, color.a,
+                        color.r, color.g, color.b, color.a
+                    );
+                }
+            }
+
+            // Create interweaving quantum paths
+            const numPaths = 6;
+            const pointsPerPath = 200;
+
+            for(let i = 0; i < numPaths; i++) {
+                const points = [];
+                const phase = (i / numPaths) * Math.PI * 2;
+                
+                for(let j = 0; j < pointsPerPath; j++) {
+                    const t = j / (pointsPerPath - 1);
+                    const angle = t * Math.PI * 4 + phase;
+                    
+                    // Create more complex path using multiple sine waves
+                    points.push({
+                        x: Math.cos(angle) * (2 + Math.sin(angle * 0.5)),
+                        y: Math.sin(angle * 1.5) * (2 + Math.cos(angle * 0.7)),
+                        z: Math.cos(angle * 0.8) * (2 + Math.sin(angle * 1.2)),
+                        w: Math.sin(angle * 0.6) * (2 + Math.cos(angle))
+                    });
+                }
+
+                // Create smooth color transition
+                const t = i / numPaths;
+                const color = {
+                    r: 0.3 + 0.7 * Math.cos(t * Math.PI * 2),
+                    g: 0.3 + 0.7 * Math.cos(t * Math.PI * 2 + Math.PI * 2/3),
+                    b: 0.3 + 0.7 * Math.cos(t * Math.PI * 2 + Math.PI * 4/3),
+                    a: 0.8
+                };
+
+                addCurve(points, color);
+            }
+
+            // Add reference axes
+            const axisLength = 3;
+            vertices.push(
+                -axisLength, 0, 0, 0, axisLength, 0, 0, 0,  // W axis
+                0, -axisLength, 0, 0, 0, axisLength, 0, 0,  // X axis
+                0, 0, -axisLength, 0, 0, 0, axisLength, 0,  // Y axis
+                0, 0, 0, -axisLength, 0, 0, 0, axisLength   // Z axis
+            );
+            colors.push(
+                1, 1, 1, 0.5, 1, 1, 1, 0.5,  // W axis (white)
+                1, 0, 0, 0.5, 1, 0, 0, 0.5,  // X axis (red)
+                0, 1, 0, 0.5, 0, 1, 0, 0.5,  // Y axis (green)
+                0, 0, 1, 0.5, 0, 0, 1, 0.5   // Z axis (blue)
+            );
+
+            return { vertices, colors };
+        }
+
+        const { vertices, colors } = createQuantumPaths();
+        
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        function updatePhysics(deltaTime) {
+            const moveSpeed = 3.0;
+            const friction = 0.92;
+
+            // Apply keyboard input with smooth acceleration
+            if (state.keys.has('KeyW')) state.velocity.z += moveSpeed * deltaTime;
+            if (state.keys.has('KeyS')) state.velocity.z -= moveSpeed * deltaTime;
+            if (state.keys.has('KeyA')) state.velocity.x -= moveSpeed * deltaTime;
+            if (state.keys.has('KeyD')) state.velocity.x += moveSpeed * deltaTime;
+            if (state.keys.has('KeyQ')) state.velocity.y += moveSpeed * deltaTime;
+            if (state.keys.has('KeyE')) state.velocity.y -= moveSpeed * deltaTime;
+            if (state.keys.has('KeyR')) state.velocity.w += moveSpeed * deltaTime;
+            if (state.keys.has('KeyF')) state.velocity.w -= moveSpeed * deltaTime;
+
+            // Apply velocity with smooth deceleration
+            state.position.w += state.velocity.w;
+            state.position.x += state.velocity.x;
+            state.position.y += state.velocity.y;
+            state.position.z += state.velocity.z;
+
+            // Apply friction
+            state.velocity.w *= friction;
+            state.velocity.x *= friction;
+            state.velocity.y *= friction;
+            state.velocity.z *= friction;
+
+            // Update HUD
+            document.getElementById('w-coord').textContent = state.position.w.toFixed(3);
+            document.getElementById('x-coord').textContent = state.position.x.toFixed(3);
+            document.getElementById('y-coord').textContent = state.position.y.toFixed(3);
+            document.getElementById('z-coord').textContent = state.position.z.toFixed(3);
+
+            // Calculate quantum metrics
+            const speed = Math.sqrt(
+                state.velocity.w * state.velocity.w +
+                state.velocity.x * state.velocity.x +
+                state.velocity.y * state.velocity.y +
+                state.velocity.z * state.velocity.z
+            );
+
+            const distance = Math.sqrt(
+                state.position.w * state.position.w +
+                state.position.x * state.position.x +
+                state.position.y * state.position.y +
+                state.position.z * state.position.z
+            );
+
+            document.getElementById('entanglement').textContent = 
+                (Math.abs(Math.sin(distance)) * 0.8 + 0.2).toFixed(3);
+            document.getElementById('coherence').textContent = 
+                (Math.abs(Math.cos(state.time * 0.5)) * 0.8 + 0.2).toFixed(3);
+            document.getElementById('density').textContent = 
+                (speed * 0.5).toFixed(3);
+        }
+
+        function getViewMatrix() {
+            const matrix = mat4.create();
+            
+            // Apply camera rotation
+            mat4.rotate(matrix, matrix, state.camera.y, [1, 0, 0]);
+            mat4.rotate(matrix, matrix, state.camera.x, [0, 1, 0]);
+
+            // Add perspective and viewing distance
+            mat4.perspective(matrix, Math.PI/3, canvas.width/canvas.height, 0.1, 100.0);
+            mat4.translate(matrix, matrix, [0, 0, -8]);
+
+            return matrix;
+        }
+
+        let lastTime = 0;
+        function render(currentTime) {
+            const deltaTime = (currentTime - lastTime) * 0.001;
+            lastTime = currentTime;
+            state.time += deltaTime;
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            updatePhysics(deltaTime);
+
+            gl.uniformMatrix4fv(matrixLocation, false, getViewMatrix());
+            gl.uniform4f(offsetLocation, 
+                state.position.w, 
+                state.position.x, 
+                state.position.y, 
+                state.position.z
+            );
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(colorLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.lineWidth(2.0);
+            gl.drawArrays(gl.LINES, 0, vertices.length / 4);
+
+            requestAnimationFrame(render);
+        }
+
+        // Mouse look controls
+        canvas.addEventListener('mousedown', e => {
+            state.mouseDown = true;
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!state.mouseDown) return;
+            
+            const dx = e.clientX - state.lastMouseX;
+            const dy = e.clientY - state.lastMouseY;
+            
+            state.camera.x += dx * 0.005;
+            state.camera.y += dy * 0.005;
+            
+            // Limit vertical rotation
+            state.camera.y = Math.max(-Math.PI/2, Math.min(Math.PI/2, state.camera.y));
+            
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', () => state.mouseDown = false);
+        document.addEventListener('mouseleave', () => state.mouseDown = false);
+
+        // Keyboard controls
+        document.addEventListener('keydown', e => state.keys.add(e.code));
+        document.addEventListener('keyup', e => state.keys.delete(e.code));
+
+        requestAnimationFrame(render);
+    })();
+    </script>
+</body>
+</html>

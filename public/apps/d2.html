@@ -1,0 +1,226 @@
+<head>
+    <link rel="stylesheet" href="https://use.typekit.net/ndt5pqe.css" />
+  </head>
+  
+  <style>
+    /* define styles for item container */
+    .item {
+      border: 1px solid black;
+      padding: 10px;
+      margin: 10px;
+      width: fit-content;
+      background-color: black;
+    }
+  
+    /* define styles for item name */
+    .item-name {
+      font-family: "Exocet", sans-serif;
+      font-weight: bold;
+      font-size: 20px;
+      text-align: center;
+      color: white;
+      margin-bottom: -10px;
+      margin-top: -5px;
+    }
+  
+    /* define styles for item description */
+    .item-description {
+      font-family: "Exocet", sans-serif;
+      font-style: italic;
+      color: white;
+      text-align: center;
+      margin-bottom: -10px;
+    }
+  
+    /* define styles for item stats */
+    .item-stats {
+      list-style-type: none;
+      color: white;
+  
+  
+    }
+    .item-stats li {
+      
+      font-family: "Exocet", sans-serif;
+      color: white;
+      margin-bottom: 2px;
+    }
+  
+    .set-item-name {
+      color: #00ff00;
+    }
+  
+    .blue-text {
+      white-space: pre-wrap;
+    }
+  </style>
+  
+  <!-- Item inputs -->
+  <div class="column left">
+    <label for="item-name-input">Item Name:</label>
+    <input id="item-name-input" type="text" oninput="updateItemName(this)" />
+    <br />
+    <label for="item-description-input">Item Description:</label>
+    <input
+      id="item-description-input"
+      type="text"
+      oninput="updateItemDescription(this)"
+    />
+  </div>
+  <!-- create container for item stats -->
+  <div class="item-stats-container">
+    <label for="required-level-input">Required Level:</label>
+    <input
+      id="required-level-input"
+      type="number"
+      oninput="updateRequiredLevel(this)"
+      value="34"
+    />
+    <br />
+    <label for="min-damage-input">Minimum Damage:</label>
+    <input
+      id="min-damage-input"
+      type="number"
+      oninput="updateDamage(this)"
+      value="25"
+    />
+    <br />
+    <label for="max-damage-input">Maximum Damage:</label>
+    <input
+      id="max-damage-input"
+      type="number"
+      oninput="updateDamage(this)"
+      value="50"
+    />
+    <br />
+    <label for="blue-text-input">Blue Text:</label>
+    <textarea
+      id="blue-text-input"
+      oninput="updateBlueText(this)"
+      rows="5"
+      cols="50"
+      wrap="hard"
+    ></textarea>
+  
+    <br />
+  
+    <input type="checkbox" onclick="toggleUnique(this)" /> Unique
+    <br />
+    <input type="checkbox" onclick="toggleSetItem(this)" />
+    <label for="set-item-input">Set Item</label>
+  </div>
+  
+  <div class="column right">
+    <!-- create container for item -->
+    <div class="item">
+      <!-- display checkbox for "unique" item -->
+  
+      <!-- display item name -->
+      <p id="item-name" class="item-name">Sam's Walking Stick</p>
+  
+      <!-- display item description -->
+      <p id="item-description" class="item-description">
+        Short Staff
+      </p>
+  
+      <!-- display item stats -->
+      <ul class="item-stats">
+        <li>Damage: 100-150</li>
+        <li>Durability: 20</li>
+        <li id="item-requirement">Required level: 34</li>
+        <li id="blue-text" class="blue-text">+5 to attack rating</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+    // define function for updating item name
+    function updateItemName(input) {
+      // get item name element
+      var itemName = document.getElementById("item-name");
+  
+      // set item name to value of input
+      itemName.innerHTML = input.value;
+    }
+  
+    // define function for updating item description
+    function updateItemDescription(input) {
+      // get item description element
+      var itemDescription = document.getElementById("item-description");
+  
+      // set item description to value of input
+      itemDescription.innerHTML = input.value;
+    }
+  
+    // define function for toggling "unique" item
+    function toggleUnique(checkbox) {
+      // get item name element
+      var itemName = document.getElementById("item-name");
+  
+      // check if checkbox is checked
+      if (checkbox.checked) {
+        // set item name color to gold
+        itemName.style.color = "gold";
+      } else {
+        // set item name color to black
+        itemName.style.color = "white";
+      }
+    }
+  </script>
+  
+  <script>
+    // define function for updating required level
+    function updateRequiredLevel(input) {
+      // get item requirement element
+      var itemRequirement = document.getElementById("item-requirement");
+  
+      // update item requirement with required level value
+      itemRequirement.innerHTML = "Required level: " + input.value;
+    }
+  </script>
+  
+  <script>
+    // define function for updating damage
+    function updateDamage(input) {
+      // get minimum and maximum damage inputs
+      var minInput = document.getElementById("min-damage-input");
+      var maxInput = document.getElementById("max-damage-input");
+  
+      // get damage element
+      var damage = document.querySelector(".item-stats li:nth-child(1)");
+  
+      // set damage to minimum and maximum values of inputs
+      damage.innerHTML = "Damage: " + minInput.value + "-" + maxInput.value;
+    }
+  </script>
+  
+  <script>
+    // define function for updating blue text
+    function updateBlueText(input) {
+      // get item name element
+      var itemName = document.getElementById("blue-text");
+  
+      // set item name to value of input
+      itemName.innerHTML = input.value;
+  
+      // set item name color to blue
+      itemName.style.color = "lightblue";
+    }
+  </script>
+  
+  <script>
+    // define function for toggling "set item"
+    function toggleSetItem(checkbox) {
+      // get item name element
+      var itemName = document.getElementById("item-name");
+  
+      // check if checkbox is checked
+      if (checkbox.checked) {
+        // set item name color to gold
+        itemName.style.color = "green";
+      } else {
+        // set item name color to black
+        itemName.style.color = "white";
+      }
+    }
+  </script>
+  

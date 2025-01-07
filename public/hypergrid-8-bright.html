@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HyperGrid 8 - Quantum Lines</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <style>
+        body { margin: 0; background: #000; }
+        canvas { width: 100vw; height: 100vh; }
+        #hud {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: #0ff;
+            font-family: monospace;
+            background: rgba(0,0,32,0.8);
+            padding: 20px;
+            border: 1px solid #0ff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="hud">
+        <div>W: <span id="w">0.000</span></div>
+        <div>X: <span id="x">0.000</span></div>
+        <div>Y: <span id="y">0.000</span></div>
+        <div>Z: <span id="z">0.000</span></div>
+    </div>
+    <script>
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl');
+        
+        // Simple vertex shader that just transforms points
+        const vsSource = `
+            attribute vec4 position;
+            attribute vec4 color;
+            uniform mat4 matrix;
+            varying vec4 vColor;
+            void main() {
+                gl_Position = matrix * position;
+                vColor = color;
+                gl_PointSize = 5.0;
+            }
+        `;
+
+        // Simple fragment shader that just outputs color
+        const fsSource = `
+            precision mediump float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vColor;
+            }
+        `;
+
+        // Create shader program
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // Get attribute locations
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const matrixLocation = gl.getUniformLocation(program, 'matrix');
+
+        // Create line vertices
+        function createLines() {
+            const vertices = [];
+            const colors = [];
+            
+            // Main axes (extra bright)
+            // W axis (white)
+            vertices.push(-2,0,0,0, 2,0,0,0);
+            colors.push(1,1,1,1, 1,1,1,1);
+            
+            // X axis (bright red)
+            vertices.push(0,-2,0,0, 0,2,0,0);
+            colors.push(1,0,0,1, 1,0,0,1);
+            
+            // Y axis (bright green)
+            vertices.push(0,0,-2,0, 0,0,2,0);
+            colors.push(0,1,0,1, 0,1,0,1);
+            
+            // Z axis (bright blue)
+            vertices.push(0,0,0,-2, 0,0,0,2);
+            colors.push(0,0,1,1, 0,0,1,1);
+
+            // Grid lines (dimmer)
+            for(let i = -1; i <= 1; i += 0.5) {
+                // WX plane
+                vertices.push(-2,i,0,0, 2,i,0,0);
+                colors.push(0.3,0.3,0.3,1, 0.3,0.3,0.3,1);
+                vertices.push(i,-2,0,0, i,2,0,0);
+                colors.push(0.3,0.3,0.3,1, 0.3,0.3,0.3,1);
+            }
+
+            return { vertices, colors };
+        }
+
+        // Create buffers
+        const { vertices, colors } = createLines();
+        
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+        // Animation state
+        let rotation = { x: 0, y: 0, z: 0, w: 0 };
+        
+        function updateRotation() {
+            const time = Date.now() * 0.001;
+            rotation.x = Math.sin(time * 0.3) * 0.5;
+            rotation.y = Math.cos(time * 0.4) * 0.5;
+            rotation.z = Math.sin(time * 0.5) * 0.5;
+            rotation.w = Math.cos(time * 0.6) * 0.5;
+            
+            // Update HUD
+            document.getElementById('w').textContent = rotation.w.toFixed(3);
+            document.getElementById('x').textContent = rotation.x.toFixed(3);
+            document.getElementById('y').textContent = rotation.y.toFixed(3);
+            document.getElementById('z').textContent = rotation.z.toFixed(3);
+        }
+
+        function getRotationMatrix() {
+            const matrix = mat4.create();
+            
+            // Apply rotations
+            mat4.rotateX(matrix, matrix, rotation.x);
+            mat4.rotateY(matrix, matrix, rotation.y);
+            mat4.rotateZ(matrix, matrix, rotation.z);
+            
+            // Add perspective
+            mat4.perspective(matrix, Math.PI/4, canvas.width/canvas.height, 0.1, 100.0);
+            mat4.translate(matrix, matrix, [0, 0, -5]);
+            
+            return matrix;
+        }
+
+        function render() {
+            // Update canvas size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            // Clear canvas
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.DEPTH_TEST);
+            gl.lineWidth(3.0); // Make lines thicker
+
+            // Update rotation
+            updateRotation();
+            
+            // Set matrix
+            gl.uniformMatrix4fv(matrixLocation, false, getRotationMatrix());
+
+            // Draw lines
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(colorLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.drawArrays(gl.LINES, 0, vertices.length / 4);
+
+            requestAnimationFrame(render);
+        }
+
+        // Start animation
+        render();
+
+        // Add mouse interaction
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+            
+            rotation.x += deltaY * 0.01;
+            rotation.y += deltaX * 0.01;
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    </script>
+</body>
+</html>
