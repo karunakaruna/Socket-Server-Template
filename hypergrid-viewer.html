@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypergrid Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            height: 100vh;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        #menu {
+            width: 300px;
+            padding: 20px;
+            background: #2a2a2a;
+            overflow-y: auto;
+            border-right: 1px solid #3a3a3a;
+        }
+
+        #viewer {
+            flex: 1;
+            height: 100vh;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: #333;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .menu-item:hover {
+            background: #444;
+        }
+
+        .menu-item.active {
+            background: #4a4a4a;
+        }
+
+        .favorite-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            color: #ffd700;
+            font-size: 20px;
+            line-height: 20px;
+            text-align: center;
+        }
+
+        .favorite-box.checked::after {
+            content: "★";
+        }
+
+        .favorite-box.unchecked::after {
+            content: "☆";
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            color: #fff;
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .menu-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+        }
+
+        .category-badge {
+            font-size: 0.8em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 8px;
+            background: #333;
+            color: #0af;
+        }
+
+        .date-badge {
+            font-size: 0.8em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+            background: #222;
+            color: #888;
+        }
+
+        #favorites-section, #regular-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            padding: 10px;
+            font-weight: bold;
+            color: #0af;
+            border-bottom: 1px solid #3a3a3a;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <div id="favorites-section">
+            <div class="section-title">Favorites</div>
+        </div>
+        <div id="regular-section">
+            <div class="section-title">All Files</div>
+        </div>
+    </div>
+    <div id="viewer">
+        <iframe id="content-frame" name="content-frame"></iframe>
+    </div>
+
+    <script>
+        // Store favorites in localStorage
+        let favorites = new Set(JSON.parse(localStorage.getItem('hypergrid-favorites') || '[]'));
+        
+        // List of hypergrid files
+        const hypergridFiles = [
+            // Latest version
+            '/latest-hypergrid/hypergrid-core.html',
+            
+            // Research versions
+            '/hypergrid-research/hypergrid-diving-deep.html',
+            '/hypergrid-research/hypergrid-r.html',
+            
+            // Mobile versions
+            '/hypergrid-mobile-versions/hypergrid-core-core-core.html',
+            '/hypergrid-mobile-versions/hypergrid-core-diving.html',
+            '/hypergrid-mobile-versions/hypergrid-core-hyper-waves.html',
+            '/hypergrid-mobile-versions/hypergrid-core-psyboid-core.html',
+            '/hypergrid-mobile-versions/hypergrid-core-quantum-cell.html',
+            '/hypergrid-mobile-versions/hypergrid-core-world-tree-soul.html',
+            '/hypergrid-mobile-versions/hypergrid-mobile-core-core.html',
+            '/hypergrid-mobile-versions/hypergrid-mobile-diving.html',
+            '/hypergrid-mobile-versions/hypergrid-mobile-hyper-waves.html',
+            '/hypergrid-mobile-versions/hypergrid-mobile-psyboid-core.html',
+            '/hypergrid-mobile-versions/hypergrid-mobile-quantum-cell.html',
+            '/hypergrid-mobile-versions/hypergrid-mobile-world-tree-soul.html',
+            
+            // Blue versions
+            '/hypergrid-blue-versions/hypergrid-core-comet.html',
+            '/hypergrid-blue-versions/hypergrid-core-hypercross.html',
+            '/hypergrid-blue-versions/hypergrid-core-psiflow.html',
+            '/hypergrid-blue-versions/hypergrid-core-psyboids.html',
+            '/hypergrid-blue-versions/hypergrid-core-qresonance.html',
+            '/hypergrid-blue-versions/hypergrid-core-soul-molecule.html',
+            '/hypergrid-blue-versions/hypergrid-core-soul-particle.html',
+            '/hypergrid-blue-versions/hypergrid-core2-hypercross.html',
+            '/hypergrid-blue-versions/hypergrid-core2-psiflow.html',
+            '/hypergrid-blue-versions/hypergrid-core2-psyboids.html',
+            '/hypergrid-blue-versions/hypergrid-core2-qresonance.html'
+        ];
+
+        // Add category information
+        const fileCategories = {
+            'latest-hypergrid': 'Latest Version',
+            'hypergrid-research': 'Research',
+            'hypergrid-mobile-versions': 'Mobile',
+            'hypergrid-blue-versions': 'Blue'
+        };
+
+        function getFileCategory(file) {
+            for (const [path, category] of Object.entries(fileCategories)) {
+                if (file.includes(path)) return category;
+            }
+            return 'Other';
+        }
+
+        // File creation dates
+        const fileCreationDates = {
+            '/latest-hypergrid/hypergrid-core.html': new Date(1736280577622),
+            '/hypergrid-research/hypergrid-diving-deep.html': new Date(1736283776669),
+            '/hypergrid-research/hypergrid-r.html': new Date(1736282185589),
+            '/hypergrid-mobile-versions/hypergrid-core-core-core.html': new Date(1736280996584),
+            '/hypergrid-mobile-versions/hypergrid-core-diving.html': new Date(1736281020115),
+            '/hypergrid-mobile-versions/hypergrid-core-hyper-waves.html': new Date(1736281001380),
+            '/hypergrid-mobile-versions/hypergrid-core-psyboid-core.html': new Date(1736281011858),
+            '/hypergrid-mobile-versions/hypergrid-core-quantum-cell.html': new Date(1736281006818),
+            '/hypergrid-mobile-versions/hypergrid-core-world-tree-soul.html': new Date(1736281016246),
+            '/hypergrid-mobile-versions/hypergrid-mobile-core-core.html': new Date(1736280753971),
+            '/hypergrid-mobile-versions/hypergrid-mobile-diving.html': new Date(1736280755045),
+            '/hypergrid-mobile-versions/hypergrid-mobile-hyper-waves.html': new Date(1736280754152),
+            '/hypergrid-mobile-versions/hypergrid-mobile-psyboid-core.html': new Date(1736280787090),
+            '/hypergrid-mobile-versions/hypergrid-mobile-quantum-cell.html': new Date(1736280754350),
+            '/hypergrid-mobile-versions/hypergrid-mobile-world-tree-soul.html': new Date(1736280793059),
+            '/hypergrid-blue-versions/hypergrid-core-comet.html': new Date(1736281702492),
+            '/hypergrid-blue-versions/hypergrid-core-hypercross.html': new Date(1736281346891),
+            '/hypergrid-blue-versions/hypergrid-core-psiflow.html': new Date(1736281338285),
+            '/hypergrid-blue-versions/hypergrid-core-psyboids.html': new Date(1736281333132),
+            '/hypergrid-blue-versions/hypergrid-core-qresonance.html': new Date(1736281342472),
+            '/hypergrid-blue-versions/hypergrid-core-soul-molecule.html': new Date(1736281350910),
+            '/hypergrid-blue-versions/hypergrid-core-soul-particle.html': new Date(1736281355124),
+            '/hypergrid-blue-versions/hypergrid-core2-hypercross.html': new Date(1736281596619),
+            '/hypergrid-blue-versions/hypergrid-core2-psiflow.html': new Date(1736281587022),
+            '/hypergrid-blue-versions/hypergrid-core2-psyboids.html': new Date(1736281582573),
+            '/hypergrid-blue-versions/hypergrid-core2-qresonance.html': new Date(1736281591421)
+        };
+
+        function formatDate(date) {
+            const now = new Date('2025-01-08T14:51:17-08:00');
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMins < 60) {
+                return `${diffMins}m ago`;
+            } else if (diffHours < 24) {
+                return `${diffHours}h ago`;
+            } else if (diffDays < 30) {
+                return `${diffDays}d ago`;
+            } else {
+                return date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            }
+        }
+
+        function createMenuItem(file) {
+            const menuItem = document.createElement('div');
+            menuItem.className = 'menu-item';
+            
+            const category = getFileCategory(file);
+            menuItem.dataset.category = category;
+
+            const favoriteBox = document.createElement('div');
+            favoriteBox.className = `favorite-box ${favorites.has(file) ? 'checked' : 'unchecked'}`;
+            favoriteBox.onclick = (e) => {
+                e.preventDefault();
+                toggleFavorite(file, favoriteBox);
+                updateMenu();
+            };
+
+            const link = document.createElement('a');
+            link.href = file;
+            link.target = 'content-frame';
+            link.className = 'menu-link';
+            
+            const menuContent = document.createElement('div');
+            menuContent.className = 'menu-content';
+            
+            // Add category badge and format filename
+            const fileName = file.split('/').pop().replace('hypergrid-', '').replace('.html', '');
+            const leftContent = document.createElement('div');
+            leftContent.innerHTML = `<span class="category-badge">${category}</span>${fileName}`;
+            
+            // Add date badge
+            const rightContent = document.createElement('div');
+            const date = fileCreationDates[file];
+            if (date) {
+                rightContent.innerHTML = `<span class="date-badge">${formatDate(date)}</span>`;
+            }
+            
+            menuContent.appendChild(leftContent);
+            menuContent.appendChild(rightContent);
+            link.appendChild(menuContent);
+            
+            link.onclick = () => {
+                document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+                menuItem.classList.add('active');
+            };
+
+            menuItem.appendChild(favoriteBox);
+            menuItem.appendChild(link);
+            return menuItem;
+        }
+
+        function toggleFavorite(file, box) {
+            if (favorites.has(file)) {
+                favorites.delete(file);
+                box.classList.replace('checked', 'unchecked');
+            } else {
+                favorites.add(file);
+                box.classList.replace('unchecked', 'checked');
+            }
+            localStorage.setItem('hypergrid-favorites', JSON.stringify([...favorites]));
+        }
+
+        function updateMenu() {
+            const favoritesSection = document.getElementById('favorites-section');
+            const regularSection = document.getElementById('regular-section');
+
+            // Clear existing items
+            while (favoritesSection.children.length > 1) {
+                favoritesSection.removeChild(favoritesSection.lastChild);
+            }
+            while (regularSection.children.length > 1) {
+                regularSection.removeChild(regularSection.lastChild);
+            }
+
+            // Add favorites
+            hypergridFiles.forEach(file => {
+                if (favorites.has(file)) {
+                    favoritesSection.appendChild(createMenuItem(file));
+                }
+            });
+
+            // Add all files
+            hypergridFiles.forEach(file => {
+                regularSection.appendChild(createMenuItem(file));
+            });
+        }
+
+        // Initial menu setup
+        updateMenu();
+
+        // Load first file by default
+        if (hypergridFiles.length > 0) {
+            document.getElementById('content-frame').src = hypergridFiles[0];
+            document.querySelector('.menu-item').classList.add('active');
+        }
+    </script>
+</body>
+</html>
