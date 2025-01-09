@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid ND - Eigenspace Navigation</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: Arial, sans-serif; }
+        canvas { display: block; }
+        
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #dimension-controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; color: #aaa; }
+        input[type="range"] { width: 100%; margin: 5px 0; }
+        
+        #fps-counter {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-family: monospace;
+            color: #0f0;
+        }
+
+        .eigen-path {
+            position: absolute;
+            background: rgba(100, 200, 255, 0.2);
+            border: 1px solid rgba(100, 200, 255, 0.4);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .dimension-focus, .dimension-translation {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+        
+        .dimension-slider {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .dimension-slider label {
+            width: 30px;
+            font-size: 12px;
+        }
+        
+        .dimension-slider input {
+            flex: 1;
+        }
+        
+        .focus-presets {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .focus-presets button {
+            flex: 1;
+            padding: 5px;
+            background: rgba(100, 200, 255, 0.2);
+            border: 1px solid rgba(100, 200, 255, 0.4);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .focus-presets button:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+        
+        .rotation-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 40px);
+            gap: 5px;
+            margin: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
+        
+        .rotation-button {
+            width: 40px;
+            height: 40px;
+            background: rgba(100, 200, 255, 0.2);
+            border: 1px solid rgba(100, 200, 255, 0.4);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+        
+        .rotation-button:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+        
+        .rotation-button.stop {
+            background: rgba(255, 100, 100, 0.2);
+            border-color: rgba(255, 100, 100, 0.4);
+        }
+        
+        .rotation-button.stop:hover {
+            background: rgba(255, 100, 100, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    
+    <div id="controls">
+        <div class="control-group">
+            <label>Point Density <span class="value-display">1000</span></label>
+            <input type="range" id="point-density" min="100" max="10000" step="100" value="1000">
+        </div>
+        <div class="control-group">
+            <label>Path Resolution <span class="value-display">50</span></label>
+            <input type="range" id="path-resolution" min="10" max="200" step="5" value="50">
+        </div>
+        <div class="control-group">
+            <label>Navigation Speed <span class="value-display">1.0</span></label>
+            <input type="range" id="nav-speed" min="0" max="2" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label>Dimensional Collapse Threshold <span class="value-display">0.1</span></label>
+            <input type="range" id="collapse-threshold" min="0" max="0.5" step="0.01" value="0.1">
+        </div>
+        <div class="control-group">
+            <label>Rotation Speed <span class="value-display">1.0</span></label>
+            <input type="range" id="rotation-speed" min="0" max="5" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <div id="dimension-controls">
+        <div class="control-group">
+            <label>Current Space: <span id="current-dim">4</span>D</label>
+            <button id="increase-dim">+</button>
+            <button id="decrease-dim">-</button>
+        </div>
+        
+        <div class="dimension-focus">
+            <label>Dimensional Focus</label>
+            <div id="dimension-sliders"></div>
+            <div class="focus-presets">
+                <button id="focus-low">1-4D</button>
+                <button id="focus-mid">3-6D</button>
+                <button id="focus-high">5-8D</button>
+            </div>
+        </div>
+
+        <div class="dimension-translation">
+            <label>Dimensional Translation</label>
+            <div id="translation-sliders"></div>
+        </div>
+    </div>
+
+    <div id="fps-counter">FPS: 60</div>
+
+    <div class="rotation-grid">
+        <button class="rotation-button" data-x="-1" data-y="1">↖</button>
+        <button class="rotation-button" data-x="0" data-y="1">↑</button>
+        <button class="rotation-button" data-x="1" data-y="1">↗</button>
+        <button class="rotation-button" data-x="-1" data-y="0">←</button>
+        <button class="rotation-button stop" data-x="0" data-y="0">⬛</button>
+        <button class="rotation-button" data-x="1" data-y="0">→</button>
+        <button class="rotation-button" data-x="-1" data-y="-1">↙</button>
+        <button class="rotation-button" data-x="0" data-y="-1">↓</button>
+        <button class="rotation-button" data-x="1" data-y="-1">↘</button>
+    </div>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 position;
+        attribute vec4 color;
+        attribute float size;
+        
+        uniform mat4 rotationMatrix;
+        uniform mat4 projectionMatrix;
+        uniform float dimensionalWeight[8];
+        uniform float dimensionalFocus[8];
+        uniform float dimensionalTranslation[8];
+        
+        varying vec4 vColor;
+        
+        void main() {
+            // Apply dimensional weights and focus
+            vec4 pos = position;
+            
+            // Apply dimensional focus and translation
+            for(int i = 0; i < 8; i++) {
+                if(i < 4) {
+                    pos[i] = (pos[i] + dimensionalTranslation[i]) * dimensionalWeight[i] * dimensionalFocus[i];
+                }
+            }
+            
+            // Apply rotation and projection
+            gl_Position = projectionMatrix * rotationMatrix * pos;
+            
+            // Adjust point size based on z-depth
+            float zDepth = (1.0 - gl_Position.z / gl_Position.w) * 0.5;
+            gl_PointSize = size * (1.0 + zDepth * 2.0);
+            
+            vColor = color;
+        }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision highp float;
+        
+        varying vec4 vColor;
+        
+        void main() {
+            vec2 coord = gl_PointCoord - vec2(0.5);
+            float r = length(coord) * 2.0;
+            float alpha = 1.0 - smoothstep(0.8, 1.0, r);
+            gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
+        }
+    </script>
+
+    <script>
+        // Initialize WebGL with explicit attributes
+        const canvas = document.getElementById("glCanvas");
+        const gl = canvas.getContext("webgl", {
+            alpha: false,
+            depth: true,
+            stencil: false,
+            antialias: true,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            powerPreference: "high-performance"
+        });
+        
+        if (!gl) {
+            alert("WebGL not supported");
+            throw new Error("WebGL not supported");
+        }
+
+        // Set up canvas with proper pixel ratio
+        function resizeCanvas() {
+            const pixelRatio = window.devicePixelRatio || 1;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            canvas.width = width * pixelRatio;
+            canvas.height = height * pixelRatio;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Compile shaders
+        function createShader(type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl.VERTEX_SHADER, 
+            document.getElementById("vertex-shader").textContent);
+        const fragmentShader = createShader(gl.FRAGMENT_SHADER, 
+            document.getElementById("fragment-shader").textContent);
+
+        // Create program
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Program link error:', gl.getProgramInfoLog(program));
+            throw new Error('Program link error');
+        }
+
+        // Get attribute and uniform locations
+        const attribLocations = {
+            position: gl.getAttribLocation(program, 'position'),
+            color: gl.getAttribLocation(program, 'color'),
+            size: gl.getAttribLocation(program, 'size')
+        };
+
+        const uniformLocations = {
+            rotationMatrix: gl.getUniformLocation(program, 'rotationMatrix'),
+            projectionMatrix: gl.getUniformLocation(program, 'projectionMatrix'),
+            dimensionalWeight: gl.getUniformLocation(program, 'dimensionalWeight'),
+            dimensionalFocus: gl.getUniformLocation(program, 'dimensionalFocus'),
+            dimensionalTranslation: gl.getUniformLocation(program, 'dimensionalTranslation')
+        };
+
+        // Rotation state with smooth transitions
+        let rotationState = {
+            targetSpeed: { x: 0, y: 0 },
+            currentSpeed: { x: 0, y: 0 },
+            angles: { x: 0, y: 0 },
+            lerpFactor: 0.1  // Adjust this to control smoothing (0-1)
+        };
+
+        // Lerp function for smooth transitions
+        function lerp(start, end, factor) {
+            return start + (end - start) * factor;
+        }
+
+        // Initialize rotation matrix with smooth transitions
+        function getRotationMatrix() {
+            // Update speeds with smooth transitions
+            rotationState.currentSpeed.x = lerp(
+                rotationState.currentSpeed.x,
+                rotationState.targetSpeed.x,
+                rotationState.lerpFactor
+            );
+            rotationState.currentSpeed.y = lerp(
+                rotationState.currentSpeed.y,
+                rotationState.targetSpeed.y,
+                rotationState.lerpFactor
+            );
+
+            // Update angles based on current speed
+            rotationState.angles.x += rotationState.currentSpeed.x * 0.01;
+            rotationState.angles.y += rotationState.currentSpeed.y * 0.01;
+
+            const cx = Math.cos(rotationState.angles.x);
+            const sx = Math.sin(rotationState.angles.x);
+            const cy = Math.cos(rotationState.angles.y);
+            const sy = Math.sin(rotationState.angles.y);
+
+            return new Float32Array([
+                cx, -sx, 0, 0,
+                sx, cx, 0, 0,
+                0, 0, cy, -sy,
+                0, 0, sy, cy
+            ]);
+        }
+
+        // Static projection with adjusted view distance
+        function getProjectionMatrix() {
+            const aspect = gl.canvas.width / gl.canvas.height;
+            const fov = Math.PI / 4; // Narrower FOV
+            const near = 0.1;
+            const far = 100.0;
+            const viewDistance = 5.0; // Move camera back
+            
+            const f = 1.0 / Math.tan(fov / 2);
+            const rangeInv = 1 / (near - far);
+            
+            return new Float32Array([
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (near + far) * rangeInv, -1,
+                0, 0, near * far * rangeInv * 2, -viewDistance // Translation back
+            ]);
+        }
+
+        // N-dimensional state with focus and translation
+        let state = {
+            currentDimension: 4,
+            targetDimension: 3,
+            dimensionalWeights: new Float32Array(8).fill(1.0),
+            dimensionalFocus: new Float32Array(8).fill(1.0),
+            dimensionalTranslation: new Float32Array(8).fill(0.0),
+            collapseThreshold: 0.1,
+            navSpeed: 1.0,
+            pointDensity: 1000,
+            pathResolution: 50,
+            eigenVectors: [],
+            lastTime: 0
+        };
+
+        // Generate n-dimensional paths
+        function generateNDGeometry(dimension, pointCount, pathSegments) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            const paths = [];
+            const pathColors = [];
+
+            // Generate points
+            for (let i = 0; i < pointCount; i++) {
+                const point = new Array(4).fill(0); // Always use 4 components
+                for (let d = 0; d < Math.min(dimension, 4); d++) {
+                    point[d] = (Math.random() * 2 - 1) * 0.5;
+                }
+
+                const distSq = point.reduce((sum, x) => sum + x * x, 0);
+                const dist = Math.sqrt(distSq);
+
+                points.push(...point);
+                colors.push(
+                    0.5 + 0.5 * Math.cos(dist * 5.0),
+                    0.5 + 0.5 * Math.sin(dist * 7.0),
+                    0.5 + 0.5 * Math.cos(dist * 11.0),
+                    1.0
+                );
+                sizes.push(5.0 + 15.0 * Math.exp(-dist * 2.0));
+
+                // Generate path from origin to point
+                const pathPoints = generatePath(point, pathSegments);
+                
+                // Add path segments
+                for (let t = 0; t < pathSegments; t++) {
+                    paths.push(...pathPoints[t], ...pathPoints[t + 1]);
+                    
+                    const alpha = 0.3 * (1 - t / pathSegments);
+                    pathColors.push(
+                        0.3, 0.6, 1.0, alpha,
+                        0.3, 0.6, 1.0, alpha * 0.8
+                    );
+                }
+            }
+
+            return { points, colors, sizes, paths, pathColors };
+        }
+
+        // Modified path generation
+        function generatePath(point, segments) {
+            const pathPoints = [];
+            for (let t = 0; t <= segments; t++) {
+                const progress = t / segments;
+                const pathPoint = new Array(4).fill(0); // Always use 4 components
+                
+                for (let d = 0; d < 4; d++) {
+                    const freq = (d + 1) * Math.PI;
+                    const phase = d * Math.PI / 4;
+                    const smooth = (1 - Math.cos(progress * Math.PI)) / 2;
+                    pathPoint[d] = point[d] * smooth * (1 + 0.2 * Math.sin(progress * freq + phase));
+                }
+                pathPoints.push(pathPoint);
+            }
+            return pathPoints;
+        }
+
+        // Initialize buffers
+        let geometry = generateNDGeometry(state.currentDimension, state.pointDensity, state.pathResolution);
+        
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.points), gl.STATIC_DRAW);
+
+        const colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.colors), gl.STATIC_DRAW);
+
+        const sizeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.sizes), gl.STATIC_DRAW);
+
+        // Create buffers for lines
+        const lineBuffer = gl.createBuffer();
+        const lineColorBuffer = gl.createBuffer();
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.paths), gl.STATIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.pathColors), gl.STATIC_DRAW);
+
+        // Function to update geometry
+        function updateGeometry() {
+            const newGeometry = generateNDGeometry(
+                state.currentDimension,
+                state.pointDensity,
+                state.pathResolution
+            );
+
+            // Update point buffers
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newGeometry.points), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newGeometry.colors), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newGeometry.sizes), gl.STATIC_DRAW);
+
+            // Update line buffers
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newGeometry.paths), gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newGeometry.pathColors), gl.STATIC_DRAW);
+
+            return newGeometry;
+        }
+
+        // Calculate eigenvectors for dimensional collapse
+        function calculateEigenVectors(dimension) {
+            const vectors = [];
+            for (let i = 0; i < dimension; i++) {
+                const vector = new Array(dimension).fill(0);
+                vector[i] = 1;  // Identity matrix eigenvectors for simplicity
+                vectors.push(vector);
+            }
+            return vectors;
+        }
+
+        // Update dimensional weights based on eigen-collapse
+        function updateDimensionalWeights(currentTime) {
+            const deltaTime = (currentTime - state.lastTime) * 0.001;
+            state.lastTime = currentTime;
+
+            // Smoothly interpolate weights
+            for (let i = 0; i < state.dimensionalWeights.length; i++) {
+                const targetWeight = i < state.targetDimension ? 1.0 : 0.0;
+                const diff = targetWeight - state.dimensionalWeights[i];
+                
+                if (Math.abs(diff) < state.collapseThreshold) {
+                    state.dimensionalWeights[i] = targetWeight;
+                } else {
+                    state.dimensionalWeights[i] += diff * deltaTime * state.navSpeed;
+                }
+            }
+        }
+
+        // Main render loop - no time-based updates
+        function render() {
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // Use static matrices
+            const rotationMatrix = getRotationMatrix();
+            const projectionMatrix = getProjectionMatrix();
+
+            gl.useProgram(program);
+            gl.uniformMatrix4fv(uniformLocations.rotationMatrix, false, rotationMatrix);
+            gl.uniformMatrix4fv(uniformLocations.projectionMatrix, false, projectionMatrix);
+            gl.uniform1fv(uniformLocations.dimensionalWeight, state.dimensionalWeights);
+            gl.uniform1fv(uniformLocations.dimensionalFocus, state.dimensionalFocus);
+            gl.uniform1fv(uniformLocations.dimensionalTranslation, state.dimensionalTranslation);
+
+            // Draw paths
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+            gl.vertexAttribPointer(attribLocations.position, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(attribLocations.position);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+            gl.vertexAttribPointer(attribLocations.color, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(attribLocations.color);
+
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.drawArrays(gl.LINES, 0, geometry.paths.length / state.currentDimension);
+
+            // Draw points
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(attribLocations.position, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.vertexAttribPointer(attribLocations.color, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.vertexAttribPointer(attribLocations.size, 1, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(attribLocations.size);
+
+            gl.drawArrays(gl.POINTS, 0, geometry.points.length / state.currentDimension);
+            gl.disable(gl.BLEND);
+
+            requestAnimationFrame(render);
+        }
+
+        // Initialize UI controls
+        document.getElementById('point-density').addEventListener('input', (e) => {
+            state.pointDensity = parseInt(e.target.value);
+            e.target.previousElementSibling.querySelector('.value-display').textContent = state.pointDensity;
+            geometry = updateGeometry();
+        });
+
+        document.getElementById('path-resolution').addEventListener('input', (e) => {
+            state.pathResolution = parseInt(e.target.value);
+            document.querySelector('label[for="path-resolution"] .value-display').textContent = state.pathResolution;
+            geometry = updateGeometry();
+        });
+
+        document.getElementById('nav-speed').addEventListener('input', (e) => {
+            state.navSpeed = parseFloat(e.target.value);
+            e.target.previousElementSibling.querySelector('.value-display').textContent = state.navSpeed.toFixed(1);
+        });
+
+        document.getElementById('collapse-threshold').addEventListener('input', (e) => {
+            state.collapseThreshold = parseFloat(e.target.value);
+            e.target.previousElementSibling.querySelector('.value-display').textContent = state.collapseThreshold.toFixed(2);
+        });
+
+        document.getElementById('increase-dim').addEventListener('click', () => {
+            if (state.currentDimension < 8) {
+                state.currentDimension++;
+                geometry = updateGeometry();
+                document.getElementById('current-dim').textContent = state.currentDimension;
+            }
+        });
+
+        document.getElementById('decrease-dim').addEventListener('click', () => {
+            if (state.currentDimension > 3) {
+                state.currentDimension--;
+                geometry = updateGeometry();
+                document.getElementById('current-dim').textContent = state.currentDimension;
+            }
+        });
+
+        // Initialize dimensional controls
+        function initDimensionalControls() {
+            const sliderContainer = document.getElementById('dimension-sliders');
+            const translationContainer = document.getElementById('translation-sliders');
+            
+            // Create sliders for each dimension
+            for (let d = 0; d < 8; d++) {
+                // Focus slider
+                const focusDiv = document.createElement('div');
+                focusDiv.className = 'dimension-slider';
+                focusDiv.innerHTML = `
+                    <label>${d+1}D</label>
+                    <input type="range" class="focus-slider" data-dim="${d}"
+                           min="0" max="1" step="0.01" value="1.0">
+                    <span class="value-display">1.00</span>
+                `;
+                sliderContainer.appendChild(focusDiv);
+
+                // Translation slider
+                const transDiv = document.createElement('div');
+                transDiv.className = 'dimension-slider';
+                transDiv.innerHTML = `
+                    <label>${d+1}D</label>
+                    <input type="range" class="translation-slider" data-dim="${d}"
+                           min="-1" max="1" step="0.01" value="0.0">
+                    <span class="value-display">0.00</span>
+                `;
+                translationContainer.appendChild(transDiv);
+            }
+
+            // Add event listeners for focus presets
+            document.getElementById('focus-low').addEventListener('click', () => {
+                const weights = new Float32Array(8);
+                for (let i = 0; i < 4; i++) weights[i] = 1.0;
+                updateDimensionalFocus(weights);
+            });
+
+            document.getElementById('focus-mid').addEventListener('click', () => {
+                const weights = new Float32Array(8);
+                for (let i = 2; i < 6; i++) weights[i] = 1.0;
+                updateDimensionalFocus(weights);
+            });
+
+            document.getElementById('focus-high').addEventListener('click', () => {
+                const weights = new Float32Array(8);
+                for (let i = 4; i < 8; i++) weights[i] = 1.0;
+                updateDimensionalFocus(weights);
+            });
+
+            // Add event listeners for individual sliders
+            document.querySelectorAll('.focus-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const dim = parseInt(e.target.dataset.dim);
+                    state.dimensionalFocus[dim] = parseFloat(e.target.value);
+                    e.target.nextElementSibling.textContent = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.translation-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const dim = parseInt(e.target.dataset.dim);
+                    state.dimensionalTranslation[dim] = parseFloat(e.target.value);
+                    e.target.nextElementSibling.textContent = e.target.value;
+                });
+            });
+        }
+
+        // Update dimensional focus weights
+        function updateDimensionalFocus(weights) {
+            state.dimensionalFocus = weights;
+            document.querySelectorAll('.focus-slider').forEach((slider, i) => {
+                slider.value = weights[i];
+                slider.nextElementSibling.textContent = weights[i].toFixed(2);
+            });
+        }
+
+        // Initialize rotation controls
+        document.querySelectorAll('.rotation-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const x = parseFloat(button.dataset.x);
+                const y = parseFloat(button.dataset.y);
+                
+                // Set target speeds (stop if center button)
+                if (x === 0 && y === 0) {
+                    rotationState.targetSpeed.x = 0;
+                    rotationState.targetSpeed.y = 0;
+                } else {
+                    rotationState.targetSpeed.x = x;
+                    rotationState.targetSpeed.y = y;
+                }
+            });
+        });
+
+        // Initialize WebGL state
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        
+        // Initialize dimensional controls
+        initDimensionalControls();
+
+        // Start the animation
+        state.eigenVectors = calculateEigenVectors(state.currentDimension);
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>

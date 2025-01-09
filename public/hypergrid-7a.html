@@ -398,10 +398,38 @@
             content: '⌂';
             font-size: 18px;
         }
+
+        #fps-counter {
+            position: fixed;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0ff;
+            font-size: 10px;
+            font-family: monospace;
+            padding: 3px 6px;
+            border-radius: 4px;
+            opacity: 0.8;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <canvas id="glCanvas"></canvas>
+    
+    <div id="fps-counter" style="
+        position: fixed;
+        top: 5px;
+        left: 5px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #0ff;
+        font-size: 10px;
+        font-family: monospace;
+        padding: 3px 6px;
+        border-radius: 4px;
+        opacity: 0.8;
+        z-index: 1000;
+    ">FPS: 0</div>
     
     <div id="presets">
         <h3>✨ Ultra Slow Presets</h3>
@@ -704,93 +732,6 @@
                     display.textContent = input.value;
                 }
             });
-            
-            // Get rotation matrix
-            const rotationMatrix = get4DRotationMatrix(
-                rotationState.wx, rotationState.wy, rotationState.wz,
-                rotationState.xy, rotationState.xz, rotationState.yz
-            );
-            
-            // Update uniforms
-            gl.uniformMatrix4fv(projectionLocation, false, getProjectionMatrix());
-            gl.uniformMatrix4fv(rotation4dLocation, false, rotationMatrix);
-            gl.uniform1f(cameraDistanceLocation, parseFloat(document.getElementById('camera-distance').value));
-            gl.uniform1f(traceDepthLocation, parseFloat(document.getElementById('trace-depth').value));
-            gl.uniform1f(brightnessLocation, parseFloat(document.getElementById('point-brightness').value));
-            
-            // Update point attributes
-            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
-        }
-
-        function get4DRotationMatrix(wx, wy, wz, xy, xz, yz) {
-            // Create rotation matrices for each plane
-            function rotationMatrix(angle, plane) {
-                const c = Math.cos(angle);
-                const s = Math.sin(angle);
-                const m = new Array(16).fill(0);
-                
-                // Initialize as identity matrix
-                m[0] = m[5] = m[10] = m[15] = 1;
-                
-                // Set rotation components
-                switch(plane) {
-                    case 'wx':
-                        m[0] = c; m[3] = -s;
-                        m[12] = s; m[15] = c;
-                        break;
-                    case 'wy':
-                        m[5] = c; m[7] = -s;
-                        m[13] = s; m[15] = c;
-                        break;
-                    case 'wz':
-                        m[10] = c; m[11] = -s;
-                        m[14] = s; m[15] = c;
-                        break;
-                    case 'xy':
-                        m[0] = c; m[1] = -s;
-                        m[4] = s; m[5] = c;
-                        break;
-                    case 'xz':
-                        m[0] = c; m[2] = -s;
-                        m[8] = s; m[10] = c;
-                        break;
-                    case 'yz':
-                        m[5] = c; m[6] = -s;
-                        m[9] = s; m[10] = c;
-                        break;
-                }
-                return m;
-            }
-            
-            // Multiply matrices
-            function multiplyMatrices(a, b) {
-                const result = new Array(16).fill(0);
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        for (let k = 0; k < 4; k++) {
-                            result[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
-                        }
-                    }
-                }
-                return result;
-            }
-            
-            // Combine all rotations
-            let matrix = rotationMatrix(wx, 'wx');
-            matrix = multiplyMatrices(matrix, rotationMatrix(wy, 'wy'));
-            matrix = multiplyMatrices(matrix, rotationMatrix(wz, 'wz'));
-            matrix = multiplyMatrices(matrix, rotationMatrix(xy, 'xy'));
-            matrix = multiplyMatrices(matrix, rotationMatrix(xz, 'xz'));
-            matrix = multiplyMatrices(matrix, rotationMatrix(yz, 'yz'));
-            
-            return matrix;
         }
 
         // Initialize WebGL
@@ -816,53 +757,75 @@
             attribute vec4 position;
             attribute float pointSize;
             attribute vec4 color;
-            uniform mat4 projection;
-            uniform mat4 rotation4d;
-            uniform float cameraDistance;
-            uniform float brightness;
+            uniform mat4 rotationMatrix;
+            uniform mat4 projectionMatrix;
             varying vec4 vColor;
-            varying float vDepth;
             
             void main() {
-                // Apply 4D rotation
-                vec4 rotated = rotation4d * position;
-                float w = rotated.w;
-                
-                // Project to 3D with perspective division
-                vec3 pos = rotated.xyz / (cameraDistance * (w + 2.0));
-                
-                // Final position
-                gl_Position = projection * vec4(pos, 1.0);
-                
-                // Point size varies with w-coordinate and depth
-                float depthScale = 1.0 - gl_Position.z * 0.1;
-                gl_PointSize = pointSize * (2.0 / (w + 2.0)) * depthScale;
-                
-                // Pass color and depth to fragment shader
-                vColor = color * brightness;
-                vDepth = gl_Position.z;
+                vec4 rotatedPosition = rotationMatrix * position;
+                gl_Position = projectionMatrix * rotatedPosition;
+                gl_PointSize = pointSize * (1.0 - rotatedPosition.w * 0.1);
+                vColor = color;
             }
         `;
 
         const fragmentShaderSource = `
             precision mediump float;
             varying vec4 vColor;
-            varying float vDepth;
-            uniform float traceDepth;
             
             void main() {
-                // Calculate distance from center of point
-                vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-                float r = dot(cxy, cxy);
+                gl_FragColor = vColor;
+            }
+        `;
+
+        // Add sphere shaders
+        const sphereVertexShaderSource = `
+            attribute vec4 spherePosition;
+            attribute vec3 normal;
+            
+            uniform mat4 rotationMatrix;
+            uniform mat4 projectionMatrix;
+            uniform vec4 sphereCenter;
+            
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            
+            void main() {
+                vec4 worldPosition = rotationMatrix * (spherePosition + sphereCenter);
+                gl_Position = projectionMatrix * worldPosition;
                 
-                // Improved point rendering with softer edges
-                float alpha = max(0.0, 1.0 - r * 1.1);  // Slightly larger points
-                alpha = pow(alpha, 1.5);  // Adjusted power for better point shape
+                vNormal = normalize(mat3(rotationMatrix) * normal);
+                vViewPosition = -worldPosition.xyz;
+            }
+        `;
+
+        const sphereFragmentShaderSource = `
+            precision mediump float;
+            
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(vViewPosition);
                 
-                // Enhanced brightness in the center
-                float centerBoost = 1.0 + (1.0 - r) * 0.5;
+                vec3 lightPos = vec3(5.0, 5.0, 5.0);
+                vec3 lightColor = vec3(1.0, 1.0, 1.0);
                 
-                gl_FragColor = vec4(vColor.rgb * centerBoost, vColor.a * alpha);
+                vec3 ambient = 0.1 * lightColor;
+                
+                vec3 lightDir = normalize(lightPos);
+                float diff = max(dot(normal, lightDir), 0.0);
+                vec3 diffuse = diff * lightColor;
+                
+                vec3 reflectDir = reflect(-lightDir, normal);
+                float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+                vec3 specular = 0.5 * spec * lightColor;
+                
+                vec3 sphereColor = vec3(0.0, 0.8, 1.0);
+                vec3 result = (ambient + diffuse + specular) * sphereColor;
+                
+                gl_FragColor = vec4(result, 1.0);
             }
         `;
 
@@ -891,34 +854,18 @@
 
         gl.useProgram(program);
 
-        // Generate 4D grid points
-        function generatePoints(size) {
-            const points = [];
-            const colors = [];
-            const sizes = [];
-            
-            const volumeScale = parseFloat(document.getElementById('volume-scale').value);
-            const step = 2.0 / size;
-            
-            // Expanded volume
-            for (let w = -volumeScale; w <= volumeScale; w += step * volumeScale) {
-                for (let x = -volumeScale; x <= volumeScale; x += step * volumeScale) {
-                    for (let y = -volumeScale; y <= volumeScale; y += step * volumeScale) {
-                        for (let z = -volumeScale; z <= volumeScale; z += step * volumeScale) {
-                            points.push(x, y, z, w);
-                            
-                            // Enhanced color variation with volume scale
-                            const r = 0.5 + (x/volumeScale + w/volumeScale) / 4;
-                            const g = 0.5 + (y/volumeScale + w/volumeScale) / 4;
-                            const b = 0.5 + (z/volumeScale + w/volumeScale) / 4;
-                            colors.push(r, g, b, 1.0);
-                            
-                            sizes.push(2.0);
-                        }
-                    }
-                }
-            }
-            return { points, colors, sizes };
+        // Create sphere program
+        const sphereProgram = gl.createProgram();
+        const sphereVertexShader = createShader(gl, gl.VERTEX_SHADER, sphereVertexShaderSource);
+        const sphereFragmentShader = createShader(gl, gl.FRAGMENT_SHADER, sphereFragmentShaderSource);
+        
+        gl.attachShader(sphereProgram, sphereVertexShader);
+        gl.attachShader(sphereProgram, sphereFragmentShader);
+        gl.linkProgram(sphereProgram);
+
+        if (!gl.getProgramParameter(sphereProgram, gl.LINK_STATUS)) {
+            console.error('Unable to initialize sphere shader program:', gl.getProgramInfoLog(sphereProgram));
+            return;
         }
 
         // Get attribute and uniform locations
@@ -926,121 +873,139 @@
         const colorLocation = gl.getAttribLocation(program, "color");
         const sizeLocation = gl.getAttribLocation(program, "pointSize");
 
-        const projectionLocation = gl.getUniformLocation(program, "projection");
-        const rotation4dLocation = gl.getUniformLocation(program, "rotation4d");
-        const cameraDistanceLocation = gl.getUniformLocation(program, "cameraDistance");
-        const traceDepthLocation = gl.getUniformLocation(program, "traceDepth");
-        const brightnessLocation = gl.getUniformLocation(program, "brightness");
+        const rotationLocation = gl.getUniformLocation(program, "rotationMatrix");
+        const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 
         // Enable attributes
         gl.enableVertexAttribArray(positionLocation);
         gl.enableVertexAttribArray(colorLocation);
         gl.enableVertexAttribArray(sizeLocation);
 
-        // Generate points
-        let currentGridSize = parseInt(document.getElementById('grid-density').value);
-        let currentVolumeScale = parseFloat(document.getElementById('volume-scale').value);
-        let { points, colors, sizes } = generatePoints(currentGridSize);
+        // Initialize controls
+        const gridDensityControl = document.getElementById('grid-density');
+        const volumeScaleControl = document.getElementById('volume-scale');
+        const rotationSpeedControl = document.getElementById('rotation-speed');
+        const rotationScaleControl = document.getElementById('rotation-scale');
 
-        // Set up buffers
+        // Initialize base frequencies for rotations
+        const baseFreqs = {
+            wx: 0.3, wy: 0.4, wz: 0.5,
+            xy: 0.6, xz: 0.7, yz: 0.8
+        };
+
+        // Initialize rotation state
+        let rotationState = {
+            wx: 0, wy: 0, wz: 0,
+            xy: 0, xz: 0, yz: 0,
+            speed: 1,
+            lastTime: performance.now(),
+            time: 0
+        };
+
+        // Generate initial points
+        const { points, colors, sizes } = generatePoints(parseInt(gridDensityControl.value));
+
+        // Create and initialize buffers
         const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
+        const sizeBuffer = gl.createBuffer();
+
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
-
-        const colorBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-
-        const sizeBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.STATIC_DRAW);
 
-        // Set initial attribute pointers
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+        // Main render function
+        function render(currentTime) {
+            updateFPS(currentTime);
+            updateRotations(currentTime);
+            updateNavigator(currentTime);
+            updateQuantumHud(currentTime);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-        gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+            // Update matrices
+            const rotationMatrix = get4DRotationMatrix(
+                rotationState.wx, rotationState.wy, rotationState.wz,
+                rotationState.xy, rotationState.xz, rotationState.yz
+            );
+            const projectionMatrix = getProjectionMatrix();
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-        gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+            // Clear and draw grid points
+            gl.useProgram(program);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // UI Controls
-        const gridDensityControl = document.getElementById('grid-density');
-        const volumeScaleControl = document.getElementById('volume-scale');
-        const wxRotationControl = document.getElementById('wx-rotation');
-        const wyRotationControl = document.getElementById('wy-rotation');
-        const wzRotationControl = document.getElementById('wz-rotation');
-        const xyRotationControl = document.getElementById('xy-rotation');
-        const xzRotationControl = document.getElementById('xz-rotation');
-        const yzRotationControl = document.getElementById('yz-rotation');
-        const pointSizeControl = document.getElementById('point-size');
-        const cameraDistanceControl = document.getElementById('camera-distance');
-        const traceDepthControl = document.getElementById('trace-depth');
-        const pointBrightnessControl = document.getElementById('point-brightness');
-        const rotationSpeedControl = document.getElementById('rotation-speed');
-        const rotationScaleControl = document.getElementById('rotation-scale');
-        const evolutionSpeedControl = document.getElementById('evolution-speed');
+            // Set grid point attributes and uniforms
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
 
-        // Function to update uniform values
-        function updateUniforms() {
-            gl.uniform1f(cameraDistanceLocation, parseFloat(cameraDistanceControl.value));
-            gl.uniform1f(traceDepthLocation, parseFloat(traceDepthControl.value));
-            gl.uniform1f(brightnessLocation, parseFloat(pointBrightnessControl.value));
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.enableVertexAttribArray(sizeLocation);
+            gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+            gl.uniformMatrix4fv(rotationLocation, false, rotationMatrix);
+            gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
+
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+            // Draw sphere
+            gl.useProgram(sphereProgram);
+            
+            // Calculate sphere position in 4D space
+            const sphereCenter = [
+                0.5 * Math.cos(currentTime * 0.001),
+                0.5 * Math.sin(currentTime * 0.001),
+                0.5 * Math.cos(currentTime * 0.0007),
+                0.5 * Math.sin(currentTime * 0.0007)
+            ];
+
+            // Set sphere uniforms
+            gl.uniformMatrix4fv(gl.getUniformLocation(sphereProgram, "rotationMatrix"), false, rotationMatrix);
+            gl.uniformMatrix4fv(gl.getUniformLocation(sphereProgram, "projectionMatrix"), false, projectionMatrix);
+            gl.uniform4fv(gl.getUniformLocation(sphereProgram, "sphereCenter"), sphereCenter);
+
+            // Set sphere attributes
+            gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1, 0, 0,
+                1, -1, 0, 0,
+                1, 1, 0, 0,
+                -1, 1, 0, 0
+            ]), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(gl.getAttribLocation(sphereProgram, "spherePosition"));
+            gl.vertexAttribPointer(gl.getAttribLocation(sphereProgram, "spherePosition"), 4, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1
+            ]), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(gl.getAttribLocation(sphereProgram, "normal"));
+            gl.vertexAttribPointer(gl.getAttribLocation(sphereProgram, "normal"), 3, gl.FLOAT, false, 0, 0);
+
+            // Draw sphere with depth testing
+            gl.enable(gl.DEPTH_TEST);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([
+                0, 1, 2,
+                2, 3, 0
+            ]), gl.STATIC_DRAW);
+            gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+            gl.disable(gl.DEPTH_TEST);
+
+            rotationState.lastTime = currentTime;
+            requestAnimationFrame(render);
         }
 
-        // Add event listeners for controls
-        gridDensityControl.addEventListener('input', () => {
-            const size = parseInt(gridDensityControl.value);
-            const scale = parseFloat(volumeScaleControl.value);
-            let { points: newPoints, colors: newColors, sizes: newSizes } = generatePoints(size);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newPoints), gl.STATIC_DRAW);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newColors), gl.STATIC_DRAW);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(newSizes), gl.STATIC_DRAW);
-            
-            points = newPoints;
-            colors = newColors;
-            sizes = newSizes;
-            
-            updateUniforms();
-        });
-
-        // Add event listeners for direct uniform controls
-        [pointSizeControl, cameraDistanceControl, traceDepthControl, pointBrightnessControl].forEach(control => {
-            control.addEventListener('input', updateUniforms);
-        });
-
-        // Initialize displays with proper precision
-        document.querySelectorAll('input[type="range"]').forEach(input => {
-            const display = input.previousElementSibling.querySelector('.value-display');
-            if (display) {
-                const value = parseFloat(input.value);
-                const precision = value < 0.0001 ? 6 : value < 0.001 ? 5 : value < 0.01 ? 4 : value < 0.1 ? 3 : 2;
-                display.textContent = value.toFixed(precision);
-            }
-            
-            input.addEventListener('input', () => {
-                const display = input.previousElementSibling.querySelector('.value-display');
-                if (display) {
-                    const value = parseFloat(input.value);
-                    const precision = value < 0.0001 ? 6 : value < 0.001 ? 5 : value < 0.01 ? 4 : value < 0.1 ? 3 : 2;
-                    display.textContent = value.toFixed(precision);
-                }
-            });
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        });
+        // Start the animation
+        requestAnimationFrame(render);
 
         // Quantum Navigator State
         let navigatorState = {
@@ -1247,17 +1212,69 @@
                 .textContent = `${(hudState.coherence * 100).toFixed(1)}%`;
         }
 
-        // Start rendering
-        function render(currentTime) {
-            updateRotations(currentTime);
-            updateNavigator(currentTime);
-            updateQuantumHud(currentTime);
+        // 4D Rotation Matrix calculation
+        function get4DRotationMatrix(wx, wy, wz, xy, xz, yz) {
+            // Create rotation matrices for each plane
+            function rotationMatrix(angle, plane) {
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                const m = new Array(16).fill(0);
+                
+                // Initialize as identity matrix
+                m[0] = m[5] = m[10] = m[15] = 1;
+                
+                // Set rotation components
+                switch(plane) {
+                    case 'wx':
+                        m[0] = c; m[3] = -s;
+                        m[12] = s; m[15] = c;
+                        break;
+                    case 'wy':
+                        m[5] = c; m[7] = -s;
+                        m[13] = s; m[15] = c;
+                        break;
+                    case 'wz':
+                        m[10] = c; m[11] = -s;
+                        m[14] = s; m[15] = c;
+                        break;
+                    case 'xy':
+                        m[0] = c; m[1] = -s;
+                        m[4] = s; m[5] = c;
+                        break;
+                    case 'xz':
+                        m[0] = c; m[2] = -s;
+                        m[8] = s; m[10] = c;
+                        break;
+                    case 'yz':
+                        m[5] = c; m[6] = -s;
+                        m[9] = s; m[10] = c;
+                        break;
+                }
+                return m;
+            }
             
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+            // Multiply matrices
+            function multiplyMatrices(a, b) {
+                const result = new Array(16).fill(0);
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        for (let k = 0; k < 4; k++) {
+                            result[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                        }
+                    }
+                }
+                return result;
+            }
             
-            rotationState.lastTime = currentTime;
-            requestAnimationFrame(render);
+            // Combine all rotations
+            let matrix = rotationMatrix(wx, 'wx');
+            matrix = multiplyMatrices(matrix, rotationMatrix(wy, 'wy'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(wz, 'wz'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(xy, 'xy'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(xz, 'xz'));
+            matrix = multiplyMatrices(matrix, rotationMatrix(yz, 'yz'));
+            
+            return matrix;
         }
 
         // Initialize quantum navigator
@@ -1265,6 +1282,23 @@
 
         // Initialize quantum HUD
         initQuantumHud();
+
+        // FPS tracking variables
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        function updateFPS(currentTime) {
+            frameCount++;
+            const deltaTime = currentTime - lastFrameTime;
+
+            if (deltaTime >= 1000) { // Update FPS every second
+                fps = frameCount;
+                frameCount = 0;
+                lastFrameTime = currentTime;
+                document.getElementById('fps-counter').textContent = `FPS: ${fps}`;
+            }
+        }
 
         // Quantum memory system
         let quantumMemories = [];
@@ -1525,8 +1559,235 @@
         // Initialize quantum memory system
         document.getElementById('save-quantum-state').addEventListener('click', saveQuantumState);
 
-        // Start the animation
-        render();
+        // Generate 4D grid points
+        function generatePoints(size) {
+            const points = [];
+            const colors = [];
+            const sizes = [];
+            
+            const volumeScale = parseFloat(document.getElementById('volume-scale').value);
+            const step = 2.0 / size;
+            
+            // Expanded volume
+            for (let w = -volumeScale; w <= volumeScale; w += step * volumeScale) {
+                for (let x = -volumeScale; x <= volumeScale; x += step * volumeScale) {
+                    for (let y = -volumeScale; y <= volumeScale; y += step * volumeScale) {
+                        for (let z = -volumeScale; z <= volumeScale; z += step * volumeScale) {
+                            points.push(x, y, z, w);
+                            
+                            // Enhanced color variation with volume scale
+                            const r = 0.5 + (x/volumeScale + w/volumeScale) / 4;
+                            const g = 0.5 + (y/volumeScale + w/volumeScale) / 4;
+                            const b = 0.5 + (z/volumeScale + w/volumeScale) / 4;
+                            colors.push(r, g, b, 1.0);
+                            
+                            sizes.push(2.0);
+                        }
+                    }
+                }
+            }
+            return { points, colors, sizes };
+        }
+
+        // Create sphere geometry
+        function createSphereGeometry(radius, segments) {
+            const vertices = [];
+            const normals = [];
+            const indices = [];
+            
+            for (let lat = 0; lat <= segments; lat++) {
+                const theta = lat * Math.PI / segments;
+                const sinTheta = Math.sin(theta);
+                const cosTheta = Math.cos(theta);
+                
+                for (let lon = 0; lon <= segments; lon++) {
+                    const phi = lon * 2 * Math.PI / segments;
+                    const sinPhi = Math.sin(phi);
+                    const cosPhi = Math.cos(phi);
+                    
+                    const x = cosPhi * sinTheta;
+                    const y = cosTheta;
+                    const z = sinPhi * sinTheta;
+                    
+                    vertices.push(radius * x, radius * y, radius * z, 0);
+                    normals.push(x, y, z);
+                }
+            }
+            
+            for (let lat = 0; lat < segments; lat++) {
+                for (let lon = 0; lon < segments; lon++) {
+                    const first = (lat * (segments + 1)) + lon;
+                    const second = first + segments + 1;
+                    
+                    indices.push(first, second, first + 1);
+                    indices.push(second, second + 1, first + 1);
+                }
+            }
+            
+            return { vertices, normals, indices };
+        }
+
+        // Initialize sphere buffers and attributes
+        const sphere = createSphereGeometry(0.1, 32);
+        
+        const sphereVBO = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sphereVBO);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphere.vertices), gl.STATIC_DRAW);
+        
+        const sphereNormalVBO = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, sphereNormalVBO);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphere.normals), gl.STATIC_DRAW);
+        
+        const sphereIBO = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIBO);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphere.indices), gl.STATIC_DRAW);
+
+        // Get sphere shader locations
+        const sphereAttribLocations = {
+            position: gl.getAttribLocation(sphereProgram, 'spherePosition'),
+            normal: gl.getAttribLocation(sphereProgram, 'normal')
+        };
+        
+        const sphereUniformLocations = {
+            rotationMatrix: gl.getUniformLocation(sphereProgram, 'rotationMatrix'),
+            projectionMatrix: gl.getUniformLocation(sphereProgram, 'projectionMatrix'),
+            sphereCenter: gl.getUniformLocation(sphereProgram, 'sphereCenter')
+        };
+
+        // N-dimensional geometry support
+        function createNDGeometry(dimensions, type, params) {
+            const vertices = [];
+            const indices = [];
+            
+            switch(type) {
+                case 'hypersphere':
+                    // Generate vertices for n-sphere using recursive method
+                    function generateHyperspherePoints(dim, point = [], radius = params.radius) {
+                        if (dim === dimensions) {
+                            const sumSquares = point.reduce((sum, x) => sum + x * x, 0);
+                            if (Math.abs(sumSquares - radius * radius) < 0.001) {
+                                vertices.push(...point);
+                            }
+                            return;
+                        }
+                        
+                        const steps = params.resolution || 10;
+                        for (let theta = 0; theta <= Math.PI; theta += Math.PI / steps) {
+                            const r = radius * Math.sin(theta);
+                            const h = radius * Math.cos(theta);
+                            generateHyperspherePoints(dim + 1, [...point, r], h);
+                        }
+                    }
+                    generateHyperspherePoints(0);
+                    break;
+
+                case 'hypercube':
+                    // Generate vertices for n-cube
+                    function generateHypercubePoints(dim, point = []) {
+                        if (dim === dimensions) {
+                            vertices.push(...point);
+                            return;
+                        }
+                        generateHypercubePoints(dim + 1, [...point, -params.size]);
+                        generateHypercubePoints(dim + 1, [...point, params.size]);
+                    }
+                    generateHypercubePoints(0);
+                    break;
+            }
+
+            // Generate indices for connecting nearby points
+            for (let i = 0; i < vertices.length / dimensions; i++) {
+                for (let j = i + 1; j < vertices.length / dimensions; j++) {
+                    let distance = 0;
+                    for (let d = 0; d < dimensions; d++) {
+                        const diff = vertices[i * dimensions + d] - vertices[j * dimensions + d];
+                        distance += diff * diff;
+                    }
+                    if (distance < params.connectionThreshold) {
+                        indices.push(i, j);
+                    }
+                }
+            }
+
+            return { vertices, indices };
+        }
+
+        // Manifold projection
+        function projectToManifold(points, fromDim, toDim) {
+            const projected = [];
+            
+            // Use parallel transport along geodesics
+            for (let i = 0; i < points.length / fromDim; i++) {
+                const point = points.slice(i * fromDim, (i + 1) * fromDim);
+                const projectedPoint = new Array(toDim).fill(0);
+                
+                for (let d = 0; d < toDim; d++) {
+                    let sum = 0;
+                    for (let j = d; j < fromDim; j++) {
+                        // Project using parallel transport equations
+                        sum += point[j] * Math.cos(Math.PI * (j - d) / (2 * (fromDim - d)));
+                    }
+                    projectedPoint[d] = sum;
+                }
+                
+                projected.push(...projectedPoint);
+            }
+            
+            return projected;
+        }
+
+        // Create a higher dimensional shape
+        const ndShape = createNDGeometry(5, 'hypersphere', {
+            radius: 0.5,
+            resolution: 20,
+            connectionThreshold: 0.1
+        });
+
+        // Project to 4D for our visualization
+        const projectedVertices = projectToManifold(ndShape.vertices, 5, 4);
+
+        // Create buffer for the projected shape
+        const ndShapeBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, ndShapeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(projectedVertices), gl.STATIC_DRAW);
+
+        const ndIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ndIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ndShape.indices), gl.STATIC_DRAW);
+
+        // Modify render function to include n-dimensional shape
+        function render(currentTime) {
+            updateFPS(currentTime);
+            updateRotations(currentTime);
+            updateNavigator(currentTime);
+            updateQuantumHud(currentTime);
+
+            const rotationMatrix = get4DRotationMatrix(
+                rotationState.wx, rotationState.wy, rotationState.wz,
+                rotationState.xy, rotationState.xz, rotationState.yz
+            );
+            const projectionMatrix = getProjectionMatrix();
+
+            // Clear and draw grid points
+            gl.useProgram(program);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // Draw grid points...
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+            gl.drawArrays(gl.POINTS, 0, points.length / 4);
+
+            // Draw n-dimensional shape
+            gl.bindBuffer(gl.ARRAY_BUFFER, ndShapeBuffer);
+            gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ndIndexBuffer);
+            
+            // Use lines to show the structure of the n-dimensional shape
+            gl.drawElements(gl.LINES, ndShape.indices.length, gl.UNSIGNED_SHORT, 0);
+
+            rotationState.lastTime = currentTime;
+            requestAnimationFrame(render);
+        }
     </script>
 </body>
 </html>

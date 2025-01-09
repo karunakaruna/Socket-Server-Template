@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N-Dimensional Raymarched Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        #dimension-controls {
+            margin-top: 20px;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-label {
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .dimension-group {
+            margin-bottom: 15px;
+        }
+        input[type="range"] {
+            width: 200px;
+            margin: 5px 0;
+        }
+        .dimension-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        button {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #3a3a3a;
+        }
+        .current-space {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div class="current-space">
+            <div class="control-label">Current Space: <span id="space-dim">8D</span></div>
+            <div class="dimension-buttons">
+                <button onclick="setDimension(4)">1-4D</button>
+                <button onclick="setDimension(6)">3-6D</button>
+                <button onclick="setDimension(8)">5-8D</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Dimensional Focus</div>
+            <div id="dimension-focus-controls"></div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Dimensional Translation</div>
+            <div id="dimension-translation-controls"></div>
+        </div>
+    </div>
+
+    <div class="rotation-grid">
+        <button class="rotation-button" data-x="-1" data-y="1">↖</button>
+        <button class="rotation-button" data-x="0" data-y="1">↑</button>
+        <button class="rotation-button" data-x="1" data-y="1">↗</button>
+        <button class="rotation-button" data-x="-1" data-y="0">←</button>
+        <button class="rotation-button stop" data-x="0" data-y="0">⬛</button>
+        <button class="rotation-button" data-x="1" data-y="0">→</button>
+        <button class="rotation-button" data-x="-1" data-y="-1">↙</button>
+        <button class="rotation-button" data-x="0" data-y="-1">↓</button>
+        <button class="rotation-button" data-x="1" data-y="-1">↘</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision highp float;
+
+        uniform vec2 resolution;
+        uniform float time;
+        uniform vec4 rotation;
+        uniform vec3 cameraPosition;
+        uniform float dimensionalWeights[8];
+        uniform float dimensionalFocus[8];
+        uniform float dimensionalTranslation[8];
+
+        const float MAX_DIST = 100.0;
+        const float EPSILON = 0.001;
+        const int MAX_STEPS = 100;
+        const float PI = 3.14159265359;
+
+        // Smooth min function for blending
+        float smin(float a, float b, float k) {
+            float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+            return mix(b, a, h) - k * h * (1.0 - h);
+        }
+
+        // Get dimensional weight and focus
+        float getDimensionalInfluence(int index) {
+            if(index == 0) return dimensionalWeights[0] * dimensionalFocus[0];
+            if(index == 1) return dimensionalWeights[1] * dimensionalFocus[1];
+            if(index == 2) return dimensionalWeights[2] * dimensionalFocus[2];
+            if(index == 3) return dimensionalWeights[3] * dimensionalFocus[3];
+            if(index == 4) return dimensionalWeights[4] * dimensionalFocus[4];
+            if(index == 5) return dimensionalWeights[5] * dimensionalFocus[5];
+            if(index == 6) return dimensionalWeights[6] * dimensionalFocus[6];
+            return dimensionalWeights[7] * dimensionalFocus[7];
+        }
+
+        // Project point between dimensions using constant indices
+        vec3 projectBetweenDimensions(vec3 p, float t, int dim) {
+            vec3 p1 = p;
+            vec3 p2 = p;
+            
+            // Create a spiral path between dimensions
+            float angle = t * PI * 2.0;
+            float r = 1.0;
+            
+            // Get weights for current and next dimension
+            float w1 = getDimensionalInfluence(dim);
+            float w2 = getDimensionalInfluence(dim + 1);
+            
+            // Create a smooth path between dimensions
+            p1 += vec3(
+                cos(angle) * r * w1,
+                sin(angle * 2.0) * r * w1,
+                cos(angle * 3.0) * r * w1
+            );
+            
+            p2 += vec3(
+                sin(angle * 2.0) * r * w2,
+                cos(angle * 3.0) * r * w2,
+                sin(angle * 4.0) * r * w2
+            );
+            
+            // Blend between the two positions
+            float blend = 0.5 + 0.5 * sin(t * PI);
+            return mix(p1, p2, blend);
+        }
+
+        // Create an 8D shape with dimensional boundaries
+        float manifold8DSDF(vec3 p) {
+            float dist = MAX_DIST;
+            float baseRadius = 1.5;
+            float thickness = 0.1;
+            
+            // Create paths between adjacent dimensions using constant loop
+            dist = length(projectBetweenDimensions(p, time * 0.2, 0) - p) - thickness;
+            dist = smin(dist, length(projectBetweenDimensions(p, time * 0.2 + 0.5, 1) - p) - thickness, 0.3);
+            dist = smin(dist, length(projectBetweenDimensions(p, time * 0.2 + 1.0, 2) - p) - thickness, 0.3);
+            dist = smin(dist, length(projectBetweenDimensions(p, time * 0.2 + 1.5, 3) - p) - thickness, 0.3);
+            dist = smin(dist, length(projectBetweenDimensions(p, time * 0.2 + 2.0, 4) - p) - thickness, 0.3);
+            dist = smin(dist, length(projectBetweenDimensions(p, time * 0.2 + 2.5, 5) - p) - thickness, 0.3);
+            dist = smin(dist, length(projectBetweenDimensions(p, time * 0.2 + 3.0, 6) - p) - thickness, 0.3);
+            
+            // Add central attractor point
+            float centerDist = length(p) - 0.1;
+            dist = smin(dist, centerDist, 0.3);
+            
+            // Add dimensional portals with constant positions
+            vec3 portalPositions[8];
+            portalPositions[0] = vec3(cos(0.0) * baseRadius, sin(time * 0.5) * 0.5, sin(0.0) * baseRadius);
+            portalPositions[1] = vec3(cos(PI * 0.25) * baseRadius, sin(time * 0.5) * 0.5, sin(PI * 0.25) * baseRadius);
+            portalPositions[2] = vec3(cos(PI * 0.5) * baseRadius, sin(time * 0.5) * 0.5, sin(PI * 0.5) * baseRadius);
+            portalPositions[3] = vec3(cos(PI * 0.75) * baseRadius, sin(time * 0.5) * 0.5, sin(PI * 0.75) * baseRadius);
+            portalPositions[4] = vec3(cos(PI) * baseRadius, sin(time * 0.5) * 0.5, sin(PI) * baseRadius);
+            portalPositions[5] = vec3(cos(PI * 1.25) * baseRadius, sin(time * 0.5) * 0.5, sin(PI * 1.25) * baseRadius);
+            portalPositions[6] = vec3(cos(PI * 1.5) * baseRadius, sin(time * 0.5) * 0.5, sin(PI * 1.5) * baseRadius);
+            portalPositions[7] = vec3(cos(PI * 1.75) * baseRadius, sin(time * 0.5) * 0.5, sin(PI * 1.75) * baseRadius);
+            
+            // Add portals with constant loop unrolling and connection lines
+            float portalDist;
+            float distortion;
+            float connectionDist;
+            
+            for(int i = 0; i < 8; i++) {
+                portalDist = length(p - portalPositions[i]) - 0.2;
+                
+                // Add dimensional distortion and swirling effect
+                vec3 toPortal = p - portalPositions[i];
+                float angle = atan(toPortal.z, toPortal.x) + time * (float(i) - 3.5) * 0.2;
+                vec2 spiral = vec2(cos(angle), sin(angle)) * length(toPortal.xz);
+                toPortal.xz = spiral;
+                
+                distortion = sin(length(toPortal) * 8.0 + time * 3.0) * 0.1 * getDimensionalInfluence(i);
+                
+                // Add connection to center
+                vec3 toCenter = portalPositions[i];
+                connectionDist = length(cross(toCenter, p - portalPositions[i])) / length(toCenter) - 0.05 
+                    * (1.0 + 0.3 * sin(time * 2.0 + float(i) * PI * 0.25));
+                
+                // Add portal rim effect
+                float rimDist = abs(length(p - portalPositions[i]) - 0.2) - 0.02;
+                
+                // Combine distances with smooth blending
+                portalDist = smin(portalDist, rimDist, 0.1);
+                portalDist = smin(portalDist, connectionDist, 0.1);
+                dist = smin(dist, portalDist + distortion, 0.3);
+                
+                // Add energy flow along connections
+                float flow = sin(length(p - portalPositions[i]) * 4.0 - time * 3.0) * 0.5 + 0.5;
+                dist += flow * 0.02 * getDimensionalInfluence(i);
+            }
+            
+            return dist;
+        }
+
+        vec3 getNormal(vec3 p) {
+            vec2 e = vec2(EPSILON, 0.0);
+            return normalize(vec3(
+                manifold8DSDF(p + e.xyy) - manifold8DSDF(p - e.xyy),
+                manifold8DSDF(p + e.yxy) - manifold8DSDF(p - e.yxy),
+                manifold8DSDF(p + e.yyx) - manifold8DSDF(p - e.yyx)
+            ));
+        }
+
+        float raymarch(vec3 ro, vec3 rd) {
+            float t = 0.0;
+            for(int i = 0; i < MAX_STEPS; i++) {
+                vec3 p = ro + rd * t;
+                float d = manifold8DSDF(p);
+                if(d < EPSILON) return t;
+                t += d * 0.5;
+                if(t > MAX_DIST) break;
+            }
+            return MAX_DIST;
+        }
+
+        // Get color based on dimensional influence with constant indices
+        vec3 getDimensionalColor(vec3 p, vec3 n) {
+            vec3 col = vec3(0.0);
+            
+            // Add color contributions with constant indices
+            float influence;
+            float posInfluence;
+            
+            influence = getDimensionalInfluence(0);
+            posInfluence = sin(dot(p, n) * 5.0 + time) * 0.5 + 0.5;
+            col += vec3(1.0, 0.2, 0.2) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(1);
+            posInfluence = sin(dot(p, n) * 5.0 + PI * 0.25 + time) * 0.5 + 0.5;
+            col += vec3(0.2, 1.0, 0.2) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(2);
+            posInfluence = sin(dot(p, n) * 5.0 + PI * 0.5 + time) * 0.5 + 0.5;
+            col += vec3(0.2, 0.2, 1.0) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(3);
+            posInfluence = sin(dot(p, n) * 5.0 + PI * 0.75 + time) * 0.5 + 0.5;
+            col += vec3(1.0, 1.0, 0.2) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(4);
+            posInfluence = sin(dot(p, n) * 5.0 + PI + time) * 0.5 + 0.5;
+            col += vec3(1.0, 0.2, 1.0) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(5);
+            posInfluence = sin(dot(p, n) * 5.0 + PI * 1.25 + time) * 0.5 + 0.5;
+            col += vec3(0.2, 1.0, 1.0) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(6);
+            posInfluence = sin(dot(p, n) * 5.0 + PI * 1.5 + time) * 0.5 + 0.5;
+            col += vec3(1.0, 0.5, 0.0) * influence * posInfluence;
+            
+            influence = getDimensionalInfluence(7);
+            posInfluence = sin(dot(p, n) * 5.0 + PI * 1.75 + time) * 0.5 + 0.5;
+            col += vec3(0.5, 0.0, 1.0) * influence * posInfluence;
+            
+            return normalize(col);
+        }
+
+        void main() {
+            vec2 uv = (gl_FragCoord.xy - 0.5 * resolution.xy) / resolution.y;
+            
+            vec3 ro = cameraPosition;
+            vec3 rd = normalize(vec3(uv, 1.0));
+            
+            // Apply camera rotation
+            float c = cos(rotation.x);
+            float s = sin(rotation.x);
+            rd.xz = mat2(c, -s, s, c) * rd.xz;
+            
+            c = cos(rotation.y);
+            s = sin(rotation.y);
+            rd.yz = mat2(c, -s, s, c) * rd.yz;
+            
+            float t = raymarch(ro, rd);
+            vec3 col = vec3(0.0);
+            
+            if(t < MAX_DIST) {
+                vec3 p = ro + rd * t;
+                vec3 normal = getNormal(p);
+                
+                // Get dimensional color
+                vec3 baseColor = getDimensionalColor(p, normal);
+                
+                // Lighting
+                vec3 light = normalize(vec3(1.0, 1.0, -1.0));
+                float diff = max(0.0, dot(normal, light));
+                float spec = pow(max(0.0, dot(reflect(-light, normal), -rd)), 32.0);
+                float fresnel = pow(1.0 - max(0.0, dot(normal, -rd)), 4.0);
+                
+                // Final color
+                col = baseColor * diff + vec3(1.0) * spec * 0.5;
+                
+                // Add dimensional boundary glow
+                float boundaryGlow = 0.0;
+                vec3 projected;
+                float dist;
+                
+                projected = projectBetweenDimensions(p, time * 0.2, 0);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(0);
+                
+                projected = projectBetweenDimensions(p, time * 0.2 + 0.5, 1);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(1);
+                
+                projected = projectBetweenDimensions(p, time * 0.2 + 1.0, 2);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(2);
+                
+                projected = projectBetweenDimensions(p, time * 0.2 + 1.5, 3);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(3);
+                
+                projected = projectBetweenDimensions(p, time * 0.2 + 2.0, 4);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(4);
+                
+                projected = projectBetweenDimensions(p, time * 0.2 + 2.5, 5);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(5);
+                
+                projected = projectBetweenDimensions(p, time * 0.2 + 3.0, 6);
+                dist = length(projected - p);
+                boundaryGlow += exp(-dist * 5.0) * getDimensionalInfluence(6);
+                
+                col += baseColor * boundaryGlow * 2.0;
+                
+                // Add fresnel glow
+                col += baseColor * fresnel * 0.5;
+            }
+            
+            // Add ambient glow
+            col += vec3(0.1, 0.2, 0.3) * pow(1.0 - length(uv), 2.0) * 0.2;
+            
+            // Gamma correction
+            col = pow(col, vec3(0.4545));
+            
+            gl_FragColor = vec4(col, 1.0);
+        }
+    </script>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            alert('WebGL not supported');
+            throw new Error('WebGL not supported');
+        }
+
+        // Enable logging for shader compilation
+        function createShader(type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+
+        // Create vertex shader
+        const vertexShader = createShader(gl.VERTEX_SHADER, `
+            attribute vec2 position;
+            void main() {
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        `);
+
+        // Create fragment shader
+        const fragmentShader = createShader(gl.FRAGMENT_SHADER, 
+            document.getElementById('fragment-shader').textContent
+        );
+
+        // Create and link program
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Program link error:', gl.getProgramInfoLog(program));
+        }
+
+        // Create quad buffer
+        const positions = new Float32Array([
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1
+        ]);
+
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+        // Get locations
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const resolutionLocation = gl.getUniformLocation(program, 'resolution');
+        const timeLocation = gl.getUniformLocation(program, 'time');
+        const rotationLocation = gl.getUniformLocation(program, 'rotation');
+        const cameraPositionLocation = gl.getUniformLocation(program, 'cameraPosition');
+        const dimensionalWeightsLocation = gl.getUniformLocation(program, 'dimensionalWeights');
+        const dimensionalFocusLocation = gl.getUniformLocation(program, 'dimensionalFocus');
+        const dimensionalTranslationLocation = gl.getUniformLocation(program, 'dimensionalTranslation');
+
+        // Rotation state
+        let rotationState = {
+            targetSpeed: { x: 0, y: 0 },
+            currentSpeed: { x: 0, y: 0 },
+            angles: { x: 0, y: 0 },
+            lerpFactor: 0.1
+        };
+
+        // Camera state
+        let cameraState = {
+            position: { x: 0, y: 1, z: -4 },
+            target: { x: 0, y: 0, z: 0 },
+            up: { x: 0, y: 1, z: 0 },
+            moveSpeed: 0.1,
+            keysPressed: new Set()
+        };
+
+        // N-dimensional state
+        let state = {
+            currentDimension: 8,
+            dimensionalWeights: new Float32Array(8).fill(1.0),
+            dimensionalFocus: new Float32Array(8).fill(1.0),
+            dimensionalTranslation: new Float32Array(8).fill(0.0)
+        };
+
+        function lerp(start, end, factor) {
+            return start + (end - start) * factor;
+        }
+
+        // Keyboard controls
+        window.addEventListener('keydown', (e) => {
+            cameraState.keysPressed.add(e.key.toLowerCase());
+        });
+
+        window.addEventListener('keyup', (e) => {
+            cameraState.keysPressed.delete(e.key.toLowerCase());
+        });
+
+        function updateCamera() {
+            const speed = cameraState.moveSpeed;
+            const forward = normalize(subtract(cameraState.target, cameraState.position));
+            const right = normalize(cross(forward, cameraState.up));
+
+            if (cameraState.keysPressed.has('w')) {
+                cameraState.position.z += speed;
+                cameraState.target.z += speed;
+            }
+            if (cameraState.keysPressed.has('s')) {
+                cameraState.position.z -= speed;
+                cameraState.target.z -= speed;
+            }
+            if (cameraState.keysPressed.has('a')) {
+                cameraState.position.x -= speed;
+                cameraState.target.x -= speed;
+            }
+            if (cameraState.keysPressed.has('d')) {
+                cameraState.position.x += speed;
+                cameraState.target.x += speed;
+            }
+            if (cameraState.keysPressed.has('q')) {
+                cameraState.position.y += speed;
+                cameraState.target.y += speed;
+            }
+            if (cameraState.keysPressed.has('e')) {
+                cameraState.position.y -= speed;
+                cameraState.target.y -= speed;
+            }
+        }
+
+        // Vector math helpers
+        function normalize(v) {
+            const len = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            return {
+                x: v.x / len,
+                y: v.y / len,
+                z: v.z / len
+            };
+        }
+
+        function subtract(a, b) {
+            return {
+                x: a.x - b.x,
+                y: a.y - b.y,
+                z: a.z - b.z
+            };
+        }
+
+        function cross(a, b) {
+            return {
+                x: a.y * b.z - a.z * b.y,
+                y: a.z * b.x - a.x * b.z,
+                z: a.x * b.y - a.y * b.x
+            };
+        }
+
+        // Initialize dimensional controls
+        function createDimensionalControls() {
+            const focusContainer = document.getElementById('dimension-focus-controls');
+            const translationContainer = document.getElementById('dimension-translation-controls');
+            
+            focusContainer.innerHTML = '';
+            translationContainer.innerHTML = '';
+            
+            for (let d = 0; d < state.currentDimension; d++) {
+                // Focus controls
+                const focusGroup = document.createElement('div');
+                focusGroup.className = 'dimension-group';
+                focusGroup.innerHTML = `
+                    <div class="control-label">${d + 1}D</div>
+                    <input type="range" min="0" max="1" step="0.01" value="${state.dimensionalFocus[d]}"
+                           oninput="updateDimensionalFocus(${d}, this.value)">
+                `;
+                focusContainer.appendChild(focusGroup);
+                
+                // Translation controls
+                const translationGroup = document.createElement('div');
+                translationGroup.className = 'dimension-group';
+                translationGroup.innerHTML = `
+                    <div class="control-label">${d + 1}D</div>
+                    <input type="range" min="-1" max="1" step="0.01" value="${state.dimensionalTranslation[d]}"
+                           oninput="updateDimensionalTranslation(${d}, this.value)">
+                `;
+                translationContainer.appendChild(translationGroup);
+            }
+        }
+
+        window.setDimension = function(dim) {
+            state.currentDimension = dim;
+            document.getElementById('space-dim').textContent = dim + 'D';
+            createDimensionalControls();
+        };
+
+        window.updateDimensionalFocus = function(dimension, value) {
+            state.dimensionalFocus[dimension] = parseFloat(value);
+        };
+
+        window.updateDimensionalTranslation = function(dimension, value) {
+            state.dimensionalTranslation[dimension] = parseFloat(value);
+        };
+
+        // Render loop
+        function render(time) {
+            time *= 0.001;
+
+            // Update camera
+            updateCamera();
+
+            // Update rotation
+            rotationState.currentSpeed.x = lerp(
+                rotationState.currentSpeed.x,
+                rotationState.targetSpeed.x,
+                rotationState.lerpFactor
+            );
+            rotationState.currentSpeed.y = lerp(
+                rotationState.currentSpeed.y,
+                rotationState.targetSpeed.y,
+                rotationState.lerpFactor
+            );
+
+            rotationState.angles.x += rotationState.currentSpeed.x * 0.01;
+            rotationState.angles.y += rotationState.currentSpeed.y * 0.01;
+
+            // Resize canvas
+            const pixelRatio = window.devicePixelRatio || 1;
+            canvas.width = canvas.clientWidth * pixelRatio;
+            canvas.height = canvas.clientHeight * pixelRatio;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            // Clear and set uniforms
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(program);
+            gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+            gl.uniform1f(timeLocation, time);
+            gl.uniform4f(rotationLocation, 
+                rotationState.angles.x, rotationState.angles.y, 
+                rotationState.currentSpeed.x, rotationState.currentSpeed.y
+            );
+            gl.uniform3f(cameraPositionLocation,
+                cameraState.position.x,
+                cameraState.position.y,
+                cameraState.position.z
+            );
+
+            gl.uniform1fv(dimensionalWeightsLocation, state.dimensionalWeights);
+            gl.uniform1fv(dimensionalFocusLocation, state.dimensionalFocus);
+            gl.uniform1fv(dimensionalTranslationLocation, state.dimensionalTranslation);
+
+            // Draw quad
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            requestAnimationFrame(render);
+        }
+
+        // Initialize rotation controls
+        document.querySelectorAll('.rotation-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const x = parseFloat(button.dataset.x);
+                const y = parseFloat(button.dataset.y);
+                
+                if (x === 0 && y === 0) {
+                    rotationState.targetSpeed.x = 0;
+                    rotationState.targetSpeed.y = 0;
+                } else {
+                    rotationState.targetSpeed.x = x;
+                    rotationState.targetSpeed.y = y;
+                }
+            });
+        });
+
+        // Create controls and start rendering
+        createDimensionalControls();
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
