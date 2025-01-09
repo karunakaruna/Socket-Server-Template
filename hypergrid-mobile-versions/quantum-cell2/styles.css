@@ -1,0 +1,153 @@
+/* Quantum Cell Visualization Styles */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+}
+
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.control-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    color: cyan;
+    font-family: 'Courier New', monospace;
+    z-index: 1000;
+}
+
+.control-group {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.slider-label {
+    font-size: 12px;
+    color: rgba(0, 255, 255, 0.8);
+}
+
+input[type="range"] {
+    width: 150px;
+    height: 5px;
+    -webkit-appearance: none;
+    background: rgba(0, 255, 255, 0.2);
+    border-radius: 5px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    background: cyan;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.value-display {
+    font-size: 12px;
+    min-width: 40px;
+    text-align: right;
+    color: rgba(0, 255, 255, 0.8);
+}
+
+#quantum-hud {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    font-family: 'Courier New', monospace;
+    color: rgba(0, 255, 255, 0.8);
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+#quantum-navigator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    border: 2px solid rgba(0, 255, 255, 0.2);
+    border-radius: 50%;
+    cursor: crosshair;
+    background: radial-gradient(circle at 50% 50%,
+        rgba(255, 255, 255, 0.1),
+        rgba(0, 100, 255, 0.15),
+        rgba(0, 0, 0, 0.5)
+    );
+    box-shadow: 0 0 40px rgba(0, 100, 255, 0.2);
+    z-index: 1000;
+    touch-action: none;
+    pointer-events: auto;
+}
+
+#navigator-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+#navigator-grid::before,
+#navigator-grid::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#navigator-grid::before {
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    transform: translateY(-50%);
+}
+
+#navigator-grid::after {
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 100%;
+    transform: translateX(-50%);
+}
+
+#navigator-vector {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: rgba(0, 255, 255, 0.8);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px cyan;
+}

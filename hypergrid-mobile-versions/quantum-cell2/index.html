@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Cell Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    
+    <div id="quantum-navigator">
+        <div id="navigator-grid"></div>
+        <div id="navigator-vector"></div>
+    </div>
+
+    <div id="quantum-hud">
+        <div>Quantum State: <span id="stateDisplay">0.5</span></div>
+        <div>W-Position: <span id="wPosDisplay">0.0</span></div>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-group">
+            <div class="slider-container">
+                <span class="slider-label">Particle Count</span>
+                <input type="range" id="particleCount" min="100" max="10000" value="1000">
+                <span class="value-display" id="particleCountValue">1000</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="slider-container">
+                <span class="slider-label">Particle Depth</span>
+                <input type="range" id="particleDepth" min="1" max="20" value="12">
+                <span class="value-display" id="particleDepthValue">12</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="slider-container">
+                <span class="slider-label">4D W-Axis</span>
+                <input type="range" id="wDimension" min="-10" max="10" value="0" step="0.1">
+                <span class="value-display" id="wDimensionValue">0</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="slider-container">
+                <span class="slider-label">Quantum State</span>
+                <input type="range" id="quantumState" min="0" max="1" value="0.5" step="0.01">
+                <span class="value-display" id="quantumStateValue">0.5</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- WebGL Shaders -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 position;
+        attribute vec4 color;
+        attribute float size;
+        
+        uniform mat4 rotationMatrix;
+        uniform vec4 positionOffset;
+        
+        varying vec4 vColor;
+        
+        void main() {
+            vec4 rotatedPosition = rotationMatrix * (position + positionOffset);
+            float w = rotatedPosition.w;
+            
+            // Project 4D to 3D
+            vec3 proj = rotatedPosition.xyz / (w + 2.0);
+            gl_Position = vec4(proj, 1.0);
+            
+            // Adjust point size based on w coordinate
+            gl_PointSize = size * (1.0 / (w + 2.0));
+            
+            vColor = color;
+        }
+    </script>
+    
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 vColor;
+        
+        void main() {
+            vec2 coord = gl_PointCoord - vec2(0.5);
+            float r = length(coord) * 2.0;
+            float a = 1.0 - smoothstep(0.0, 1.0, r);
+            gl_FragColor = vec4(vColor.rgb, vColor.a * a);
+        }
+    </script>
+
+    <script src="quantum.js"></script>
+</body>
+</html>

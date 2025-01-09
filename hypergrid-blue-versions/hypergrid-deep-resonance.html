@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperGrid Deep Resonance</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        #depth-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: cyan;
+            font-family: monospace;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(0,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="quantum-canvas"></canvas>
+    <div id="depth-indicator">Quantum Depth: 0.00</div>
+
+    <script>
+        const canvas = document.getElementById('quantum-canvas');
+        const ctx = canvas.getContext('2d');
+        const depthIndicator = document.getElementById('depth-indicator');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Quantum state
+        const quantumState = {
+            depth: 0,
+            maxDepth: 5.0, // Increased max depth
+            resonanceFields: [],
+            hyperstrings: [],
+            time: 0
+        };
+
+        // Enhanced hyperstring properties
+        class Hyperstring {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.phase = Math.random() * Math.PI * 2;
+                this.radius = 0;
+                this.maxRadius = 600;
+                this.strength = 1.0;
+                this.spirals = [];
+                this.depth = 0;
+                this.harmonics = [];
+                this.resonancePoints = [];
+                
+                // Create more complex spiral patterns
+                for (let i = 0; i < 12; i++) {
+                    this.spirals.push({
+                        phase: (i / 12) * Math.PI * 2,
+                        frequency: 0.02 + Math.random() * 0.03,
+                        amplitude: 0.5 + Math.random() * 0.5,
+                        temporalPhase: Math.random() * Math.PI * 2,
+                        harmonicFreq: 0.1 + Math.random() * 0.2
+                    });
+                }
+
+                // Add harmonic resonance points
+                for (let i = 0; i < 5; i++) {
+                    this.harmonics.push({
+                        frequency: 0.5 + Math.random(),
+                        phase: Math.random() * Math.PI * 2,
+                        amplitude: 0.2 + Math.random() * 0.3
+                    });
+                }
+            }
+
+            update(time) {
+                const progress = this.radius / this.maxRadius;
+                this.strength = Math.max(0, 1 - progress);
+                
+                // Update radius with non-linear growth
+                this.radius += (this.maxRadius - this.radius) * 0.03;
+                
+                // Update resonance points
+                this.resonancePoints = [];
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2 + time * 0.2;
+                    const dist = 50 + Math.sin(time * 0.5 + i) * 20;
+                    this.resonancePoints.push({
+                        x: this.x + Math.cos(angle) * dist,
+                        y: this.y + Math.sin(angle) * dist,
+                        intensity: 0.5 + Math.sin(time + i) * 0.5
+                    });
+                }
+            }
+
+            draw(ctx, time) {
+                // Draw main resonance field
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius
+                );
+                gradient.addColorStop(0, `rgba(0, 255, 255, ${this.strength * 0.5})`);
+                gradient.addColorStop(0.5, `rgba(0, 200, 255, ${this.strength * 0.3})`);
+                gradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Draw enhanced spiral patterns
+                this.spirals.forEach((spiral, i) => {
+                    ctx.beginPath();
+                    const points = [];
+                    
+                    // Generate more complex spiral path
+                    for (let t = 0; t <= 1; t += 0.02) {
+                        const radius = this.radius * t;
+                        
+                        // Add harmonic modulation
+                        let harmonicEffect = 0;
+                        this.harmonics.forEach(h => {
+                            harmonicEffect += Math.sin(time * h.frequency + h.phase) * h.amplitude;
+                        });
+                        
+                        const angle = spiral.phase + 
+                                    t * Math.PI * 6 + // More rotations
+                                    Math.sin(time * spiral.frequency + spiral.temporalPhase) * spiral.amplitude +
+                                    harmonicEffect;
+                        
+                        const x = this.x + Math.cos(angle) * radius;
+                        const y = this.y + Math.sin(angle) * radius;
+                        points.push({x, y});
+                    }
+                    
+                    // Draw smooth curve through points
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for (let i = 1; i < points.length - 2; i++) {
+                        const xc = (points[i].x + points[i + 1].x) / 2;
+                        const yc = (points[i].y + points[i + 1].y) / 2;
+                        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+                    }
+                    
+                    // Add depth-based color variation
+                    const hue = 180 + Math.sin(time * 0.1 + i) * 20;
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${this.strength * 0.4})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+
+                // Draw resonance points
+                this.resonancePoints.forEach(point => {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0, 255, 255, ${point.intensity * this.strength})`;
+                    ctx.fill();
+                });
+            }
+        }
+
+        // Handle click/touch events
+        function handleInteraction(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Create new hyperstring
+            const string = new Hyperstring(x, y);
+            quantumState.hyperstrings.push(string);
+            
+            // Increase quantum depth
+            quantumState.depth = Math.min(
+                quantumState.maxDepth,
+                quantumState.depth + 0.5 + Math.random() * 0.5
+            );
+        }
+
+        canvas.addEventListener('click', handleInteraction);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleInteraction(touch);
+        });
+
+        // Animation loop
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            quantumState.time += 0.016;
+            
+            // Update and draw all hyperstrings
+            quantumState.hyperstrings = quantumState.hyperstrings.filter(string => string.strength > 0.01);
+            quantumState.hyperstrings.forEach(string => {
+                string.update(quantumState.time);
+                string.draw(ctx, quantumState.time);
+            });
+            
+            // Slowly decrease depth over time
+            if (quantumState.depth > 0) {
+                quantumState.depth = Math.max(0, quantumState.depth - 0.01);
+            }
+            
+            // Update depth indicator
+            depthIndicator.textContent = `Quantum Depth: ${quantumState.depth.toFixed(2)}`;
+            
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
